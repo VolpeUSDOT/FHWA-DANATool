@@ -241,7 +241,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     
     #a. Read TMAS Station and Classification
     print('Reading TMAS Data')    #This takes like 10 min
-    tmas_class = pd.read_csv(PATH_TMAS_CLASS_CLEAN, dtype={'STATION_ID':str, 'ROUTE_NUMBER':str})
+    tmas_class = pd.read_csv(PATH_TMAS_CLASS_CLEAN, dtype={'STATION_ID':str, 'LRS_ID':str}, low_memory=False)
     states_avlb=tmas_class['STATE_NAME'].drop_duplicates()
     if SELECT_STATE in states_avlb.values:
         tmas_class_state = tmas_class[tmas_class['STATE_NAME']==SELECT_STATE]
