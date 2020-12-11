@@ -14,7 +14,7 @@ from geopandas import GeoDataFrame
 from shapely.geometry import Point
 import pathlib
 
-def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_all, PATH_npmrds_raw_pass,PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION_STATE, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI):
+def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_all, PATH_npmrds_raw_pass,PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI):
     #!!! INPUT Parameters
     filepath = 'Temp/'
     #pathlib.Path(filepath).mkdir(exist_ok=True) 
@@ -74,10 +74,10 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     ##########################################################################################
     
     # NPMRDS
-    # FIPS/NEI have names and codes; TMC_Identification only has names; repcty only in code; Use code
+    # FIPS/NEI have names and codes; TMC_Identification only has names; repcty only in code; Use codeo 
     fips_header = ['STATE_NAME','STATE_CODE','COUNTY_CODE','COUNTY_NAME','FIPS_TYPE']
     fips = pd.read_csv(PATH_FIPS,header=None,names=fips_header)
-    repcty = pd.read_excel(PATH_NEI)
+    repcty = pd.read_csv(PATH_NEI)
     state_county = pd.merge(fips, repcty, left_on=['STATE_CODE','COUNTY_NAME'], right_on=['stateid','County_Name'], how='inner')
     state_county.drop(['stateid','countyid','County_Name'], inplace=True, axis=1)
     state_county.rename(columns={'State_Name':'STATE_FULL_NAME'}, inplace=True)
@@ -248,9 +248,13 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
         #tmas_class_state['ROUTE_NUMBER'] = pd.to_numeric(tmas_class_state['ROUTE_NUMBER'], errors='coerce')
         tmas_class_state['ROUTE_NUMBER'].dropna(axis=0, inplace=True)
     
-        #a1. Select only data in the clean station array
+        #a1. Load national station file, 
+        #    Select only desired State, 
+        #    Select only data in the clean station array
         clean_stations = tmas_class_state['STATION_ID'].unique()
-        tmas_station = pd.read_csv(PATH_TMAS_STATION_STATE, dtype={'STATION_ID':str}, low_memory=False)
+        tmas_station = pd.read_csv(PATH_TMAS_STATION, dtype={'STATION_ID':str}, low_memory=False)
+        tmas_station_State = tmas_station[tmas_station['STATE_NAME']==SELECT_STATE]
+        tmas_station_State.reset_index(inplace=True, drop=True)
         tmas_station_clean = tmas_station.loc[tmas_station['STATION_ID'].isin(clean_stations)]
         
         #a2. Preparing TMAS station data for geoprocessing

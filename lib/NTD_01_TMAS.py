@@ -41,7 +41,7 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI):
     fips = pd.read_csv(PATH_FIPS,header=None,names=fips_header)
     tmas_station = pd.merge(tmas_station,fips,how='left',left_on=['FIPS','FIPS_COUNTY'],right_on=['STATE_CODE','COUNTY_CODE'])
     # NEI repcty
-    repcty = pd.read_excel(PATH_NEI)
+    repcty = pd.read_csv(PATH_NEI)
     repcty['countyid'] = repcty['countyid'] % 1000
     repcty['repcty'] = repcty['repcty'] % 1000
     tmas_station = pd.merge(tmas_station, repcty, left_on=['FIPS','FIPS_COUNTY'], right_on=['stateid','countyid'], how='inner')
@@ -59,7 +59,7 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI):
     #tmas_station.to_csv(PATH_TMAS_STATION.replace('.dat','.csv'), index=False)
     #tmas_station_State.to_csv(PATH_TMAS_STATION.replace('.dat','_State.csv'), index=False)
     now=lapTimer('  took: ',now)
-    
+        
     ##########################################################################################
     # TMAS CLASS
     #a. Read in TMAS Class dataset

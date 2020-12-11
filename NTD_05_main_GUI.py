@@ -23,11 +23,11 @@ from tkinter import *
 from tkinter import Tk,ttk,StringVar,filedialog
 import re
 
-import NTD_01_TMAS
-import NTD_02_NPMRDS
-import NTD_03_MOVES
-import NTD_04_SPEED
-import NTD_05_NOISE
+from lib import NTD_01_TMAS
+from lib import NTD_02_NPMRDS
+from lib import NTD_03_MOVES
+from lib import NTD_04_SPEED
+from lib import NTD_05_NOISE
 #import pyarrow as pa
 #import pyarrow.parquet as pq
 #from shapely.geometry import Point
