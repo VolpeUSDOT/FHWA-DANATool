@@ -23,17 +23,16 @@ from tkinter import *
 from tkinter import Tk,ttk,StringVar,filedialog
 import re
 
-from lib import NTD_01_TMAS
-from lib import NTD_02_NPMRDS
-from lib import NTD_03_MOVES
-from lib import NTD_04_SPEED
-from lib import NTD_05_NOISE
+from lib import NTD_01_NPMRDS
+from lib import NTD_02_MOVES
+from lib import NTD_03_SPEED
+from lib import NTD_04_NOISE
 #import pyarrow as pa
 #import pyarrow.parquet as pq
 #from shapely.geometry import Point
 
-filepath = 'Temp/'
-pathlib.Path(filepath).mkdir(exist_ok=True) 
+#filepath = ''
+#pathlib.Path(filepath).mkdir(exist_ok=True) 
 
 # Func - Popups
 def PopUpCleanTMASSelection():
@@ -330,10 +329,10 @@ w_script.grid(column=1, row=2, columnspan=1)
 
 # 3. File Browsing Buttons
 # script 1
-w_tmas_station = ttk.Button(mainframe, text='Select TMAS Station File', command=f_tmas_station).grid(column=0, row=7, columnspan=1, sticky="w")
-w_tmas_class = ttk.Button(mainframe, text='Select TMAS Class File', command=f_tmas_class).grid(column=0, row=8, columnspan=1, sticky="w")
-w_fips_1 = ttk.Button(mainframe, text='Select FIPS File', command=f_fips).grid(column=0, row=9, columnspan=1, sticky="w")
-w_nei_1 = ttk.Button(mainframe, text='Select National Emission Inventory File', command=f_nei).grid(column=0, row=10, columnspan=1, sticky="w")
+#w_tmas_station = ttk.Button(mainframe, text='Select TMAS Station File', command=f_tmas_station).grid(column=0, row=7, columnspan=1, sticky="w")
+#w_tmas_class = ttk.Button(mainframe, text='Select TMAS Class File', command=f_tmas_class).grid(column=0, row=8, columnspan=1, sticky="w")
+#w_fips_1 = ttk.Button(mainframe, text='Select FIPS File', command=f_fips).grid(column=0, row=9, columnspan=1, sticky="w")
+#w_nei_1 = ttk.Button(mainframe, text='Select National Emission Inventory File', command=f_nei).grid(column=0, row=10, columnspan=1, sticky="w")
 
 # script 2
 w_tmas_station_state_1 = ttk.Button(mainframe, text='Select Processed TMAS Station', command=f_tmas_station_state).grid(column=0, row=13, columnspan=1, sticky="w")
@@ -374,7 +373,7 @@ pl_fips_1 = ttk.Label(mainframe)
 pl_fips_1.grid(column=1, row=9, columnspan=1, sticky="w")
 pl_nei_1 = ttk.Label(mainframe)
 pl_nei_1.grid(column=1, row=10, columnspan=1, sticky="w")
-# script 2
+# script 1
 pl_tmas_station_state_1 = ttk.Label(mainframe)
 pl_tmas_station_state_1.grid(column=1, row=13, columnspan=1, sticky="w")
 pl_tmas_class_clean_1 = ttk.Label(mainframe)
@@ -416,7 +415,7 @@ pl_npmrds_clean_2.grid(column=1, row=34, columnspan=1, sticky="w")
 
 # 5. Check available pre-processed files
 # TMAS station
-if ('TMAS_station_State.csv' in os.listdir('Temp/')):
+if ('TMAS_station.csv' in os.listdir('Temp/')):
     pl_tmas_station_state_1.config(text=os.getcwd()+'\\Temp\\tmas_station_State.csv')
     #pl_tmas_station_state_2.config(text=os.getcwd()+'\\Temp\\tmas_station_State.csv')
     fn_tmas_station_state = 'Temp/tmas_station_State.csv'

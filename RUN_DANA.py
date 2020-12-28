@@ -11,7 +11,7 @@ from lib import NTD_03_SPEED
 from lib import NTD_04_NOISE
 
 state  = 'MA'
-step = 2
+step = 1
 county = 'Middlesex'
 SELECT_TMC = ['129+04374', '129P09003']
 year = 2017
