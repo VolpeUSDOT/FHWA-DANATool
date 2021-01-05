@@ -3,3 +3,7 @@ User Input Files/
 Final Output/
 NPMRDS_Intermediate_Output/
 lib/__pycache__/
+build/
+NTD_05_main_GUI.spec
+dist/
+__pycache__/
