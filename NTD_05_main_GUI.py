@@ -15,6 +15,7 @@ import geopandas as gpd
 from geopandas import GeoDataFrame
 from shapely.geometry import Polygon, LineString, Point
 import os
+import io
 import time
 import datetime as dt
 import pathlib
@@ -23,10 +24,17 @@ from tkinter import *
 from tkinter import Tk,ttk,StringVar,filedialog
 import re
 
+from lib import NTD_00_TMAS
 from lib import NTD_01_NPMRDS
 from lib import NTD_02_MOVES
 from lib import NTD_03_SPEED
 from lib import NTD_04_NOISE
+
+import sys
+
+if not sys.warnoptions:
+    import warnings
+    warnings.simplefilter("ignore")
 #import pyarrow as pa
 #import pyarrow.parquet as pq
 #from shapely.geometry import Point
@@ -44,7 +52,7 @@ def PopUpCleanTMASSelection():
 def PopUpCleanNPMRDSSelection():
     popup = Tk()
     popup.wm_title("Warning")
-    label = ttk.Label(popup, text="Please run Step 2 to create processed NPMRDS File.")
+    label = ttk.Label(popup, text="Please run Step 1 to create processed NPMRDS File.")
     label.pack(side="top", pady=5, padx=5)
     popup.mainloop
 def PopUp_Selection(txt_input):
@@ -77,11 +85,11 @@ fn_vm2 = ''
 fn_county_mileage = ''
 fn_fips = ''
 fn_nei = ''
-step1 = '1. Process Raw TMAS Data'
-step2 = '2. Process Raw NPMRDS Data'
-step3 = '3. Produce MOVES Inputs'
-step4 = '4. Produce Speed Distributions'
-step5 = '5. Produce Noise Inputs'
+step0 = '0. Pre-Process Raw TMAS Data'
+step1 = '1. Process Raw NPMRDS Data'
+step2 = '2. Produce MOVES Inputs'
+step3 = '3. Produce Speed Distributions'
+step4 = '4. Produce Noise Inputs'
 
 # Func - File dialogs    
 def f_tmas_station():
@@ -170,6 +178,37 @@ def f_nei():
         filetypes=[('xlsx file', '.xlsx')])
     pl_nei_1.config(text=fn_nei.replace('/','\\'))
     pl_nei_2.config(text=fn_nei.replace('/','\\'))
+
+# Enable TMAS Preprocessing
+def enable_tmas_preprocess():
+    global list_scripts
+    if preprocess_checkvar.get() == 0:
+        w_tmas_station.grid_remove()
+        w_tmas_class.grid_remove()
+        w_fips_1.grid_remove()
+        w_nei_1.grid_remove()
+        
+        pl_tmas_station.grid_remove()
+        pl_tmas_class.grid_remove()
+        pl_fips_1.grid_remove()
+        pl_nei_1.grid_remove()
+        
+        list_scripts = ['', step1, step2, step3, step4]
+        w_script['values'] = list_scripts
+
+    else:
+        w_tmas_station.grid()
+        w_tmas_class.grid()
+        w_fips_1.grid()
+        w_nei_1.grid()
+        
+        pl_tmas_station.grid()
+        pl_tmas_class.grid()
+        pl_fips_1.grid()
+        pl_nei_1.grid()
+        
+        list_scripts = ['', step0, step1, step2, step3, step4]
+        w_script['values'] = list_scripts    
         
 # Func - Print TMC Input
 def PrintTMCinput(tmc_list):
@@ -180,10 +219,11 @@ def PrintTMCinput(tmc_list):
     
 # Func - ProcessData Function
 def ProcessData():
+    
     tmc_chars = set('0123456789+-PN, ')
     if StateValue.get() == '':
         PopUp_Selection("State")
-    elif ScriptValue.get() == step1:
+    elif ScriptValue.get() == step0:
         if fn_tmas_station == '':
             PopUp_Selection("TMAS Station file")
         elif fn_tmas_class == '':
@@ -198,8 +238,8 @@ def ProcessData():
             PATH_TMAS_CLASS = fn_tmas_class
             PATH_FIPS = fn_fips 
             PATH_NEI = fn_nei
-            NTD_01_TMAS.TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI)
-    elif ScriptValue.get() == step2:
+            NTD_00_TMAS.TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI)
+    elif ScriptValue.get() == step1:
         if fn_tmas_station_state == '' or fn_tmas_class_clean == '':
             PopUpCleanTMASSelection()            
         elif fn_npmrds_all == '':
@@ -230,8 +270,8 @@ def ProcessData():
             PATH_TMAS_CLASS_CLEAN = fn_tmas_class_clean
             PATH_FIPS = fn_fips 
             PATH_NEI = fn_nei
-            NTD_02_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION_STATE, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI)
-    elif ScriptValue.get() == step3:
+            NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION_STATE, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI)
+    elif ScriptValue.get() == step2:
         if fn_tmas_class_clean == '':
             PopUpCleanTMASSelection()
         else:
@@ -240,15 +280,15 @@ def ProcessData():
             PATH_HPMS = fn_hpms
             PATH_VM2 = fn_vm2
             PATH_COUNTY_MILEAGE = fn_county_mileage
-            NTD_03_MOVES.MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)
-    elif ScriptValue.get() == step4:    # needs update
+            NTD_02_MOVES.MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)
+    elif ScriptValue.get() == step3:    # needs update
         SELECT_STATE = StateValue.get()
         if fn_npmrds_clean == '':
             PopUpCleanNPMRDSSelection()
         else:
             PATH_NPMRDS = fn_npmrds_clean
-            NTD_04_SPEED.SPEED(SELECT_STATE, PATH_NPMRDS)
-    elif ScriptValue.get() == step5:    # needs update
+            NTD_03_SPEED.SPEED(SELECT_STATE, PATH_NPMRDS)
+    elif ScriptValue.get() == step4:    # needs update
         SELECT_STATE = StateValue.get()
         if fn_npmrds_clean == '':
             PopUpCleanNPMRDSSelection()
@@ -259,29 +299,78 @@ def ProcessData():
             SELECT_TMC = re.split(',\s+',tmcEntry.get())
             PrintTMCinput(SELECT_TMC)
             PATH_NPMRDS = fn_npmrds_clean
-            NTD_05_NOISE.NOISE(SELECT_STATE, SELECT_TMC, PATH_NPMRDS)
+            NTD_04_NOISE.NOISE(SELECT_STATE, SELECT_TMC, PATH_NPMRDS)
     else:
         PopUp_Selection("Step")
     #root.destroy()
 
+# GUI
+   
+################################################################################
+#Some important user interface callback functions
+
+# Bind Mouse Wheel to GUI
+def mouse_wheel(event):
+    canvas.yview_scroll(int(-1*event.delta/120), "units")
+    #output_canvas.yview_scroll(int(-1*event.delta/120), "units")
+    
+# bind ctrl events so the text can be coppied
+def ctrlEvent(event):
+    if(12==event.state and event.keysym=='c' ):
+        return
+    else:
+        return "break"
+
 ################################################################################
 
-# GUI
 root = Tk()
 root.title("DANA Tool")
 root.grid_rowconfigure(0, weight=1)
-root.columnconfigure(0, weight=1)
+root.grid_columnconfigure(0, weight=1)
 
-canvas = tk.Canvas(root, height=900, width=700)
+p1 = tk.PhotoImage(file = 'lib/dot.png')
+root.iconphoto(True, p1)
+
+root.bind("<MouseWheel>", mouse_wheel)
+
+notebook = ttk.Notebook(root, width=700, height=400)
+notebook.grid(row=0, column=0, sticky="news")
+
+main_container = tk.Frame(notebook)
+main_container.grid(row=0, column=0, sticky="news")
+main_container.grid_rowconfigure(0, weight=1)
+main_container.grid_columnconfigure(0, weight=1)
+notebook.add(main_container, text='Data Processing')
+
+canvas = tk.Canvas(main_container)
+main_scrollbar = tk.Scrollbar(main_container, orient="vertical")
+main_scrollbar.grid(row=0, column=1, sticky='ns')
 canvas.grid(row=0, column=0, sticky="news")
-
-scrollbar = tk.Scrollbar(root, orient="vertical", command=canvas.yview)
-scrollbar.grid(row=0, column=1, sticky='ns')
-canvas.configure(yscrollcommand = scrollbar.set)
+canvas.configure(yscrollcommand = main_scrollbar.set)
 
 mainframe = tk.Frame(canvas)
 canvas.create_window((0,0), window=mainframe, anchor='nw')
 
+output_container = tk.Frame(notebook)
+output_container.grid(row=0, column=0, sticky="news")
+output_container.grid_rowconfigure(0, weight=1)
+output_container.grid_columnconfigure(0, weight=1)
+notebook.add(output_container, text='Progress and Output')
+
+output_text = tk.Text(output_container, height=400, width=80,  wrap=WORD)
+output_text.grid(row=0, column=0, sticky="news")
+output_scrollbar = tk.Scrollbar(output_container, orient="vertical")
+output_scrollbar.grid(row=0, column=1, sticky='ns')
+output_text.configure(yscrollcommand = output_scrollbar.set)
+
+##################################################
+
+# checkbox for process 1
+
+preprocess_checkvar = IntVar()
+preprocess_checkvar.set(False)
+preprocess_tmas_checkbox = ttk.Checkbutton(mainframe, text=step0, variable=preprocess_checkvar, command=enable_tmas_preprocess)
+preprocess_tmas_checkbox.grid(row=6,column=0, columnspan=1, sticky="w")
 
 ##################################################
 
@@ -293,17 +382,17 @@ ttk.Label(mainframe, text='Select inputs under the selected step and press the p
 ttk.Button(mainframe, text="Process Data", command=ProcessData).grid(column=0, row=4, columnspan=1 ,sticky="w")
 
 ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=5,column=0, columnspan=5, sticky="ew")
-ttk.Label(mainframe, text=step1).grid(row=6,column=0, columnspan=1, sticky="w")
+#ttk.Label(mainframe, text=step0).grid(row=6,column=1, columnspan=1, sticky="w")
 ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=11,column=0, columnspan=5, sticky="ew")
-ttk.Label(mainframe, text=step2).grid(row=12,column=0, columnspan=1, sticky="w")
+ttk.Label(mainframe, text=step1).grid(row=12,column=0, columnspan=1, sticky="w")
 ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=23,column=0, columnspan=5, sticky="ew")
-ttk.Label(mainframe, text=step3).grid(row=24,column=0, columnspan=1, sticky="w")
+ttk.Label(mainframe, text=step2).grid(row=24,column=0, columnspan=1, sticky="w")
 ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=29,column=0, columnspan=5, sticky="ew")
-ttk.Label(mainframe, text=step4).grid(row=30,column=0, columnspan=1, sticky="w")
+ttk.Label(mainframe, text=step3).grid(row=30,column=0, columnspan=1, sticky="w")
 ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=32,column=0, columnspan=5, sticky="ew")
-ttk.Label(mainframe, text=step5).grid(row=33,column=0, columnspan=1, sticky="w")
+ttk.Label(mainframe, text=step4).grid(row=33,column=0, columnspan=1, sticky="w")
 
-ttk.Label(mainframe, text=' Enter TMC Codes (separate by comma)').grid(row=35,column=0, columnspan=1, sticky="w")
+ttk.Label(mainframe, text=' Enter TMC Codes (separate by comma)').grid(row=35, column=0, columnspan=1, sticky="w")
 ttk.Label(mainframe, text='          ').grid(row=36,column=0, columnspan=1, sticky="w")
 
 ##################################################
@@ -319,7 +408,7 @@ w_state['values'] = list_states
 w_state.current(0)
 w_state.grid(column=1, row=1, columnspan=1)
 # List of Scripts Combobox
-list_scripts = ['', step1, step2, step3, step4, step5]
+list_scripts = ['', step0, step1, step2, step3, step4]
 ScriptValue = StringVar()
 w_script = ttk.Combobox(mainframe, textvariable=ScriptValue, state='readonly', width=60)
 w_script['values'] = list_scripts
@@ -328,13 +417,17 @@ w_script.grid(column=1, row=2, columnspan=1)
 ##################################################
 
 # 3. File Browsing Buttons
-# script 1
-#w_tmas_station = ttk.Button(mainframe, text='Select TMAS Station File', command=f_tmas_station).grid(column=0, row=7, columnspan=1, sticky="w")
-#w_tmas_class = ttk.Button(mainframe, text='Select TMAS Class File', command=f_tmas_class).grid(column=0, row=8, columnspan=1, sticky="w")
-#w_fips_1 = ttk.Button(mainframe, text='Select FIPS File', command=f_fips).grid(column=0, row=9, columnspan=1, sticky="w")
-#w_nei_1 = ttk.Button(mainframe, text='Select National Emission Inventory File', command=f_nei).grid(column=0, row=10, columnspan=1, sticky="w")
+# script 0
+w_tmas_station = ttk.Button(mainframe, text='Select TMAS Station File', command=f_tmas_station)
+w_tmas_station.grid(column=0, row=7, columnspan=1, sticky="w")
+w_tmas_class = ttk.Button(mainframe, text='Select TMAS Class File', command=f_tmas_class)
+w_tmas_class.grid(column=0, row=8, columnspan=1, sticky="w")
+w_fips_1 = ttk.Button(mainframe, text='Select FIPS File', command=f_fips)
+w_fips_1.grid(column=0, row=9, columnspan=1, sticky="w")
+w_nei_1 = ttk.Button(mainframe, text='Select National Emission Inventory File', command=f_nei)
+w_nei_1.grid(column=0, row=10, columnspan=1, sticky="w")
 
-# script 2
+# script 1
 w_tmas_station_state_1 = ttk.Button(mainframe, text='Select Processed TMAS Station', command=f_tmas_station_state).grid(column=0, row=13, columnspan=1, sticky="w")
 w_tmas_class_clean_1 = ttk.Button(mainframe, text='Select Processed TMAS Class', command=f_tmas_class_clean).grid(column=0, row=14, columnspan=1, sticky="w")
 w_npmrds_all = ttk.Button(mainframe, text='Select NPMRDS (All)', command=f_npmrds_all).grid(column=0, row=15, columnspan=1, sticky="w")
@@ -346,17 +439,17 @@ w_emission = ttk.Button(mainframe, text='Select Emission Rates', command=f_emiss
 w_fips_2 = ttk.Button(mainframe, text='Select FIPS File', command=f_fips).grid(column=0, row=21, columnspan=1, sticky="w")
 w_nei_2 = ttk.Button(mainframe, text='Select National Emission Inventory File', command=f_nei).grid(column=0, row=22, columnspan=1, sticky="w")
 
-# script 3
+# script 2
 #w_tmas_station_state_2 = ttk.Button(mainframe, text='Select Processed TMAS Station', command=f_tmas_station_state).grid(column=0, row=19, columnspan=1, sticky="w")
 w_tmas_class_clean_2 = ttk.Button(mainframe, text='Select Processed TMAS Class', command=f_tmas_class_clean).grid(column=0, row=25, columnspan=1, sticky="w")
 w_hpms = ttk.Button(mainframe, text='Select HPMS', command=f_hpms).grid(column=0, row=26, columnspan=1, sticky="w")
 w_vm2 = ttk.Button(mainframe, text='Select VM2', command=f_vm2).grid(column=0, row=27, columnspan=1, sticky="w")
 w_county_mileage = ttk.Button(mainframe, text='Select County Mileage file', command=f_county_mileage).grid(column=0, row=28, columnspan=1, sticky="w")
 
-# script 4
+# script 3
 w_npmrds_clean_1 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=31, columnspan=1, sticky="w")
 
-# script 5
+# script 4
 w_npmrds_clean_2 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=34, columnspan=1, sticky="w")
 # Entry
 tmcEntry = StringVar()
@@ -415,55 +508,45 @@ pl_npmrds_clean_2.grid(column=1, row=34, columnspan=1, sticky="w")
 
 # 5. Check available pre-processed files
 # TMAS station
-if ('TMAS_station.csv' in os.listdir('Temp/')):
-    pl_tmas_station_state_1.config(text=os.getcwd()+'\\Temp\\tmas_station_State.csv')
-    #pl_tmas_station_state_2.config(text=os.getcwd()+'\\Temp\\tmas_station_State.csv')
-    fn_tmas_station_state = 'Temp/tmas_station_State.csv'
-else:
-    pl_tmas_station_state_1.config(text='')
-    #pl_tmas_station_state_2.config(text='')
+pl_tmas_station_state_1.config(text='')
+#pl_tmas_station_state_2.config(text='')
 
 # TMAS Class
-if ('tmas_class_clean.csv' in os.listdir('Temp/')):
-    pl_tmas_class_clean_1.config(text=os.getcwd()+'\\Temp\\tmas_class_clean.csv')
-    pl_tmas_class_clean_2.config(text=os.getcwd()+'\\Temp\\tmas_class_clean.csv')
-    fn_tmas_class_clean = 'Temp/tmas_class_clean.csv'
-else:
-    pl_tmas_class_clean_1.config(text='')
-    pl_tmas_class_clean_2.config(text='')
+pl_tmas_class_clean_1.config(text='')
+pl_tmas_class_clean_2.config(text='')
 
 # FIPS
-if ('FIPS Codes.csv' in os.listdir('Data Input/default/')):
-    pl_fips_1.config(text=os.getcwd()+'\\Data Input\\default\\FIPS Codes.csv')
+if ('FIPS_County_Codes.csv' in os.listdir('Default Input Files/')):
+    pl_fips_1.config(text=os.getcwd()+'\\Default Input Files\\FIPS_County_Codes.csv')
     pl_fips_2.config(text=os.getcwd()+'\\Data Input\\default\\FIPS Codes.csv')
-    fn_fips = 'Data Input/default/FIPS Codes.csv'
+    fn_fips = 'Default Input Files/FIPS_County_Codes.csv'
 else:
     pl_fips_1.config(text='')
     pl_fips_2.config(text='')
     
 # NEI
-if ('2014NEI_v2_Representative_Counties_Final.xlsx' in os.listdir('Data Input/default/')):
-    pl_nei_1.config(text=os.getcwd()+'\\Data Input\\default\\2014NEI_v2_Representative_Counties_Final.xlsx')
-    pl_nei_2.config(text=os.getcwd()+'\\Data Input\\default\\2014NEI_v2_Representative_Counties_Final.xlsx')
-    fn_nei = 'Data Input/default/2014NEI_v2_Representative_Counties_Final.xlsx'
+if ('NEI_Representative_Counties.csv' in os.listdir('Default Input Files/')):
+    pl_nei_1.config(text=os.getcwd()+'\\Default Input Files\\NEI_Representative_Counties.xlsx')
+    pl_nei_2.config(text=os.getcwd()+'\\Default Input Files\\NEI_Representative_Counties.xlsx')
+    fn_nei = 'Default Input Files/NEI_Representative_Counties.csv'
 else:
     pl_nei_1.config(text='')
     pl_nei_2.config(text='')
 
 # Emission Rates
-if ('rates_2014v2nei_basis_20190206.csv' in os.listdir('Data Input/Emission Rates')):
-    pl_emission.config(text=os.getcwd()+'\\Data Input\\rates_2014v2nei_basis_20190206.csv')
-    fn_emission = 'Data Input/Emission Rates/rates_2014v2nei_basis_20190206.csv'
+if ('NEI_National_Emissions_Rates_Basis.csv' in os.listdir('Default Input Files/')):
+    pl_emission.config(text=os.getcwd()+'\\Default Input Files\\NEI_National_Emissions_Rates_Basis.csv')
+    fn_emission = 'Default Input Files/NEI_National_Emissions_Rates_Basis.csv'
 else:
     pl_emission.config(text='')
 
 # Processed Composite dataset    
 def StateUpdate(event):
    global fn_npmrds_clean
-   if (StateValue.get()+'_Composite_Emissions.parquet' in os.listdir('Output/')):
-       pl_npmrds_clean_1.config(text=os.getcwd()+'\\Output\\'+StateValue.get()+'_Composite_Emissions.parquet')
-       pl_npmrds_clean_2.config(text=os.getcwd()+'\\Output\\'+StateValue.get()+'_Composite_Emissions.parquet')
-       fn_npmrds_clean = 'Output/'+StateValue.get()+'_Composite_Emissions.parquet'
+   if (StateValue.get()+'_Composite_Emissions.parquet' in os.listdir('NPMRDS Intermediate Output/')):
+       pl_npmrds_clean_1.config(text=os.getcwd()+'\\NPMRDS Intermediate Output\\'+StateValue.get()+'_Composite_Emissions.parquet')
+       pl_npmrds_clean_2.config(text=os.getcwd()+'\\NPMRDS Intermediate Output\\'+StateValue.get()+'_Composite_Emissions.parquet')
+       fn_npmrds_clean = 'NPMRDS Intermediate Output/'+StateValue.get()+'_Composite_Emissions.parquet'
    else:
        pl_npmrds_clean_1.config(text='')
        pl_npmrds_clean_2.config(text='')
@@ -480,5 +563,6 @@ for child in mainframe.winfo_children(): child.grid_configure(padx=2, pady=4)
 
 mainframe.update_idletasks()
 canvas.configure(scrollregion=canvas.bbox('all'))
+enable_tmas_preprocess()
 
 root.mainloop()

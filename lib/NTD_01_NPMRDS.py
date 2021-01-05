@@ -16,9 +16,9 @@ import pathlib
 
 def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_all, PATH_npmrds_raw_pass,PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI):
     #!!! INPUT Parameters
-    filepath = 'Temp/'
-    #pathlib.Path(filepath).mkdir(exist_ok=True) 
-    outputpath = 'Output/'
+    filepath = 'NPMRDS_Intermediate_Output/'
+    pathlib.Path(filepath).mkdir(exist_ok=True) 
+    outputpath = 'Final Output/'
     pathlib.Path(outputpath).mkdir(exist_ok=True) 
     
     '''
@@ -555,7 +555,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     df.rename(index=str, columns={'miles':'tmc_length'}, inplace=True)
     df.drop(['route_numb','route_sign','dir_num'],axis=1,inplace=True)
     now=lapTimer('  took: ',now)
-    '''
+    
     # QC
     total_tmc = df['tmc'].nunique()
     tier1_tmc = df.loc[df['tier']==1,'tmc'].nunique()
@@ -567,7 +567,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     print('Tier 2 TMCs %i:' %tier2_tmc)
     print('Tier 3 TMCs %i:' %tier3_tmc)
     print('Tier 4 TMCs %i:' %tier4_tmc)
-    '''
+    
     '''
     #d. Exporting NPMRDS and classification data
     print('Exporting Tier data')
@@ -675,7 +675,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     print('Exporting Final Dataset')
     #df_emissions.to_csv(outputpath+SELECT_STATE+'_Composite_Emission.csv', index=False)
     npmrds_emissions = pa.Table.from_pandas(df_emissions)
-    pq.write_table(npmrds_emissions, outputpath+SELECT_STATE+'_Composite_Emissions.parquet')
+    pq.write_table(npmrds_emissions, filepath+SELECT_STATE+'_Composite_Emissions.parquet')
     now=lapTimer('  took: ',now)
     '''
     if SELECT_TMC != []:
