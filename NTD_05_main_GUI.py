@@ -333,7 +333,7 @@ root.iconphoto(True, p1)
 
 root.bind("<MouseWheel>", mouse_wheel)
 
-notebook = ttk.Notebook(root, width=700, height=400)
+notebook = ttk.Notebook(root, width=850, height=400)
 notebook.grid(row=0, column=0, sticky="news")
 
 main_container = tk.Frame(notebook)
