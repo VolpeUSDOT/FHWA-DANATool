@@ -24,6 +24,7 @@ import tkinter as tk
 from tkinter import *
 from tkinter import Tk,ttk,StringVar,filedialog
 import re
+import multiprocessing as mp
 
 from lib import NTD_00_TMAS
 from lib import NTD_01_NPMRDS
@@ -41,7 +42,25 @@ if not sys.warnoptions:
 #from shapely.geometry import Point
 
 #filepath = ''
-#pathlib.Path(filepath).mkdir(exist_ok=True) 
+#pathlib.Path(filepath).mkdir(exist_ok=True)
+
+class RedirectText(object):
+    """"""
+    #----------------------------------------------------------------------
+    def __init__(self, queue):
+        """Constructor"""
+        self.out_queue = queue
+        
+    #----------------------------------------------------------------------
+    def write(self, string):
+        """"""
+        self.out_queue.put(string)
+
+#Function for creating path to the icon        
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, relative_path)
 
 # Func - Popups
 def PopUpCleanTMASSelection():
@@ -80,7 +99,7 @@ fn_npmrds_shp = ''
 fn_emission = ''
 fn_tmas_class_clean = ''
 fn_npmrds_clean = ''
-fn_tmas_station_state = ''
+fn_tmas_station = ''
 fn_hpms = ''
 fn_vm2 = ''
 fn_county_mileage = ''
@@ -147,11 +166,11 @@ def f_npmrds_clean():
     pl_npmrds_clean_1.config(text=fn_npmrds_clean.replace('/','\\'))
     pl_npmrds_clean_2.config(text=fn_npmrds_clean.replace('/','\\'))
 def f_tmas_station_state():
-    global fn_tmas_station_state
-    fn_tmas_station_state = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose Processed TMAS Station File',
+    global fn_tmas_station
+    fn_tmas_station = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose Processed TMAS Station File',
         filetypes=[('csv file', '.csv')])
-    pl_tmas_station_state_1.config(text=fn_tmas_station_state.replace('/','\\'))
-    #pl_tmas_station_state_2.config(text=fn_tmas_station_state)
+    pl_tmas_station_state_1.config(text=fn_tmas_station.replace('/','\\'))
+    #pl_tmas_station_state_2.config(text=fn_tmas_station)
 def f_hpms():
     global fn_hpms
     fn_hpms = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose HPMS File',
@@ -217,9 +236,21 @@ def PrintTMCinput(tmc_list):
     for i in tmc_list:
         text.write(i+'\n')
     text.close()
+
+def updateOutput():
+    global thread_queue
+    while not thread_queue.empty():
+        output_text.insert(tk.END, thread_queue.get())
+    root.after(1000, updateOutput)
+
+def process_handler(proc_target, thread_queue, args): 
+    redir = RedirectText(thread_queue)
+    sys.stdout = redir
+    proc_target(*args)        
     
 # Func - ProcessData Function
 def ProcessData():
+    global runningThreads
     
     tmc_chars = set('0123456789+-PN, ')
     if StateValue.get() == '':
@@ -239,9 +270,13 @@ def ProcessData():
             PATH_TMAS_CLASS = fn_tmas_class
             PATH_FIPS = fn_fips 
             PATH_NEI = fn_nei
-            NTD_00_TMAS.TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI)
+            TMAS_Proc = mp.Process(target=process_handler, name=step0, args=(NTD_00_TMAS.TMAS, thread_queue, (SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI)))
+            TMAS_Proc.start()
+            runningThreads.append(TMAS_Proc)
+            notebook.select('.!notebook.!frame2')
+            
     elif ScriptValue.get() == step1:
-        if fn_tmas_station_state == '' or fn_tmas_class_clean == '':
+        if fn_tmas_station == '' or fn_tmas_class_clean == '':
             PopUpCleanTMASSelection()            
         elif fn_npmrds_all == '':
             PopUp_Selection("NPMRDS All Data")
@@ -267,11 +302,15 @@ def ProcessData():
             PATH_tmc_identification = fn_npmrds_tmc
             PATH_tmc_shp = fn_npmrds_shp
             PATH_emission = fn_emission
-            PATH_TMAS_STATION_STATE = fn_tmas_station_state
+            PATH_TMAS_STATION = fn_tmas_station
             PATH_TMAS_CLASS_CLEAN = fn_tmas_class_clean
             PATH_FIPS = fn_fips 
             PATH_NEI = fn_nei
-            NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION_STATE, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI)
+            NPMRDS_Proc = mp.Process(target=process_handler, name=step1, args=(NTD_01_NPMRDS.NPMRDS, thread_queue, (SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI)))
+            NPMRDS_Proc.start()
+            runningThreads.append(NPMRDS_Proc)
+            notebook.select('.!notebook.!frame2')
+    
     elif ScriptValue.get() == step2:
         if fn_tmas_class_clean == '':
             PopUpCleanTMASSelection()
@@ -304,6 +343,21 @@ def ProcessData():
     else:
         PopUp_Selection("Step")
     #root.destroy()
+    
+def CancelProcess():
+    global runningThreads
+    for proc in runningThreads:
+        print(proc.name)
+        while proc.is_alive():
+            print("Step {} is active".format(proc.name))
+            
+            proc.terminate()
+        
+        if not proc.is_alive():
+            print("Step {} is no longer active".format(proc.name))
+            print("************* Process Canceled **************")
+    
+    runningThreads = []
 
 # GUI
    
@@ -329,7 +383,8 @@ root.title("DANA Tool")
 root.grid_rowconfigure(0, weight=1)
 root.grid_columnconfigure(0, weight=1)
 
-p1 = tk.PhotoImage(file = 'lib/dot.png')
+iconPath = resource_path('lib\\dot.png')
+p1 = tk.PhotoImage(file = iconPath)
 root.iconphoto(True, p1)
 
 root.bind("<MouseWheel>", mouse_wheel)
@@ -363,6 +418,9 @@ output_text.grid(row=0, column=0, sticky="news")
 output_scrollbar = tk.Scrollbar(output_container, orient="vertical")
 output_scrollbar.grid(row=0, column=1, sticky='ns')
 output_text.configure(yscrollcommand = output_scrollbar.set)
+output_text.bind("<Key>", lambda e: ctrlEvent(e))
+
+#print(notebook.tabs())
 
 ##################################################
 
@@ -381,6 +439,7 @@ ttk.Label(mainframe, text='Select State:').grid(row=1,column=0, columnspan=1, st
 ttk.Label(mainframe, text='Select Processing Steps:').grid(row=2,column=0, columnspan=1, sticky="w")
 ttk.Label(mainframe, text='Select inputs under the selected step and press the process data button.  Repeat for each step that you want to run.').grid(row=3,column=0, columnspan=3, sticky="w")
 ttk.Button(mainframe, text="Process Data", command=ProcessData).grid(column=0, row=4, columnspan=1 ,sticky="w")
+ttk.Button(mainframe, text="Cancel Data Processing", command=CancelProcess).grid(column=1, row=4, columnspan=1 ,sticky="w")
 
 ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=5,column=0, columnspan=5, sticky="ew")
 #ttk.Label(mainframe, text=step0).grid(row=6,column=1, columnspan=1, sticky="w")
@@ -519,7 +578,7 @@ pl_tmas_class_clean_2.config(text='')
 # FIPS
 if ('FIPS_County_Codes.csv' in os.listdir('Default Input Files/')):
     pl_fips_1.config(text=os.getcwd()+'\\Default Input Files\\FIPS_County_Codes.csv')
-    pl_fips_2.config(text=os.getcwd()+'\\Data Input\\default\\FIPS Codes.csv')
+    pl_fips_2.config(text=os.getcwd()+'\\Default Input Files\\FIPS_County_Codes.csv')
     fn_fips = 'Default Input Files/FIPS_County_Codes.csv'
 else:
     pl_fips_1.config(text='')
@@ -543,14 +602,31 @@ else:
 
 # Processed Composite dataset    
 def StateUpdate(event):
-   global fn_npmrds_clean
-   if (StateValue.get()+'_Composite_Emissions.parquet' in os.listdir('NPMRDS Intermediate Output/')):
+    global fn_npmrds_clean
+    if (StateValue.get()+'_Composite_Emissions.parquet' in os.listdir('NPMRDS_Intermediate_Output/')):
        pl_npmrds_clean_1.config(text=os.getcwd()+'\\NPMRDS Intermediate Output\\'+StateValue.get()+'_Composite_Emissions.parquet')
        pl_npmrds_clean_2.config(text=os.getcwd()+'\\NPMRDS Intermediate Output\\'+StateValue.get()+'_Composite_Emissions.parquet')
-       fn_npmrds_clean = 'NPMRDS Intermediate Output/'+StateValue.get()+'_Composite_Emissions.parquet'
-   else:
+       fn_npmrds_clean = 'NPMRDS_Intermediate_Output/'+StateValue.get()+'_Composite_Emissions.parquet'
+    else:
        pl_npmrds_clean_1.config(text='')
        pl_npmrds_clean_2.config(text='')
+       
+if True:
+    w_state.current(22)
+    fn_tmas_station = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2017/TMAS_Station_2017.csv'
+    pl_tmas_station_state_1.config(text=fn_tmas_station.replace('/','\\'))
+    fn_tmas_class_clean = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2017/TMAS_Class_Clean_2017.csv'
+    pl_tmas_class_clean_1.config(text=fn_tmas_class_clean.replace('/','\\'))
+    fn_npmrds_all = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/Example_MiddlesexCounty_Massachusetts/2018 NPMRDS Data/MA_MIDDLESEX_2018_ALL.csv'
+    pl_npmrds_all.config(text=fn_npmrds_all.replace('/','\\'))
+    fn_npmrds_pass = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/Example_MiddlesexCounty_Massachusetts/2018 NPMRDS Data/MA_MIDDLESEX_2018_PASSENGER.csv'
+    pl_npmrds_pass.config(text=fn_npmrds_pass.replace('/','\\'))
+    fn_npmrds_truck = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/Example_MiddlesexCounty_Massachusetts/2018 NPMRDS Data/MA_MIDDLESEX_2018_TRUCKS.csv'
+    pl_npmrds_truck.config(text=fn_npmrds_truck.replace('/','\\'))
+    fn_npmrds_tmc = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/Example_MiddlesexCounty_Massachusetts/2018 NPMRDS Data/TMC_Identification.csv'
+    pl_npmrds_tmc.config(text=fn_npmrds_tmc.replace('/','\\'))
+    fn_npmrds_shp = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/National TMC Shapefile/NationalMerge.shp'
+    pl_npmrds_shp.config(text=fn_npmrds_shp.replace('/','\\'))
     
 w_state.bind("<<ComboboxSelected>>", StateUpdate)
 ##################################################
@@ -562,8 +638,18 @@ w_state.bind("<<ComboboxSelected>>", StateUpdate)
 # pad each widget globally
 for child in mainframe.winfo_children(): child.grid_configure(padx=2, pady=4)
 
-mainframe.update_idletasks()
-canvas.configure(scrollregion=canvas.bbox('all'))
+
 enable_tmas_preprocess()
 
-root.mainloop()
+if __name__ == "__main__":
+    mp.freeze_support()  
+    thread_queue = mp.Queue()
+    old_stdout = sys.stdout
+    redir = RedirectText(thread_queue)
+    sys.stdout = redir
+    root.update_idletasks()
+    canvas.configure(scrollregion=canvas.bbox('all'))
+    runningThreads = []
+    updateOutput()
+    root.mainloop()
+    sys.stdout = old_stdout
