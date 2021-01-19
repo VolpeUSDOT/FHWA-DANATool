@@ -3,3 +3,7 @@ User Input Files/
 NPMRDS_Intermediate_Output/
 Final Output/
 lib/__pycache__/
+build/
+__pycache__/
+DANATool.exe
+NTD_05_main_GUI.spec
