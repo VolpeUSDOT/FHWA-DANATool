@@ -8,3 +8,7 @@ NTD_05_main_GUI.spec
 dist/
 __pycache__/
 DANATool.exe
+.vscode/
+Scratch_Code.py
+test.csv
+test.zip
