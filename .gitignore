@@ -4,7 +4,6 @@ Final Output/
 NPMRDS_Intermediate_Output/
 lib/__pycache__/
 build/
-NTD_05_main_GUI.spec
 dist/
 __pycache__/
 DANATool.exe
@@ -12,3 +11,4 @@ DANATool.exe
 Scratch_Code.py
 test.csv
 test.zip
+DANAPackage.zip
