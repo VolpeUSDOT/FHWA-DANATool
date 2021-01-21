@@ -246,7 +246,7 @@ def updateOutput():
 def process_handler(proc_target, thread_queue, args): 
     redir = RedirectText(thread_queue)
     sys.stdout = redir
-    proc_target(*args)        
+    proc_target(*args)            
     
 # Func - ProcessData Function
 def ProcessData():
@@ -611,7 +611,7 @@ def StateUpdate(event):
        pl_npmrds_clean_1.config(text='')
        pl_npmrds_clean_2.config(text='')
        
-if True:
+if False:
     w_state.current(22)
     fn_tmas_station = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2017/TMAS_Station_2017.csv'
     pl_tmas_station_state_1.config(text=fn_tmas_station.replace('/','\\'))

@@ -9,7 +9,7 @@ import time
 
 def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI):
     
-    filepath = 'Temp/'
+    filepath = 'Default Input Files/TMAS Data/TMAS Processing Output/'
     pathlib.Path(filepath).mkdir(exist_ok=True) 
     
     def lapTimer(text,now):
