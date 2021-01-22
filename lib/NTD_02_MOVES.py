@@ -13,20 +13,10 @@ import time
 def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE): 
     #!!! INPUT Parameters
     
-    filepath = 'Temp/'
+    filepath = '/'
     #pathlib.Path(filepath).mkdir(exist_ok=True) 
-    #outputpath = 'Output/'
-    #pathlib.Path(outputpath).mkdir(exist_ok=True)
-    
-    #SELECT_STATE='CO' #changed to 'AK' due to limited samples
-    #PATH_HPMS='Data Input/HPMS/CO_HPMS_2015.csv'
-    #PATH_VM2='Data Input/HPMS/vm2.csv'
-    #PATH_COUNTY_MILEAGE='Data Input/HPMS/National_2017_11_AdHocSQL.csv'
-    #PATH_TMAS_CLASS_CLEAN=filepath+'tmas_class_clean.csv'
-    
-    #PATH_TMAS_CLASS='Data Input/TMAS/TMAS_2015.dat'
-    #PATH_TMAS_STATION='Data Input/TMAS/STATION_2015.dat'
-    #NPMRDS_parquet='Parquet/' + SELECT_STATE + '_npmrds_tmc.parquet'   
+    outputpath = 'Final Output/'
+    pathlib.Path(outputpath).mkdir(exist_ok=True)
     
     def lapTimer(text,now):
         print('%s%.3f' %(text,time.time()-now))
@@ -881,12 +871,12 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     roadVMTFraction=roadVMTFrac_5[['county','sourceTypeID','roadTypeID','roadTypeVMTFraction','VMT']]
     # Exporting data
     df3_county = roadVMTFraction.groupby('county')
-    df3_filepath = 'Output/'+SELECT_STATE+'_ROADTYPE_VMT/'
+    df3_filepath = outputpath+SELECT_STATE+'_ROADTYPE_VMT/'
     pathlib.Path(df3_filepath).mkdir(exist_ok=True) 
-    roadVMTFraction.to_csv('Output/'+SELECT_STATE+'_ROADTYPE_VMT.csv', index=False)
+    roadVMTFraction.to_csv(outputpath+SELECT_STATE+'_ROADTYPE_VMT.csv', index=False)
     for name, group in df3_county:
         group.to_csv(df3_filepath+SELECT_STATE+'_ROADTYPE_VMT'+'_'+str(name)+'.csv', index=False)
     now=lapTimer('  took: ',now)
-    print('Outputs saved in Output\\')
+    print('Outputs saved in Final Output\\')
     print('**********Process Completed**********')
     print('')

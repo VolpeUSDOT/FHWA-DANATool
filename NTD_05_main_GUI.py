@@ -10,6 +10,7 @@ GUI interface to create the 'input.txt' file used to select TMC links in the NTD
 Author: Cambridge Systematics
 Modified By: Volpe National Transportation Systems Center
 """
+
 import pandas as pd
 import numpy as np
 import geopandas as gpd
@@ -33,6 +34,7 @@ from lib import NTD_03_SPEED
 from lib import NTD_04_NOISE
 
 import sys
+import traceback
 
 if not sys.warnoptions:
     import warnings
@@ -53,8 +55,10 @@ class RedirectText(object):
         
     #----------------------------------------------------------------------
     def write(self, string):
-        """"""
         self.out_queue.put(string)
+        
+    def flush(self):
+        pass        
 
 #Function for creating path to the icon        
 def resource_path(relative_path):
@@ -115,13 +119,13 @@ step4 = '4. Produce Noise Inputs'
 def f_tmas_station():
     global fn_tmas_station
     fn_tmas_station = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose TMAS Station File',
-        filetypes=[('dat file', '.dat')])
+        filetypes=[('dat file', '.dat'), ('station file', '.STA')])
     pl_tmas_station.config(text=fn_tmas_station.replace('/','\\'))
     #print (f)
 def f_tmas_class():
     global fn_tmas_class
     fn_tmas_class = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose TMAS Class File',
-        filetypes=[('dat file', '.dat'),('csv file', '.csv')])
+        filetypes=[('dat file', '.dat'),('csv file', '.csv'), ('class file', '.CLS')])
     pl_tmas_class.config(text=fn_tmas_class.replace('/','\\'))
 def f_npmrds_all():
     global fn_npmrds_all
@@ -237,21 +241,39 @@ def PrintTMCinput(tmc_list):
         text.write(i+'\n')
     text.close()
 
-def updateOutput():
+def checkProgress():
     global thread_queue
     while not thread_queue.empty():
         output_text.insert(tk.END, thread_queue.get())
-    root.after(1000, updateOutput)
+        
+    removeList = []
+    for i in range(len(runningThreads)):
+        if not runningThreads[i].is_alive():
+            removeList.append(i)
+        else:
+            statusLabel["text"] = "Step {} is currently running".format(runningThreads[i].name)
+    for i in removeList:
+        print("*** {} has finished running ***".format(runningThreads[i].name))
+        del runningThreads[i]
+        startButton["state"] = NORMAL
+        statusLabel["text"] = "No Process Currently Running"
+    
+    root.after(1000, checkProgress)
+        
 
 def process_handler(proc_target, thread_queue, args): 
     redir = RedirectText(thread_queue)
     sys.stdout = redir
-    proc_target(*args)            
+    #sys.stderr = sys.stdout
+    try:
+        proc_target(*args)
+    except Exception as e:
+        print(traceback.format_exc())            
     
 # Func - ProcessData Function
 def ProcessData():
     global runningThreads
-    
+    #output_text.delete('1.0', END)
     tmc_chars = set('0123456789+-PN, ')
     if StateValue.get() == '':
         PopUp_Selection("State")
@@ -271,6 +293,7 @@ def ProcessData():
             PATH_FIPS = fn_fips 
             PATH_NEI = fn_nei
             TMAS_Proc = mp.Process(target=process_handler, name=step0, args=(NTD_00_TMAS.TMAS, thread_queue, (SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI)))
+            startButton["state"] = DISABLED
             TMAS_Proc.start()
             runningThreads.append(TMAS_Proc)
             notebook.select('.!notebook.!frame2')
@@ -307,6 +330,7 @@ def ProcessData():
             PATH_FIPS = fn_fips 
             PATH_NEI = fn_nei
             NPMRDS_Proc = mp.Process(target=process_handler, name=step1, args=(NTD_01_NPMRDS.NPMRDS, thread_queue, (SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI)))
+            startButton["state"] = DISABLED
             NPMRDS_Proc.start()
             runningThreads.append(NPMRDS_Proc)
             notebook.select('.!notebook.!frame2')
@@ -320,14 +344,24 @@ def ProcessData():
             PATH_HPMS = fn_hpms
             PATH_VM2 = fn_vm2
             PATH_COUNTY_MILEAGE = fn_county_mileage
-            NTD_02_MOVES.MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)
+            MOVES_Proc = mp.Process(target=process_handler, name=step2, args=(NTD_02.MOVES, thread_queue, (SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)))
+            startButton["state"] = DISABLED
+            MOVES_Proc.start()
+            runningThreads.append(MOVES_Proc)
+            notebook.select('.!notebook.!frame2')
+            
     elif ScriptValue.get() == step3:    # needs update
         SELECT_STATE = StateValue.get()
         if fn_npmrds_clean == '':
             PopUpCleanNPMRDSSelection()
         else:
             PATH_NPMRDS = fn_npmrds_clean
-            NTD_03_SPEED.SPEED(SELECT_STATE, PATH_NPMRDS)
+            SPEED_Proc = mp.Process(target=process_handler, name=step3, args=(NTD_03_SPEED.SPEED, thread_queue, (SELECT_STATE, PATH_NPMRDS)))
+            startButton["state"] = DISABLED
+            SPEED_Proc.start()
+            runningThreads.append(SPEED_Proc)
+            notebook.select('.!notebook.!frame2')
+
     elif ScriptValue.get() == step4:    # needs update
         SELECT_STATE = StateValue.get()
         if fn_npmrds_clean == '':
@@ -339,7 +373,12 @@ def ProcessData():
             SELECT_TMC = re.split(',\s+',tmcEntry.get())
             PrintTMCinput(SELECT_TMC)
             PATH_NPMRDS = fn_npmrds_clean
-            NTD_04_NOISE.NOISE(SELECT_STATE, SELECT_TMC, PATH_NPMRDS)
+            NOISE_Proc = mp.Process(target=process_handler, name=step3, args=(NTD_04_NOISE.NOISE, thread_queue, (SELECT_STATE, SELECT_TMC, PATH_NPMRDS)))
+            startButton["state"] = DISABLED
+            NOISE_Proc.start()
+            runningThreads.append(NOISE_Proc)
+            notebook.select('.!notebook.!frame2')
+            
     else:
         PopUp_Selection("Step")
     #root.destroy()
@@ -347,16 +386,14 @@ def ProcessData():
 def CancelProcess():
     global runningThreads
     for proc in runningThreads:
-        print(proc.name)
         while proc.is_alive():
-            print("Step {} is active".format(proc.name))
-            
             proc.terminate()
         
         if not proc.is_alive():
-            print("Step {} is no longer active".format(proc.name))
-            print("************* Process Canceled **************")
-    
+            print("************* Canceled Step {} **************".format(proc.name))
+            startButton["state"] = NORMAL
+            statusLabel["text"] = "No Process Currently Running"
+
     runningThreads = []
 
 # GUI
@@ -411,7 +448,7 @@ output_container = tk.Frame(notebook)
 output_container.grid(row=0, column=0, sticky="news")
 output_container.grid_rowconfigure(0, weight=1)
 output_container.grid_columnconfigure(0, weight=1)
-notebook.add(output_container, text='Progress and Output')
+notebook.add(output_container, text='Progress Log')
 
 output_text = tk.Text(output_container, height=400, width=80,  wrap=WORD)
 output_text.grid(row=0, column=0, sticky="news")
@@ -438,8 +475,11 @@ ttk.Label(mainframe, wraplength = 500, text='To select the desired script and in
 ttk.Label(mainframe, text='Select State:').grid(row=1,column=0, columnspan=1, sticky="w")
 ttk.Label(mainframe, text='Select Processing Steps:').grid(row=2,column=0, columnspan=1, sticky="w")
 ttk.Label(mainframe, text='Select inputs under the selected step and press the process data button.  Repeat for each step that you want to run.').grid(row=3,column=0, columnspan=3, sticky="w")
-ttk.Button(mainframe, text="Process Data", command=ProcessData).grid(column=0, row=4, columnspan=1 ,sticky="w")
-ttk.Button(mainframe, text="Cancel Data Processing", command=CancelProcess).grid(column=1, row=4, columnspan=1 ,sticky="w")
+startButton = ttk.Button(mainframe, text="Process Data", command=ProcessData)
+startButton.grid(column=0, row=4, columnspan=1 ,sticky="w")
+ttk.Button(mainframe, text="Cancel Data Processing", command=CancelProcess).grid(column=0, row=4, columnspan=1 ,sticky="E")
+statusLabel = ttk.Label(mainframe, text="No Process Currently Running", relief=SUNKEN)
+statusLabel.grid(column=1, row=4, columnspan=1, sticky="W")
 
 ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=5,column=0, columnspan=5, sticky="ew")
 #ttk.Label(mainframe, text=step0).grid(row=6,column=1, columnspan=1, sticky="w")
@@ -466,14 +506,14 @@ StateValue = StringVar()
 w_state = ttk.Combobox(mainframe, textvariable=StateValue, state='readonly', width=60)
 w_state['values'] = list_states
 w_state.current(0)
-w_state.grid(column=1, row=1, columnspan=1)
+w_state.grid(column=1, row=1, columnspan=1, sticky="w")
 # List of Scripts Combobox
 list_scripts = ['', step0, step1, step2, step3, step4]
 ScriptValue = StringVar()
 w_script = ttk.Combobox(mainframe, textvariable=ScriptValue, state='readonly', width=60)
 w_script['values'] = list_scripts
 w_script.current(0)
-w_script.grid(column=1, row=2, columnspan=1)
+w_script.grid(column=1, row=2, columnspan=1, sticky="w")
 ##################################################
 
 # 3. File Browsing Buttons
@@ -611,7 +651,7 @@ def StateUpdate(event):
        pl_npmrds_clean_1.config(text='')
        pl_npmrds_clean_2.config(text='')
        
-if False:
+if True:
     w_state.current(22)
     fn_tmas_station = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2017/TMAS_Station_2017.csv'
     pl_tmas_station_state_1.config(text=fn_tmas_station.replace('/','\\'))
@@ -647,9 +687,10 @@ if __name__ == "__main__":
     old_stdout = sys.stdout
     redir = RedirectText(thread_queue)
     sys.stdout = redir
+    sys.stderr = sys.stdout
     root.update_idletasks()
     canvas.configure(scrollregion=canvas.bbox('all'))
     runningThreads = []
-    updateOutput()
+    checkProgress()
     root.mainloop()
     sys.stdout = old_stdout

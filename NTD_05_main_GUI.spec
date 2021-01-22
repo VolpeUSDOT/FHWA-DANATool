@@ -5,7 +5,6 @@ from PyInstaller.utils.hooks import collect_dynamic_libs
 
 # pyinstaller --distpath . NTD_05_main_GUI.spec
 
-
 a = Analysis(['NTD_05_main_GUI.py'],
              pathex=['C:\\Users\\William.Chupp\\Documents\\DANAToolTesting\\FHWA-DANATool'],
              binaries=collect_dynamic_libs("rtree"),
@@ -33,5 +32,5 @@ exe = EXE(pyz,
           upx=True,
           upx_exclude=[],
           runtime_tmpdir=None,
-          console=True,
+          console=False,
           icon='C:\\Users\\William.Chupp\\Documents\\DANAToolTesting\\dot.ico')
