@@ -9,7 +9,7 @@ import time
 
 def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI):
     
-    filepath = 'TMAS_Intermediate_Output'
+    filepath = 'TMAS_Intermediate_Output/'
     pathlib.Path(filepath).mkdir(exist_ok=True) 
     
     def lapTimer(text,now):
@@ -53,7 +53,7 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI):
     tmas_station_State = tmas_station[tmas_station['STATE_NAME']==SELECT_STATE]
     tmas_station_State.reset_index(inplace=True, drop=True)
     
-    #d. Export as csv files in "Temp files"    
+    #d. Export as csv files in "Temp files"
     tmas_station.to_csv(filepath+'TMAS_station.csv',index=False)
     tmas_station_State.to_csv(filepath+'TMAS_station_State.csv',index=False)
     #tmas_station.to_csv(PATH_TMAS_STATION.replace('.dat','.csv'), index=False)
@@ -152,7 +152,15 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI):
     
     # DOW for holidays
     print ('Other cleanup')
-    tmas_class.loc[tmas_class['DATE'].isin(['2015-1-1','2015-1-19','2015-2-16','2015-5-25','2015-7-3','2015-9-7','2015-11-26','2015-12-25']), 'DOW']='8'
+    holidays = ['2015-1-1',	'2015-1-19', '2015-2-16', '2015-5-25', '2015-7-3', '2015-9-7', '2015-11-26', '2015-12-25'
+                '2016-1-1',	'2016-1-18', '2016-2-15', '2016-5-30', '2016-7-4', '2016-9-5', '2016-11-24', '2016-12-26'
+                '2017-1-1',	'2017-1-16', '2017-2-20', '2017-5-29', '2017-7-4', '2017-9-4', '2017-11-23', '2017-12-25'
+                '2018-1-1',	'2018-1-15', '2018-2-19', '2018-5-28', '2018-7-4', '2018-9-3', '2018-11-22', '2018-12-25'
+                '2019-1-1',	'2019-1-21', '2019-2-18', '2019-5-27', '2019-7-4', '2019-9-2', '2019-11-28', '2019-12-25'
+                '2020-1-1',	'2020-1-20', '2020-2-17', '2020-5-25', '2020-7-3', '2020-9-7', '2020-11-26', '2020-12-25'
+                '2021-1-1',	'2021-1-18', '2021-2-15', '2021-5-31', '2021-7-5', '2021-9-6', '2021-11-25', '2021-12-24']
+
+    tmas_class.loc[tmas_class['DATE'].isin(holidays), 'DOW']='8'
     tmas_class.loc[tmas_class['DOW']==8,'DAY_TYPE'] = 'WE'
 
     now=lapTimer('  took: ',now) 
@@ -197,6 +205,6 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI):
     tmas_class_clean_sample.to_csv(filepath+'tmas_class_clean_sample.csv',index=False)
     #tmas_class_clean.to_csv(PATH_TMAS_CLASS.replace('.dat','_clean.csv'),index=False)
     now=lapTimer('  took: ',now)
-    print('Outputs saved in Temp\\')
+    print('Outputs saved in {}'.format(filepath))
     print('**********Process Completed**********')
     print('')

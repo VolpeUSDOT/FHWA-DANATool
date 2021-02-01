@@ -15,7 +15,7 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     
     filepath = '/'
     #pathlib.Path(filepath).mkdir(exist_ok=True) 
-    outputpath = 'Final Output/'
+    outputpath = 'Final Output/Process2_MOVES_VMT_Distributions/'
     pathlib.Path(outputpath).mkdir(exist_ok=True)
     
     def lapTimer(text,now):
@@ -24,7 +24,7 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     
     now=time.time()
     print ('')
-    print ('********** Produce MOVES Inputs **********')
+    print ('********** Produce MOVES VMT Inputs **********')
     ##########################################################################################
     #a. State definition
     states = {

@@ -243,9 +243,13 @@ def PrintTMCinput(tmc_list):
 
 def checkProgress():
     global thread_queue
+    global fn_npmrds_clean
     while not thread_queue.empty():
         output_text.insert(tk.END, thread_queue.get())
-        
+    
+    root.update_idletasks()
+    canvas.configure(scrollregion=canvas.bbox('all'))
+    
     removeList = []
     for i in range(len(runningThreads)):
         if not runningThreads[i].is_alive():
@@ -257,6 +261,13 @@ def checkProgress():
         del runningThreads[i]
         startButton["state"] = NORMAL
         statusLabel["text"] = "No Process Currently Running"
+    if os.path.isdir('NPMRDS_Intermediate_Output/') and (StateValue.get()+'_Composite_Emissions.parquet' in os.listdir('NPMRDS_Intermediate_Output/')):
+       pl_npmrds_clean_1.config(text=os.getcwd()+'\\NPMRDS_Intermediate_Output\\'+StateValue.get()+'_Composite_Emissions.parquet')
+       pl_npmrds_clean_2.config(text=os.getcwd()+'\\NPMRDS_Intermediate_Output\\'+StateValue.get()+'_Composite_Emissions.parquet')
+       fn_npmrds_clean = 'NPMRDS_Intermediate_Output/'+StateValue.get()+'_Composite_Emissions.parquet'
+    else:
+       pl_npmrds_clean_1.config(text='')
+       pl_npmrds_clean_2.config(text='')
     
     root.after(1000, checkProgress)
         
@@ -639,19 +650,8 @@ if ('NEI_National_Emissions_Rates_Basis.csv' in os.listdir('Default Input Files/
     fn_emission = 'Default Input Files/NEI_National_Emissions_Rates_Basis.csv'
 else:
     pl_emission.config(text='')
-
-# Processed Composite dataset    
-def StateUpdate(event):
-    global fn_npmrds_clean
-    if (StateValue.get()+'_Composite_Emissions.parquet' in os.listdir('NPMRDS_Intermediate_Output/')):
-       pl_npmrds_clean_1.config(text=os.getcwd()+'\\NPMRDS Intermediate Output\\'+StateValue.get()+'_Composite_Emissions.parquet')
-       pl_npmrds_clean_2.config(text=os.getcwd()+'\\NPMRDS Intermediate Output\\'+StateValue.get()+'_Composite_Emissions.parquet')
-       fn_npmrds_clean = 'NPMRDS_Intermediate_Output/'+StateValue.get()+'_Composite_Emissions.parquet'
-    else:
-       pl_npmrds_clean_1.config(text='')
-       pl_npmrds_clean_2.config(text='')
        
-if True:
+if False:
     w_state.current(22)
     fn_tmas_station = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2017/TMAS_Station_2017.csv'
     pl_tmas_station_state_1.config(text=fn_tmas_station.replace('/','\\'))
@@ -667,8 +667,7 @@ if True:
     pl_npmrds_tmc.config(text=fn_npmrds_tmc.replace('/','\\'))
     fn_npmrds_shp = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/National TMC Shapefile/NationalMerge.shp'
     pl_npmrds_shp.config(text=fn_npmrds_shp.replace('/','\\'))
-    
-w_state.bind("<<ComboboxSelected>>", StateUpdate)
+
 ##################################################
 
 # 6. Button

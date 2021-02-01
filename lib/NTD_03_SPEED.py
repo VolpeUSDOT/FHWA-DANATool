@@ -18,7 +18,7 @@ def SPEED(SELECT_STATE, PATH_NPMRDS):
     
     now=time.time()
     
-    outputpath = 'Final Output/'
+    outputpath = 'Final Output/Process3_MOVES_Speed_Distributions/'
     pathlib.Path(outputpath).mkdir(exist_ok=True)
     
     print ('')

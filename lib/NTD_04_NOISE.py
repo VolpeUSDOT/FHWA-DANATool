@@ -14,9 +14,8 @@ import pathlib
 
 def NOISE(SELECT_STATE, SELECT_TMC, PATH_NPMRDS):
     #!!! INPUT Parameters
-    filepath = 'Temp/'
     #pathlib.Path(filepath).mkdir(exist_ok=True) 
-    outputpath = 'Output/'
+    outputpath = 'Final Output/Process4_TNM_AIDE_Inputs/'
     pathlib.Path(outputpath).mkdir(exist_ok=True) 
     
     #SELECT_STATE='CO'
@@ -54,7 +53,7 @@ def NOISE(SELECT_STATE, SELECT_TMC, PATH_NPMRDS):
         
         df_emissions_select.to_csv(outputpath+SELECT_STATE+'_Composite_Emissions_select.csv', index=False)
         now=lapTimer('  took: ',now)
-        print('Outputs saved in Output\\')
+        print('Outputs saved in {}\\'.format(outputpath))
     else:
         print('No TMC input provided.')
         
