@@ -9,12 +9,13 @@ from lib import NTD_01_NPMRDS
 from lib import NTD_02_MOVES
 from lib import NTD_03_SPEED
 from lib import NTD_04_NOISE
+import os
 
 # Basic Input Parameters
 step = 1
-year = 2017
+year = 2016
 state  = 'MA'
-county = 'Middlesex'
+county = 'Franklin'
 
 SELECT_TMC = ['129+04374', '129P09003']
 SELECT_STATE = state 
@@ -30,10 +31,10 @@ elif computerName == 'OFFICEDESKTOP':
     pathPrefix1 = 'G:/Repos/FHWA-DANATool/Default Input Files'
     pathPrefix2 = 'G:/Repos/FHWA-DANATool/User Input Files/Example_MiddlesexCounty_Massachusetts/2018 NPMRDS Data'
     pathPrefix3 = 'G:/Repos/FHWA-DANATool/NPMRDS_Intermediate_Output'
-elif computerName == 'TBD'
-    pathPrefix1 = 'TBD'
-    pathPrefix2 = 'TBD'
-    pathPrefix3 = 'TBD'
+elif computerName == 'VOLSLBOS-06756':
+    pathPrefix1 = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files'
+    pathPrefix2 = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/Franklin_MA/NPMRDS Data'
+    pathPrefix3 = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/NPMRDS_Intermediate_Output'
 
 
 # Set File Paths for Calling DANA Scripts
@@ -61,7 +62,7 @@ PATH_NPMRDS = pathPrefix3 + '/{}/{}/{}_Composite_Emissions.parquet'.format(state
 if step == 1:
     NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI)
 elif step == 2:
-    NTD_02_MOVES_MOVES.MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)
+    NTD_02_MOVES.MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)
 elif step == 3:
     NTD_03_SPEED.SPEED(SELECT_STATE, PATH_NPMRDS)  
 elif step == 4:

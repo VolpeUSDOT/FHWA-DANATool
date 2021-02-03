@@ -305,20 +305,23 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
         tier1['tier']=1
         now=lapTimer('  took: ',now)
         
-        #c4. Creating Tier 1 Classifications
-        print('Defining Tier 1 Classifications')
-        tmas_class_state_tier1 = pd.merge(tmas_class_state, tier1, on=['STATION_ID','DIR'])
-        tmas_class_state_tier1_clean = tmas_class_state_tier1[tmas_class_state_tier1['tier']==1]
-        # 'tmc' and 'STATION_ID'+'DIR' can be many-to-many 
-        hpms_numerator = tmas_class_state_tier1_clean.groupby(['STATION_ID','tmc','DIR','MONTH','DAY_TYPE','HOUR'])['HPMS_TYPE10','HPMS_TYPE25','HPMS_TYPE40','HPMS_TYPE50','HPMS_TYPE60'].sum()
-        noise_numerator = tmas_class_state_tier1_clean.groupby(['STATION_ID','tmc','DIR','MONTH','DAY_TYPE','HOUR'])['NOISE_AUTO','NOISE_MED_TRUCK','NOISE_HVY_TRUCK','NOISE_BUS','NOISE_MC'].sum()
-        #hpms_denominator = tmas_class_state_tier1_clean.groupby(['STATION_ID','tmc','DIR','MONTH','DAY_TYPE'])['HPMS_ALL'].sum()
-        #noise_denominator = tmas_class_state_tier1_clean.groupby(['STATION_ID','tmc','DIR','MONTH','DAY_TYPE'])['NOISE_ALL'].sum()
-        tier1_hpms_classification = hpms_numerator.groupby(level=[0,1,2,3,4]).apply(lambda x: x/x.sum().sum())      # aggregate hours to day first, then sum across typeXX, (without axis=1)
-        tier1_noise_classification = noise_numerator.groupby(level=[0,1,2,3,4]).apply(lambda x: x/x.sum().sum())
-        tier1_hpms_classification.reset_index(inplace=True)
-        tier1_noise_classification.reset_index(inplace=True, drop=True)
-        tier1_class = pd.concat([tier1_hpms_classification,tier1_noise_classification], axis=1)
+        if len(tier1) == 0:
+            tier1_class = pd.DataFrame(columns=['STATION_ID','tmc','DIR','MONTH','DAY_TYPE','HOUR', 
+                                                'HPMS_TYPE10','HPMS_TYPE25','HPMS_TYPE40','HPMS_TYPE50','HPMS_TYPE60', 
+                                                'NOISE_AUTO','NOISE_MED_TRUCK','NOISE_HVY_TRUCK','NOISE_BUS','NOISE_MC'])
+        else:
+            #c4. Creating Tier 1 Classifications
+            print('Defining Tier 1 Classifications')
+            tmas_class_state_tier1 = pd.merge(tmas_class_state, tier1, on=['STATION_ID','DIR'])
+            tmas_class_state_tier1_clean = tmas_class_state_tier1[tmas_class_state_tier1['tier']==1]
+            # 'tmc' and 'STATION_ID'+'DIR' can be many-to-many 
+            hpms_numerator = tmas_class_state_tier1_clean.groupby(['STATION_ID','tmc','DIR','MONTH','DAY_TYPE','HOUR'])['HPMS_TYPE10','HPMS_TYPE25','HPMS_TYPE40','HPMS_TYPE50','HPMS_TYPE60'].sum()
+            noise_numerator = tmas_class_state_tier1_clean.groupby(['STATION_ID','tmc','DIR','MONTH','DAY_TYPE','HOUR'])['NOISE_AUTO','NOISE_MED_TRUCK','NOISE_HVY_TRUCK','NOISE_BUS','NOISE_MC'].sum()
+            tier1_hpms_classification = hpms_numerator.groupby(level=[0,1,2,3,4]).apply(lambda x: x/x.sum().sum())      # aggregate hours to day first, then sum across typeXX, (without axis=1)
+            tier1_noise_classification = noise_numerator.groupby(level=[0,1,2,3,4]).apply(lambda x: x/x.sum().sum())
+            tier1_hpms_classification.reset_index(inplace=True)
+            tier1_noise_classification.reset_index(inplace=True, drop=True)
+            tier1_class = pd.concat([tier1_hpms_classification,tier1_noise_classification], axis=1)
         #tier1_class = pd.concat([tier1_hpms_classification,tier1_noise_classification], axis=1, sort=False)
         tier1_class.rename(index=str, columns={'HPMS_TYPE10':'PCT_TYPE10','HPMS_TYPE25':'PCT_TYPE25','HPMS_TYPE40':'PCT_TYPE40','HPMS_TYPE50':'PCT_TYPE50','HPMS_TYPE60':'PCT_TYPE60','NOISE_AUTO':'PCT_NOISE_AUTO','NOISE_MED_TRUCK':'PCT_NOISE_MED_TRUCK','NOISE_HVY_TRUCK':'PCT_NOISE_HVY_TRUCK','NOISE_BUS':'PCT_NOISE_BUS','NOISE_MC':'PCT_NOISE_MC'},inplace=True)
         tier1_class.to_csv(filepath+'tier1_class.csv',index=False)
@@ -439,7 +442,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
         tier1_class['tier']=1
         tier1_class.drop('STATION_ID',inplace=True,axis=1)
         #Merge with NPMRDS data
-        npmrds_tier1 = pd.merge(npmrds_tmc, tier1_class, left_on=['tmc','month','dir_num','dow','hour'], right_on=['tmc','DIR','MONTH','DAY_TYPE','HOUR'], how='left')
+        npmrds_tier1 = pd.merge(npmrds_tmc, tier1_class, left_on=['tmc','dir_num', 'month', 'dow','hour'], right_on=['tmc','DIR','MONTH','DAY_TYPE','HOUR'], how='left')
         npmrds_for_tiers = npmrds_tier1[pd.isnull(npmrds_tier1['tier'])]
         npmrds_tier1 = npmrds_tier1[pd.notnull(npmrds_tier1['tier'])]
         now=lapTimer('  took: ',now)
