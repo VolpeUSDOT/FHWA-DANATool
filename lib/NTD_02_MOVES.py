@@ -13,20 +13,10 @@ import time
 def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE): 
     #!!! INPUT Parameters
     
-    filepath = 'Temp/'
+    filepath = '/'
     #pathlib.Path(filepath).mkdir(exist_ok=True) 
-    #outputpath = 'Output/'
-    #pathlib.Path(outputpath).mkdir(exist_ok=True)
-    
-    #SELECT_STATE='CO' #changed to 'AK' due to limited samples
-    #PATH_HPMS='Data Input/HPMS/CO_HPMS_2015.csv'
-    #PATH_VM2='Data Input/HPMS/vm2.csv'
-    #PATH_COUNTY_MILEAGE='Data Input/HPMS/National_2017_11_AdHocSQL.csv'
-    #PATH_TMAS_CLASS_CLEAN=filepath+'tmas_class_clean.csv'
-    
-    #PATH_TMAS_CLASS='Data Input/TMAS/TMAS_2015.dat'
-    #PATH_TMAS_STATION='Data Input/TMAS/STATION_2015.dat'
-    #NPMRDS_parquet='Parquet/' + SELECT_STATE + '_npmrds_tmc.parquet'   
+    outputpath = 'Final Output/Process2_MOVES_VMT_Distributions/'
+    pathlib.Path(outputpath).mkdir(exist_ok=True)
     
     def lapTimer(text,now):
         print('%s%.3f' %(text,time.time()-now))
@@ -34,7 +24,7 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     
     now=time.time()
     print ('')
-    print ('********** Produce MOVES Inputs **********')
+    print ('********** Produce MOVES VMT Inputs **********')
     ##########################################################################################
     #a. State definition
     states = {
@@ -64,15 +54,16 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     HPMS = pd.read_csv(PATH_HPMS)
     HPMS.columns=[x.lower() for x in HPMS.columns]
     HPMS.rename(columns={'f_system':'F_System', 'urban_code': 'Urban_Code', 'aadt': 'AADT', 
-                         'begin_poin': 'Begin_Poin', 'end_point': 'End_Point'}, inplace=True)
+                         'begin_point': 'Begin_Point', 'begin_poin': 'Begin_Point', 'end_point': 'End_Point', 
+                         'county_cod': 'County_Code', 'County_Cod': 'County_Code', 'county_code': 'County_Code'}, inplace=True)
     HPMS.drop(HPMS[HPMS['F_System']==6].index, inplace=True)
     HPMS.drop(HPMS[HPMS['F_System']==7].index, inplace=True)
     HPMS['Urban_rural']=''
     HPMS.loc[HPMS['Urban_Code']<99999, 'Urban_rural']='U'
     HPMS.loc[HPMS['Urban_Code']>=99999, 'Urban_rural']='R'
-    HPMS['Length'] = HPMS['End_Point'] - HPMS['Begin_Poin']
+    HPMS['Length'] = HPMS['End_Point'] - HPMS['Begin_Point']
     HPMS['VMT'] = HPMS['AADT']*HPMS['Length']*365
-    HPMScounty_list=HPMS['county_cod'].drop_duplicates().tolist()
+    HPMScounty_list=HPMS['County_Code'].drop_duplicates().tolist()
     
     #Reading VM2 State VMT
     print ('Reading in Highway Statistics VM2')
@@ -102,7 +93,7 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     #Reading county rd mileage data
     print ('Reading in HPMS County Rd Mileage')
     County_summary = pd.read_csv(PATH_COUNTY_MILEAGE,sep='|')
-    County_summary.rename(index=str, columns={'County_Code':'County_Cod'}, inplace=True)
+    #County_summary.rename(index=str, columns={'County_Code':'County_Cod'}, inplace=True)
     County_summary['Urban_rural']=''
     County_summary.loc[County_summary['Urban_Code']<99999, 'Urban_rural']='U'
     County_summary.loc[County_summary['Urban_Code']>=99999, 'Urban_rural']='R'
@@ -138,7 +129,7 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     print('Processing VMT for functional system 6 and 7')
     #b2. Creating FS_6 U VMT
     #Urban Minor Collector (FS_6_U) county-level distribution based on Urban Major Collector (FS_5_U)
-    VMT_FS_1_5 = HPMS.groupby(['Urban_rural','F_System','county_cod']).agg({'VMT':'sum'})
+    VMT_FS_1_5 = HPMS.groupby(['Urban_rural','F_System','County_Code']).agg({'VMT':'sum'})
     VMT_FS_1_5.reset_index(inplace=True)
     VMT_FS_U6 = VMT_FS_1_5[(VMT_FS_1_5['Urban_rural']=='U')&(VMT_FS_1_5['F_System']==5)]    # 1: U-5 county distribution
     VMT_FS_U6.reset_index(drop=True,inplace=True)
@@ -153,7 +144,7 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     FS_R7 = vm2.loc[state_index, 'R_Local']
     FS_U7 = vm2.loc[state_index, 'U_Local']
     #Reading and aggregating FS 6 and 7 road lengths
-    State_County_num = State_County.groupby(['Urban_rural','F_System','County_Cod']).agg({'RMC_L_System_Length':'sum'})
+    State_County_num = State_County.groupby(['Urban_rural','F_System','County_Code']).agg({'RMC_L_System_Length':'sum'})
     State_County = State_County_num.div(State_County_num.groupby(['Urban_rural','F_System']).transform('sum'))    # county %; use transform() to keep the format, sum() would only have 3 records
     VMT_FS_R6 = State_County.loc[('R',6)]
     VMT_FS_R7 = State_County.loc[('R',7)]
@@ -175,11 +166,11 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     VMT_FS_U7['F_System'] = 7
     VMT_FS_1_5.rename(columns={'county_cod':'County_Cod'}, inplace=True)
     VMT_FS_U6.rename(columns={'county_cod':'County_Cod'}, inplace=True)
-    VMT_FS_1_5=VMT_FS_1_5[['County_Cod', 'Urban_rural', 'F_System', 'VMT']]
-    VMT_FS_R6=VMT_FS_R6[['County_Cod', 'Urban_rural', 'F_System', 'VMT']]
-    VMT_FS_U6=VMT_FS_U6[['County_Cod', 'Urban_rural', 'F_System', 'VMT']]
-    VMT_FS_R7=VMT_FS_R7[['County_Cod', 'Urban_rural', 'F_System', 'VMT']]
-    VMT_FS_U7=VMT_FS_U7[['County_Cod', 'Urban_rural', 'F_System', 'VMT']]
+    VMT_FS_1_5=VMT_FS_1_5[['County_Code', 'Urban_rural', 'F_System', 'VMT']]
+    VMT_FS_R6=VMT_FS_R6[['County_Code', 'Urban_rural', 'F_System', 'VMT']]
+    VMT_FS_U6=VMT_FS_U6[['County_Code', 'Urban_rural', 'F_System', 'VMT']]
+    VMT_FS_R7=VMT_FS_R7[['County_Code', 'Urban_rural', 'F_System', 'VMT']]
+    VMT_FS_U7=VMT_FS_U7[['County_Code', 'Urban_rural', 'F_System', 'VMT']]
     
     FS = [VMT_FS_1_5,VMT_FS_R6,VMT_FS_U6,VMT_FS_R7,VMT_FS_U7]
     State_VMT = pd.concat(FS)       # State VMT by County/FuncClass/UrbanRural
@@ -188,7 +179,7 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     State_VMT.loc[(State_VMT['Urban_rural']=='U') & (State_VMT['F_System']!=1),'roadTypeID']=5
     State_VMT.loc[(State_VMT['Urban_rural']=='R') & (State_VMT['F_System']==1),'roadTypeID']=2
     State_VMT.loc[(State_VMT['Urban_rural']=='R') & (State_VMT['F_System']!=1),'roadTypeID']=3
-    State_VMT=State_VMT.groupby(['County_Cod','roadTypeID'], as_index=False)['VMT'].sum()
+    State_VMT=State_VMT.groupby(['County_Code','roadTypeID'], as_index=False)['VMT'].sum()
     
     now=lapTimer('  took: ',now)
     ####################################################################################################
@@ -360,9 +351,9 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     monthVMTFraction=pd.concat([monthVMTFrac_3a, monthVMTFrac_4a])
     # Export data
     df3_county = monthVMTFraction.groupby('county')
-    df3_filepath = 'Output/'+SELECT_STATE+'_MONTH_VMT/'
+    df3_filepath = outputpath+SELECT_STATE+'_MONTH_VMT/'
     pathlib.Path(df3_filepath).mkdir(exist_ok=True) 
-    monthVMTFraction.to_csv('Output/'+SELECT_STATE+'_MONTH_VMT.csv', index=False)
+    monthVMTFraction.to_csv(outputpath+SELECT_STATE+'_MONTH_VMT.csv', index=False)
     for name, group in df3_county:
         group.to_csv(df3_filepath+SELECT_STATE+'_MONTH_VMT'+'_'+str(name)+'.csv', 
                      index=False, columns=['sourceTypeID','IsLeapYear','monthID','monthVMTFraction'])
@@ -523,9 +514,9 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     
     #Exporting dataset
     df3_county = dayVMTFraction.groupby('county')
-    df3_filepath = 'Output/'+SELECT_STATE+'_DAY_VMT/'
+    df3_filepath = outputpath+SELECT_STATE+'_DAY_VMT/'
     pathlib.Path(df3_filepath).mkdir(exist_ok=True) 
-    dayVMTFraction.to_csv('Output/'+SELECT_STATE+'_DAY_VMT.csv', index=False)
+    dayVMTFraction.to_csv(outputpath+SELECT_STATE+'_DAY_VMT.csv', index=False)
     for name, group in df3_county:
         group.to_csv(df3_filepath+SELECT_STATE+'_DAY_VMT'+'_'+str(name)+'.csv', index=False, columns=['sourceTypeID','monthID','roadTypeID','dayID','dayVMTFraction'])
     now=lapTimer('  took: ',now)
@@ -685,9 +676,9 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     hourVMTFraction=pd.concat([hourVMTFrac_3a, hourVMTFrac_4a])
     #Exporting datasets
     df3_county = hourVMTFraction.groupby('county')
-    df3_filepath = 'Output/'+SELECT_STATE+'_HOUR_VMT/'
+    df3_filepath = outputpath+SELECT_STATE+'_HOUR_VMT/'
     pathlib.Path(df3_filepath).mkdir(exist_ok=True) 
-    hourVMTFraction.to_csv('Output/'+SELECT_STATE+'_HOUR_VMT.csv', index=False)
+    hourVMTFraction.to_csv(outputpath+SELECT_STATE+'_HOUR_VMT.csv', index=False)
     for name, group in df3_county:
         group.to_csv(df3_filepath+SELECT_STATE+'_HOUR_VMT'+'_'+str(name)+'.csv', index=False, columns=['sourceTypeID','roadTypeID','dayID','hourID','hourVMTFraction'])
     now=lapTimer('  took: ',now)
@@ -696,7 +687,7 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     #g. Developing Regional VMT sumarriess
     print('Developing Regional VMT summaries')
     State_VMT['state']=states.get(SELECT_STATE)[1]
-    State_VMT.rename(columns={'County_Cod': 'county'}, inplace=True)
+    State_VMT.rename(columns={'County_Code': 'county'}, inplace=True)
     State_VMT_1 = State_VMT.groupby(['state','county'], as_index=False)['VMT'].sum()
     
     #g1. Aggregating all volume by County
@@ -758,9 +749,9 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     regionVMTFraction.sort_values(by='county', inplace=True)
     # Exporting data
     df3_county = regionVMTFraction.groupby('county')
-    df3_filepath = 'Output/'+SELECT_STATE+'_REGIONAL_VMT/'
+    df3_filepath = outputpath+SELECT_STATE+'_REGIONAL_VMT/'
     pathlib.Path(df3_filepath).mkdir(exist_ok=True) 
-    regionVMTFraction.to_csv('Output/'+SELECT_STATE+'_REGIONAL_VMT.csv', index=False)
+    regionVMTFraction.to_csv(outputpath+SELECT_STATE+'_REGIONAL_VMT.csv', index=False)
     for name, group in df3_county:
         group.to_csv(df3_filepath+SELECT_STATE+'_REGIONAL_VMT'+'_'+str(name)+'.csv', index=False, columns=['county','HPMStypeID','yearID','HPMSBaseYearVMT','baseYearOffNetVMT'])
     now=lapTimer('  took: ',now)
@@ -881,12 +872,12 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     roadVMTFraction=roadVMTFrac_5[['county','sourceTypeID','roadTypeID','roadTypeVMTFraction','VMT']]
     # Exporting data
     df3_county = roadVMTFraction.groupby('county')
-    df3_filepath = 'Output/'+SELECT_STATE+'_ROADTYPE_VMT/'
+    df3_filepath = outputpath+SELECT_STATE+'_ROADTYPE_VMT/'
     pathlib.Path(df3_filepath).mkdir(exist_ok=True) 
-    roadVMTFraction.to_csv('Output/'+SELECT_STATE+'_ROADTYPE_VMT.csv', index=False)
+    roadVMTFraction.to_csv(outputpath+SELECT_STATE+'_ROADTYPE_VMT.csv', index=False)
     for name, group in df3_county:
         group.to_csv(df3_filepath+SELECT_STATE+'_ROADTYPE_VMT'+'_'+str(name)+'.csv', index=False)
     now=lapTimer('  took: ',now)
-    print('Outputs saved in Output\\')
+    print('Outputs saved in Final Output\\')
     print('**********Process Completed**********')
     print('')

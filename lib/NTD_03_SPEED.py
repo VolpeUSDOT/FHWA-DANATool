@@ -18,6 +18,9 @@ def SPEED(SELECT_STATE, PATH_NPMRDS):
     
     now=time.time()
     
+    outputpath = 'Final Output/Process3_MOVES_Speed_Distributions/'
+    pathlib.Path(outputpath).mkdir(exist_ok=True)
+    
     print ('')
     print ('********** Produce Speed Distributions **********')
     
@@ -148,13 +151,14 @@ def SPEED(SELECT_STATE, PATH_NPMRDS):
     
     #Exporting data
     print ('Exporting Data')
-    speedFraction_final.to_csv('Output/'+SELECT_STATE+'_SPEED_DISTRIBUTION.csv', index=False)
+    pathlib.Path(outputpath).mkdir(exist_ok=True)
+    speedFraction_final.to_csv(outputpath+SELECT_STATE+'_SPEED_DISTRIBUTION.csv', index=False)
     df3_county = speedFraction_final.groupby('county')
-    df3_filepath = 'Output/'+SELECT_STATE+'_SPEED_DISTRIBUTION/'
+    df3_filepath = outputpath+SELECT_STATE+'_SPEED_DISTRIBUTION/'
     pathlib.Path(df3_filepath).mkdir(exist_ok=True) 
     for name, group in df3_county:
         group.to_csv(df3_filepath+SELECT_STATE+'_SPEED_DISTRIBUTION'+'_'+str(name)+'.csv', index=False, columns=['sourceTypeID','roadtypeid','hourdayID','avgSpeedBinID','avgSpeedFraction'])
-    now=lapTimer('  took: ',now)
-    print('Outputs saved in Output\\')
+    now=lapTimer('  took: ', now)
+    print('Outputs saved in Final Output\\')
     print('**********Process Completed**********')
     print('')

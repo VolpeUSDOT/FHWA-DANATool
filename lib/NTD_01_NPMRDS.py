@@ -14,17 +14,17 @@ from geopandas import GeoDataFrame
 from shapely.geometry import Point
 import pathlib
 
-def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_all, PATH_npmrds_raw_pass,PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION_STATE, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI):
+def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_all, PATH_npmrds_raw_pass,PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI):
     #!!! INPUT Parameters
-    filepath = 'Temp/'
-    #pathlib.Path(filepath).mkdir(exist_ok=True) 
-    outputpath = 'Output/'
+    filepath = 'NPMRDS_Intermediate_Output/'
+    pathlib.Path(filepath).mkdir(exist_ok=True) 
+    outputpath = 'Final Output/'
     pathlib.Path(outputpath).mkdir(exist_ok=True) 
     
     '''
     #SELECT_STATE='CO'
     SELECT_STATE='TX'
-    PATH_tmc_identification='Data Input/NPMRDS/TMC_Identification_CO.csv'
+    PATH_tmc_identification='User Input Data Input/NPMRDS/TMC_Identification_CO.csv'
     PATH_tmc_shp='Data Input/NationalMerge/NationalMerge.shp'
     PATH_npmrds_raw_all='Data Input/NPMRDS/CO_2017_ALL.csv'
     PATH_npmrds_raw_pass='Data Input/NPMRDS/CO_2017_PASS.csv'
@@ -37,7 +37,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     '''
     '''
     SELECT_STATE='MA'
-    PATH_tmc_identification='debug_2020/TMC_Identification.csv'
+    PATH_tmc_identification='User Input Data/TMC_Identification.csv'
     PATH_tmc_shp='Data Input/NationalMerge/NationalMerge.shp'
     PATH_npmrds_raw_all='debug_2020/MA_MiddlesexCounty_2019_ALL.csv'
     PATH_npmrds_raw_pass='debug_2020/MA_MiddlesexCounty_2019_PASSENGER.csv'
@@ -74,10 +74,10 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     ##########################################################################################
     
     # NPMRDS
-    # FIPS/NEI have names and codes; TMC_Identification only has names; repcty only in code; Use code
+    # FIPS/NEI have names and codes; TMC_Identification only has names; repcty only in code; Use codeo 
     fips_header = ['STATE_NAME','STATE_CODE','COUNTY_CODE','COUNTY_NAME','FIPS_TYPE']
     fips = pd.read_csv(PATH_FIPS,header=None,names=fips_header)
-    repcty = pd.read_excel(PATH_NEI)
+    repcty = pd.read_csv(PATH_NEI)
     state_county = pd.merge(fips, repcty, left_on=['STATE_CODE','COUNTY_NAME'], right_on=['stateid','County_Name'], how='inner')
     state_county.drop(['stateid','countyid','County_Name'], inplace=True, axis=1)
     state_county.rename(columns={'State_Name':'STATE_FULL_NAME'}, inplace=True)
@@ -86,7 +86,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     #a.	TMC Identification
     print ('Reading TMC Configuration Data')
     tmc = pd.read_csv(PATH_tmc_identification)
-    tmc=tmc.loc[~tmc['type'].str.contains('.', regex=False)]
+    #tmc=tmc.loc[~tmc['type'].str.contains('.', regex=False)]
     #a1. Clean raw TMC data (dir, AADT<100 = 100)
     tmc.loc[tmc['aadt']<=100, 'aadt'] = 100
     #a2. Clean the direction field; Drop addtional columns
@@ -230,6 +230,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     #d.	Merge NPMRDS data to TMCs
     print ('Merging speeds to TMC')
     npmrds_tmc = pd.merge(npmrds, tmc, left_on='tmc_code', right_on='tmc', how='left')
+    npmrds_tmc = npmrds_tmc.dropna(axis=0, subset=['route_sign'])
     now=lapTimer('  took: ',now)
     '''
     print ('Exporting output')
@@ -248,9 +249,13 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
         #tmas_class_state['ROUTE_NUMBER'] = pd.to_numeric(tmas_class_state['ROUTE_NUMBER'], errors='coerce')
         tmas_class_state['ROUTE_NUMBER'].dropna(axis=0, inplace=True)
     
-        #a1. Select only data in the clean station array
+        #a1. Load national station file, 
+        #    Select only desired State, 
+        #    Select only data in the clean station array
         clean_stations = tmas_class_state['STATION_ID'].unique()
-        tmas_station = pd.read_csv(PATH_TMAS_STATION_STATE, dtype={'STATION_ID':str}, low_memory=False)
+        tmas_station = pd.read_csv(PATH_TMAS_STATION, dtype={'STATION_ID':str}, low_memory=False)
+        tmas_station_State = tmas_station[tmas_station['STATE_NAME']==SELECT_STATE]
+        tmas_station_State.reset_index(inplace=True, drop=True)
         tmas_station_clean = tmas_station.loc[tmas_station['STATION_ID'].isin(clean_stations)]
         
         #a2. Preparing TMAS station data for geoprocessing
@@ -301,20 +306,23 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
         tier1['tier']=1
         now=lapTimer('  took: ',now)
         
-        #c4. Creating Tier 1 Classifications
-        print('Defining Tier 1 Classifications')
-        tmas_class_state_tier1 = pd.merge(tmas_class_state, tier1, on=['STATION_ID','DIR'])
-        tmas_class_state_tier1_clean = tmas_class_state_tier1[tmas_class_state_tier1['tier']==1]
-        # 'tmc' and 'STATION_ID'+'DIR' can be many-to-many 
-        hpms_numerator = tmas_class_state_tier1_clean.groupby(['STATION_ID','tmc','DIR','MONTH','DAY_TYPE','HOUR'])['HPMS_TYPE10','HPMS_TYPE25','HPMS_TYPE40','HPMS_TYPE50','HPMS_TYPE60'].sum()
-        noise_numerator = tmas_class_state_tier1_clean.groupby(['STATION_ID','tmc','DIR','MONTH','DAY_TYPE','HOUR'])['NOISE_AUTO','NOISE_MED_TRUCK','NOISE_HVY_TRUCK','NOISE_BUS','NOISE_MC'].sum()
-        #hpms_denominator = tmas_class_state_tier1_clean.groupby(['STATION_ID','tmc','DIR','MONTH','DAY_TYPE'])['HPMS_ALL'].sum()
-        #noise_denominator = tmas_class_state_tier1_clean.groupby(['STATION_ID','tmc','DIR','MONTH','DAY_TYPE'])['NOISE_ALL'].sum()
-        tier1_hpms_classification = hpms_numerator.groupby(level=[0,1,2,3,4]).apply(lambda x: x/x.sum().sum())      # aggregate hours to day first, then sum across typeXX, (without axis=1)
-        tier1_noise_classification = noise_numerator.groupby(level=[0,1,2,3,4]).apply(lambda x: x/x.sum().sum())
-        tier1_hpms_classification.reset_index(inplace=True)
-        tier1_noise_classification.reset_index(inplace=True, drop=True)
-        tier1_class = pd.concat([tier1_hpms_classification,tier1_noise_classification], axis=1)
+        if len(tier1) == 0:
+            tier1_class = pd.DataFrame(columns=['STATION_ID','tmc','DIR','MONTH','DAY_TYPE','HOUR', 
+                                                'HPMS_TYPE10','HPMS_TYPE25','HPMS_TYPE40','HPMS_TYPE50','HPMS_TYPE60', 
+                                                'NOISE_AUTO','NOISE_MED_TRUCK','NOISE_HVY_TRUCK','NOISE_BUS','NOISE_MC'])
+        else:
+            #c4. Creating Tier 1 Classifications
+            print('Defining Tier 1 Classifications')
+            tmas_class_state_tier1 = pd.merge(tmas_class_state, tier1, on=['STATION_ID','DIR'])
+            tmas_class_state_tier1_clean = tmas_class_state_tier1[tmas_class_state_tier1['tier']==1]
+            # 'tmc' and 'STATION_ID'+'DIR' can be many-to-many 
+            hpms_numerator = tmas_class_state_tier1_clean.groupby(['STATION_ID','tmc','DIR','MONTH','DAY_TYPE','HOUR'])['HPMS_TYPE10','HPMS_TYPE25','HPMS_TYPE40','HPMS_TYPE50','HPMS_TYPE60'].sum()
+            noise_numerator = tmas_class_state_tier1_clean.groupby(['STATION_ID','tmc','DIR','MONTH','DAY_TYPE','HOUR'])['NOISE_AUTO','NOISE_MED_TRUCK','NOISE_HVY_TRUCK','NOISE_BUS','NOISE_MC'].sum()
+            tier1_hpms_classification = hpms_numerator.groupby(level=[0,1,2,3,4]).apply(lambda x: x/x.sum().sum())      # aggregate hours to day first, then sum across typeXX, (without axis=1)
+            tier1_noise_classification = noise_numerator.groupby(level=[0,1,2,3,4]).apply(lambda x: x/x.sum().sum())
+            tier1_hpms_classification.reset_index(inplace=True)
+            tier1_noise_classification.reset_index(inplace=True, drop=True)
+            tier1_class = pd.concat([tier1_hpms_classification,tier1_noise_classification], axis=1)
         #tier1_class = pd.concat([tier1_hpms_classification,tier1_noise_classification], axis=1, sort=False)
         tier1_class.rename(index=str, columns={'HPMS_TYPE10':'PCT_TYPE10','HPMS_TYPE25':'PCT_TYPE25','HPMS_TYPE40':'PCT_TYPE40','HPMS_TYPE50':'PCT_TYPE50','HPMS_TYPE60':'PCT_TYPE60','NOISE_AUTO':'PCT_NOISE_AUTO','NOISE_MED_TRUCK':'PCT_NOISE_MED_TRUCK','NOISE_HVY_TRUCK':'PCT_NOISE_HVY_TRUCK','NOISE_BUS':'PCT_NOISE_BUS','NOISE_MC':'PCT_NOISE_MC'},inplace=True)
         tier1_class.to_csv(filepath+'tier1_class.csv',index=False)
@@ -415,7 +423,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
         #Read Tier 1 classifications
         print('Merging Tier 1 to NPMRDS')
         tier1_types = {
-            'STATION_ID':'int32',
+            'STATION_ID':str,
             'tmc':str,
             'DIR':'int32',
             'DAY_TYPE':str,
@@ -435,7 +443,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
         tier1_class['tier']=1
         tier1_class.drop('STATION_ID',inplace=True,axis=1)
         #Merge with NPMRDS data
-        npmrds_tier1 = pd.merge(npmrds_tmc, tier1_class, left_on=['tmc','month','dir_num','dow','hour'], right_on=['tmc','DIR','MONTH','DAY_TYPE','HOUR'], how='left')
+        npmrds_tier1 = pd.merge(npmrds_tmc, tier1_class, left_on=['tmc','dir_num', 'month', 'dow','hour'], right_on=['tmc','DIR','MONTH','DAY_TYPE','HOUR'], how='left')
         npmrds_for_tiers = npmrds_tier1[pd.isnull(npmrds_tier1['tier'])]
         npmrds_tier1 = npmrds_tier1[pd.notnull(npmrds_tier1['tier'])]
         now=lapTimer('  took: ',now)
@@ -551,7 +559,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     df.rename(index=str, columns={'miles':'tmc_length'}, inplace=True)
     df.drop(['route_numb','route_sign','dir_num'],axis=1,inplace=True)
     now=lapTimer('  took: ',now)
-    '''
+    
     # QC
     total_tmc = df['tmc'].nunique()
     tier1_tmc = df.loc[df['tier']==1,'tmc'].nunique()
@@ -563,7 +571,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     print('Tier 2 TMCs %i:' %tier2_tmc)
     print('Tier 3 TMCs %i:' %tier3_tmc)
     print('Tier 4 TMCs %i:' %tier4_tmc)
-    '''
+    
     '''
     #d. Exporting NPMRDS and classification data
     print('Exporting Tier data')
@@ -671,7 +679,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     print('Exporting Final Dataset')
     #df_emissions.to_csv(outputpath+SELECT_STATE+'_Composite_Emission.csv', index=False)
     npmrds_emissions = pa.Table.from_pandas(df_emissions)
-    pq.write_table(npmrds_emissions, outputpath+SELECT_STATE+'_Composite_Emissions.parquet')
+    pq.write_table(npmrds_emissions, filepath+SELECT_STATE+'_Composite_Emissions.parquet')
     now=lapTimer('  took: ',now)
     '''
     if SELECT_TMC != []:
