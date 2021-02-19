@@ -355,7 +355,7 @@ def ProcessData():
             PATH_HPMS = fn_hpms
             PATH_VM2 = fn_vm2
             PATH_COUNTY_MILEAGE = fn_county_mileage
-            MOVES_Proc = mp.Process(target=process_handler, name=step2, args=(NTD_02.MOVES, thread_queue, (SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)))
+            MOVES_Proc = mp.Process(target=process_handler, name=step2, args=(NTD_02_MOVES.MOVES, thread_queue, (SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)))
             startButton["state"] = DISABLED
             MOVES_Proc.start()
             runningThreads.append(MOVES_Proc)
@@ -384,7 +384,7 @@ def ProcessData():
             SELECT_TMC = re.split(',\s+',tmcEntry.get())
             PrintTMCinput(SELECT_TMC)
             PATH_NPMRDS = fn_npmrds_clean
-            NOISE_Proc = mp.Process(target=process_handler, name=step3, args=(NTD_04_NOISE.NOISE, thread_queue, (SELECT_STATE, SELECT_TMC, PATH_NPMRDS)))
+            NOISE_Proc = mp.Process(target=process_handler, name=step4, args=(NTD_04_NOISE.NOISE, thread_queue, (SELECT_STATE, SELECT_TMC, PATH_NPMRDS)))
             startButton["state"] = DISABLED
             NOISE_Proc.start()
             runningThreads.append(NOISE_Proc)

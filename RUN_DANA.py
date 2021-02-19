@@ -10,16 +10,30 @@ from lib import NTD_02_MOVES
 from lib import NTD_03_SPEED
 from lib import NTD_04_NOISE
 import os
+import sys
 
 # Basic Input Parameters
-step = 1
-year = 2016
-state  = 'MA'
-county = 'Franklin'
+step = 2
+
+testOption = 1
+if testOption:
+    tmas_year = 2018
+    npmrds_year = 2018
+    state  = 'MA'
+    county = 'Middlesex'
+else:
+    tmas_year = 2017
+    npmrds_year = 2017
+    state  = 'DC'
+    county = 'District'
+
 
 SELECT_TMC = ['129+04374', '129P09003']
-SELECT_STATE = state 
+SELECT_STATE = state
 
+if not sys.warnoptions: # Write "False and" after "if" to display warnings during runtime
+    import warnings
+    warnings.simplefilter("ignore") 
 
 # Setup Path Prefixes Based on Users Computer
 computerName = os.environ['ComputerName']
@@ -33,29 +47,29 @@ elif computerName == 'OFFICEDESKTOP':
     pathPrefix3 = 'G:/Repos/FHWA-DANATool/NPMRDS_Intermediate_Output'
 elif computerName == 'VOLSLBOS-06756':
     pathPrefix1 = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files'
-    pathPrefix2 = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/Franklin_MA/NPMRDS Data'
+    pathPrefix2 = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/{}_{}'.format(county, state)
     pathPrefix3 = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/NPMRDS_Intermediate_Output'
 
 
 # Set File Paths for Calling DANA Scripts
-PATH_TMAS_STATION = pathPrefix1 + '/TMAS Data/TMAS {}/tmas_station_{}.csv'.format(year, year)
-PATH_TMAS_CLASS_CLEAN = pathPrefix1 + '/TMAS Data/TMAS {}/tmas_class_clean_{}.csv'.format(year, year)
+PATH_TMAS_STATION = pathPrefix1 + '/TMAS Data/TMAS {}/tmas_station_{}.csv'.format(tmas_year, tmas_year)
+PATH_TMAS_CLASS_CLEAN = pathPrefix1 + '/TMAS Data/TMAS {}/tmas_class_clean_{}.csv'.format(tmas_year, tmas_year)
 PATH_FIPS = pathPrefix1 + '/FIPS_County_Codes.csv'
 PATH_NEI = pathPrefix1 + '/NEI_Representative_Counties.csv'
 
-PATH_npmrds_raw_all = pathPrefix2 + '/{}_{}_2018_ALL.csv'.format(state.upper(), county.upper())
-PATH_npmrds_raw_pass = pathPrefix2 + '/{}_{}_2018_PASSENGER.csv'.format(state.upper(), county.upper())
-PATH_npmrds_raw_truck = pathPrefix2 + '/{}_{}_2018_TRUCKS.csv'.format(state.upper(), county.upper())
-PATH_tmc_identification = pathPrefix2 + '/TMC_Identification.csv'
+PATH_npmrds_raw_all = pathPrefix2 + '/NPMRDS Data/{}_{}_{}_ALL.csv'.format(state.upper(), county.upper(), npmrds_year)
+PATH_npmrds_raw_pass = pathPrefix2 + '/NPMRDS Data/{}_{}_{}_PASSENGER.csv'.format(state.upper(), county.upper(),npmrds_year)
+PATH_npmrds_raw_truck = pathPrefix2 + '/NPMRDS Data/{}_{}_{}_TRUCKS.csv'.format(state.upper(), county.upper(),npmrds_year)
+PATH_tmc_identification = pathPrefix2 + '/NPMRDS Data/TMC_Identification.csv'
 
 PATH_tmc_shp = pathPrefix1 + '/National TMC Shapefile/NationalMerge.shp'
 PATH_emission = pathPrefix1 + '/NEI_National_Emissions_Rates_Basis.csv'
 
-PATH_HPMS  = pathPrefix2 + '/HPMS/{}_HPMS_{}.csv'.format(state.upper(), year) # Need to confirm - ALH
-PATH_VM2 = pathPrefix2 + '/HPMS/VM2_{}.csv'.format(year) # Need to confirm - ALH
-PATH_COUNTY_MILEAGE = pathPrefix1 + '/HPMS/National_{}_11_AdHocSQL.csv'.format(year) # Need to confirm - ALH
+PATH_HPMS  = pathPrefix2 + '/HPMS Data/{}_HPMS_{}.csv'.format(state.upper(), tmas_year) # Need to confirm - ALH
+PATH_VM2 = pathPrefix2 + '/HPMS Data/VM2_{}.csv'.format(tmas_year) # Need to confirm - ALH
+PATH_COUNTY_MILEAGE = pathPrefix1 + '/HPMS County Road Mileage/County_Road_Mileage_{}.csv'.format(tmas_year) # Need to confirm - ALH
 
-PATH_NPMRDS = pathPrefix3 + '/{}/{}/{}_Composite_Emissions.parquet'.format(state, county, state) # Need to confirm - ALH
+PATH_NPMRDS = pathPrefix3 + '/{}_Composite_Emissions.parquet'.format(state) # Need to confirm - ALH
 
 
 
