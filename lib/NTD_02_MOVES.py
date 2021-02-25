@@ -56,8 +56,8 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     HPMS.rename(columns={'f_system':'F_System', 'urban_code': 'Urban_Code', 'aadt': 'AADT', 
                          'begin_point': 'Begin_Point', 'begin_poin': 'Begin_Point', 'end_point': 'End_Point', 
                          'county_cod': 'County_Code', 'County_Cod': 'County_Code', 'county_code': 'County_Code'}, inplace=True)
-    HPMS.drop(HPMS[HPMS['F_System']==6].index, inplace=True)
-    HPMS.drop(HPMS[HPMS['F_System']==7].index, inplace=True)
+    #HPMS.drop(HPMS[HPMS['F_System']==6].index, inplace=True)
+    #HPMS.drop(HPMS[HPMS['F_System']==7].index, inplace=True)
     HPMS['Urban_rural']=''
     HPMS.loc[HPMS['Urban_Code']<99999, 'Urban_rural']='U'
     HPMS.loc[HPMS['Urban_Code']>=99999, 'Urban_rural']='R'
@@ -88,7 +88,29 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     vm2['U_Local'] = vm2['U_Local']*1000000
     vm2['U_Total'] = vm2['U_Total']*1000000
     vm2['Total'] = vm2['Total']*1000000
+    
     state_index = vm2[vm2['State']==states.get(SELECT_STATE)[0]].index.values[0]   # Total VMT by URB_RURAL+F_SYSTEM, of specific State 
+    vm2 = vm2.loc[state_index]
+    
+    vm2_state = []
+    vm2_state.append({'Urban_rural':'R', 'F_System':1, 'VMT':vm2.loc['R_Interstate']})
+    vm2_state.append({'Urban_rural':'R', 'F_System':2, 'VMT':vm2.loc['R_Freeways_Exp']})
+    vm2_state.append({'Urban_rural':'R', 'F_System':3, 'VMT':vm2.loc['R_Principal_Art']})
+    vm2_state.append({'Urban_rural':'R', 'F_System':4, 'VMT':vm2.loc['R_Minor_Art']})
+    vm2_state.append({'Urban_rural':'R', 'F_System':5, 'VMT':vm2.loc['R_Major_Col']})
+    vm2_state.append({'Urban_rural':'R', 'F_System':6, 'VMT':vm2.loc['R_Minor_Col']})
+    vm2_state.append({'Urban_rural':'R', 'F_System':7, 'VMT':vm2.loc['R_Local']})
+    vm2_state.append({'Urban_rural':'R', 'F_System':-1, 'VMT':vm2.loc['R_Total']})
+    vm2_state.append({'Urban_rural':'U', 'F_System':1, 'VMT':vm2.loc['U_Interstate']})
+    vm2_state.append({'Urban_rural':'U', 'F_System':2, 'VMT':vm2.loc['U_Freeways_Exp']})
+    vm2_state.append({'Urban_rural':'U', 'F_System':3, 'VMT':vm2.loc['U_Principal_Art']})
+    vm2_state.append({'Urban_rural':'U', 'F_System':4, 'VMT':vm2.loc['U_Minor_Art']})
+    vm2_state.append({'Urban_rural':'U', 'F_System':5, 'VMT':vm2.loc['U_Major_Col']})
+    vm2_state.append({'Urban_rural':'U', 'F_System':6, 'VMT':vm2.loc['U_Minor_Col']})
+    vm2_state.append({'Urban_rural':'U', 'F_System':7, 'VMT':vm2.loc['U_Local']})
+    vm2_state.append({'Urban_rural':'U', 'F_System':-1, 'VMT':vm2.loc['U_Total']})
+    vm2_state = pd.DataFrame(vm2_state)
+    vm2_state.set_index(keys = ['Urban_rural', 'F_System'], inplace=True)
     
     #Reading county rd mileage data
     print ('Reading in HPMS County Rd Mileage')
@@ -101,85 +123,71 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     ######################################################################
     #b1. Caluclate VMT for Functional Classification 1 to 5
     #Creating VM2 adjusting factors by comparing Annual VMT from HPMS and VM2
-    print('Processing VMT for functional system 1-5')
-    HPMS_VMT = HPMS.groupby(['Urban_rural','F_System'])['VMT'].sum()
     
-    HPMS_VMT.loc[('R',1)] = vm2.loc[state_index, 'R_Interstate']/HPMS_VMT.loc[('R',1)]
-    HPMS_VMT.loc[('R',2)] = vm2.loc[state_index, 'R_Freeways_Exp']/HPMS_VMT.loc[('R',2)]
-    HPMS_VMT.loc[('R',3)] = vm2.loc[state_index, 'R_Principal_Art']/HPMS_VMT.loc[('R',3)]
-    HPMS_VMT.loc[('R',4)] = vm2.loc[state_index, 'R_Minor_Art']/HPMS_VMT.loc[('R',4)]
-    HPMS_VMT.loc[('R',5)] = vm2.loc[state_index, 'R_Major_Col']/HPMS_VMT.loc[('R',5)]
-    HPMS_VMT.loc[('U',1)] = vm2.loc[state_index, 'U_Interstate']/HPMS_VMT.loc[('U',1)]
-    HPMS_VMT.loc[('U',2)] = vm2.loc[state_index, 'U_Freeways_Exp']/HPMS_VMT.loc[('U',2)]
-    HPMS_VMT.loc[('U',3)] = vm2.loc[state_index, 'U_Principal_Art']/HPMS_VMT.loc[('U',3)]
-    HPMS_VMT.loc[('U',4)] = vm2.loc[state_index, 'U_Minor_Art']/HPMS_VMT.loc[('U',4)]
-    HPMS_VMT.loc[('U',5)] = vm2.loc[state_index, 'U_Major_Col']/ HPMS_VMT.loc[('U',5)]
-    HPMS.loc[(HPMS['Urban_rural']=='R')&(HPMS['F_System']==1), 'VMT'] = HPMS.loc[(HPMS['Urban_rural']=='R')&(HPMS['F_System']==1), 'VMT'] * HPMS_VMT.loc[('R',1)]
-    HPMS.loc[(HPMS['Urban_rural']=='R')&(HPMS['F_System']==2), 'VMT'] = HPMS.loc[(HPMS['Urban_rural']=='R')&(HPMS['F_System']==2), 'VMT'] * HPMS_VMT.loc[('R',2)]
-    HPMS.loc[(HPMS['Urban_rural']=='R')&(HPMS['F_System']==3), 'VMT'] = HPMS.loc[(HPMS['Urban_rural']=='R')&(HPMS['F_System']==3), 'VMT'] * HPMS_VMT.loc[('R',3)]
-    HPMS.loc[(HPMS['Urban_rural']=='R')&(HPMS['F_System']==4), 'VMT'] = HPMS.loc[(HPMS['Urban_rural']=='R')&(HPMS['F_System']==4), 'VMT'] * HPMS_VMT.loc[('R',4)]
-    HPMS.loc[(HPMS['Urban_rural']=='R')&(HPMS['F_System']==5), 'VMT'] = HPMS.loc[(HPMS['Urban_rural']=='R')&(HPMS['F_System']==5), 'VMT'] * HPMS_VMT.loc[('R',5)]
-    HPMS.loc[(HPMS['Urban_rural']=='U')&(HPMS['F_System']==1), 'VMT'] = HPMS.loc[(HPMS['Urban_rural']=='U')&(HPMS['F_System']==1), 'VMT'] * HPMS_VMT.loc[('U',1)]
-    HPMS.loc[(HPMS['Urban_rural']=='U')&(HPMS['F_System']==2), 'VMT'] = HPMS.loc[(HPMS['Urban_rural']=='U')&(HPMS['F_System']==2), 'VMT'] * HPMS_VMT.loc[('U',2)]
-    HPMS.loc[(HPMS['Urban_rural']=='U')&(HPMS['F_System']==3), 'VMT'] = HPMS.loc[(HPMS['Urban_rural']=='U')&(HPMS['F_System']==3), 'VMT'] * HPMS_VMT.loc[('U',3)]
-    HPMS.loc[(HPMS['Urban_rural']=='U')&(HPMS['F_System']==4), 'VMT'] = HPMS.loc[(HPMS['Urban_rural']=='U')&(HPMS['F_System']==4), 'VMT'] * HPMS_VMT.loc[('U',4)]
-    HPMS.loc[(HPMS['Urban_rural']=='U')&(HPMS['F_System']==5), 'VMT'] = HPMS.loc[(HPMS['Urban_rural']=='U')&(HPMS['F_System']==5), 'VMT'] * HPMS_VMT.loc[('U',5)]
-    #HPMS.groupby(['Urban_rural','F_System'])['VMT'].sum()
+    print('Processing VMT for functional system 1-5')
+    #create State_VMT Template
+    State_VMT_Temp = []
+    for county in State_County.County_Code.unique():
+        for fclass in range(1,8):
+            State_VMT_Temp.append({'County_Code':county, 'Urban_rural':'R', 'F_System':fclass})
+        for fclass in range(1,8):
+            State_VMT_Temp.append({'County_Code':county, 'Urban_rural':'U', 'F_System':fclass})
+    
+    
+    #Calculate statewide VMT from VM2 table 
+    State_VMT_Temp = pd.DataFrame(State_VMT_Temp)
+    State_VMT_Temp = pd.merge(State_VMT_Temp, vm2_state, how="left", on=['Urban_rural','F_System'])[['County_Code', 'Urban_rural','F_System', 'VMT']]
+    State_VMT_Temp.rename(columns={'VMT':'Statewide_VMT'}, inplace=True)
+    
+    # Calculate HPMS county VMT by urban-rural F-system classification
+    HPMS_County_FClass_VMT = HPMS.groupby(['County_Code', 'Urban_rural','F_System'])['VMT'].sum().reset_index(drop=False)
+    HPMS_County_FClass_VMT = HPMS_County_FClass_VMT.loc[HPMS_County_FClass_VMT['F_System'].between(1, 5, inclusive=True)]
+    HPMS_County_FClass_VMT.reset_index(inplace=True)
+    
+    # Calculate HPMS statewide VMT by urban-rural F-system classification
+    HPMS_FClass_VMT = HPMS.groupby(['Urban_rural','F_System'])['VMT'].sum().reset_index(drop=False)
+    HPMS_FClass_VMT = HPMS_FClass_VMT.loc[HPMS_FClass_VMT['F_System'].between(1, 5, inclusive=True)]
+    HPMS_FClass_VMT.reset_index(inplace=True)
+    
+    # Merge those together with the template
+    State_VMT_Temp = pd.merge(State_VMT_Temp, HPMS_County_FClass_VMT, how="left", on=['County_Code', 'Urban_rural','F_System'])[['County_Code', 'Urban_rural','F_System', 'Statewide_VMT', 'VMT']]
+    State_VMT_Temp.rename(columns={'VMT':'County_Class_VMT'}, inplace=True)
+    State_VMT_Temp = pd.merge(State_VMT_Temp, HPMS_FClass_VMT, how="left", on=['Urban_rural','F_System'])[['County_Code', 'Urban_rural','F_System', 'Statewide_VMT', 'County_Class_VMT', 'VMT']]
+    State_VMT_Temp.rename(columns={'VMT':'Class_VMT'}, inplace=True)    
+    
+    # Drop unnecessary columns
+    State_VMT_Temp['Adjusted_VMT'] = State_VMT_Temp['Statewide_VMT']*State_VMT_Temp['County_Class_VMT']/State_VMT_Temp['Class_VMT']
+    State_VMT_Temp.rename(columns={'Adjusted_VMT':'VMT'}, inplace=True) 
+    State_VMT_Temp = State_VMT_Temp[['County_Code', 'Urban_rural', 'F_System', 'Statewide_VMT', 'VMT']]
     
     print('Processing VMT for functional system 6 and 7')
-    #b2. Creating FS_6 U VMT
-    #Urban Minor Collector (FS_6_U) county-level distribution based on Urban Major Collector (FS_5_U)
-    VMT_FS_1_5 = HPMS.groupby(['Urban_rural','F_System','County_Code']).agg({'VMT':'sum'})
-    VMT_FS_1_5.reset_index(inplace=True)
-    VMT_FS_U6 = VMT_FS_1_5[(VMT_FS_1_5['Urban_rural']=='U')&(VMT_FS_1_5['F_System']==5)]    # 1: U-5 county distribution
-    VMT_FS_U6.reset_index(drop=True,inplace=True)
-    FS_U6 = vm2.loc[state_index, 'U_Minor_Col']         # 2: Total U-6 VMT (scala value) based on vm2
-    VMT_FS_U6.loc[:,'VMT'] = FS_U6 * (VMT_FS_U6.loc[:,'VMT']/VMT_FS_U6['VMT'].sum())    # 1*2 
-    VMT_FS_U6.loc[:,'Urban_rural'] = 'U'
-    VMT_FS_U6.loc[:,'F_System'] = 6
-    VMT_FS_1_5.reset_index(inplace=True,drop=True)
+    State_County.rename(columns={'RMC_L_System_Length':'Miles'}, inplace=True)
+    County_Summary_Miles = State_County.groupby(['County_Code', 'Urban_rural','F_System'])['Miles'].sum().reset_index(drop=False)
+    County_Summary_Miles = County_Summary_Miles.loc[((County_Summary_Miles['F_System']==6)&(County_Summary_Miles['Urban_rural']=='R'))|
+                                                    ((County_Summary_Miles['F_System']==7)&(County_Summary_Miles['Urban_rural'].isin(['R', 'U'])))]
+    County_Summary_Miles.reset_index(inplace=True)
+    FClass_Summary_Miles = State_County.groupby(['Urban_rural','F_System'])['Miles'].sum().reset_index(drop=False)
+    FClass_Summary_Miles = FClass_Summary_Miles.loc[((County_Summary_Miles['F_System']==6)&(County_Summary_Miles['Urban_rural']=='R'))|
+                                                    ((County_Summary_Miles['F_System']==7)&(County_Summary_Miles['Urban_rural'].isin(['R', 'U'])))]
+    FClass_Summary_Miles.reset_index(inplace=True)
     
-    #b3. Calculating VMT for Functional Classification 6 (R) & 7
-    FS_R6 = vm2.loc[state_index, 'R_Minor_Col']
-    FS_R7 = vm2.loc[state_index, 'R_Local']
-    FS_U7 = vm2.loc[state_index, 'U_Local']
-    #Reading and aggregating FS 6 and 7 road lengths
-    State_County_num = State_County.groupby(['Urban_rural','F_System','County_Code']).agg({'RMC_L_System_Length':'sum'})
-    State_County = State_County_num.div(State_County_num.groupby(['Urban_rural','F_System']).transform('sum'))    # county %; use transform() to keep the format, sum() would only have 3 records
-    VMT_FS_R6 = State_County.loc[('R',6)]
-    VMT_FS_R7 = State_County.loc[('R',7)]
-    VMT_FS_U7 = State_County.loc[('U',7)]
-    VMT_FS_R6.reset_index(inplace=True)
-    VMT_FS_R7.reset_index(inplace=True)
-    VMT_FS_U7.reset_index(inplace=True)
-    VMT_FS_R6['VMT'] = FS_R6 * VMT_FS_R6['RMC_L_System_Length']    # Total R6 VMT * county % ('RMC_L_System_Length']
-    VMT_FS_R7['VMT'] = FS_R7 * VMT_FS_R7['RMC_L_System_Length']
-    VMT_FS_U7['VMT'] = FS_U7 * VMT_FS_U7['RMC_L_System_Length']
-    VMT_FS_R6.drop('RMC_L_System_Length',inplace=True,axis=1)
-    VMT_FS_R7.drop('RMC_L_System_Length',inplace=True,axis=1)
-    VMT_FS_U7.drop('RMC_L_System_Length',inplace=True,axis=1)
-    VMT_FS_R6['Urban_rural'] = 'R'
-    VMT_FS_R6['F_System'] = 6
-    VMT_FS_R7['Urban_rural'] = 'R'
-    VMT_FS_R7['F_System'] = 7
-    VMT_FS_U7['Urban_rural'] = 'U'
-    VMT_FS_U7['F_System'] = 7
-    VMT_FS_1_5.rename(columns={'county_cod':'County_Cod'}, inplace=True)
-    VMT_FS_U6.rename(columns={'county_cod':'County_Cod'}, inplace=True)
-    VMT_FS_1_5=VMT_FS_1_5[['County_Code', 'Urban_rural', 'F_System', 'VMT']]
-    VMT_FS_R6=VMT_FS_R6[['County_Code', 'Urban_rural', 'F_System', 'VMT']]
-    VMT_FS_U6=VMT_FS_U6[['County_Code', 'Urban_rural', 'F_System', 'VMT']]
-    VMT_FS_R7=VMT_FS_R7[['County_Code', 'Urban_rural', 'F_System', 'VMT']]
-    VMT_FS_U7=VMT_FS_U7[['County_Code', 'Urban_rural', 'F_System', 'VMT']]
+    State_VMT_Temp = pd.merge(State_VMT_Temp, County_Summary_Miles, how="left", on=['County_Code', 'Urban_rural','F_System'])[['County_Code', 'Urban_rural','F_System', 'Statewide_VMT', 'VMT', 'Miles']]
+    State_VMT_Temp.rename(columns={'Miles':'County_Class_Miles'}, inplace=True)
+    State_VMT_Temp = pd.merge(State_VMT_Temp, FClass_Summary_Miles, how="left", on=['Urban_rural','F_System'])[['County_Code', 'Urban_rural','F_System', 'Statewide_VMT', 'VMT', 'County_Class_Miles', 'Miles']]
+    State_VMT_Temp.rename(columns={'Miles':'Class_Miles'}, inplace=True)
     
-    FS = [VMT_FS_1_5,VMT_FS_R6,VMT_FS_U6,VMT_FS_R7,VMT_FS_U7]
-    State_VMT = pd.concat(FS)       # State VMT by County/FuncClass/UrbanRural
-    State_VMT['roadTypeID']=''
-    State_VMT.loc[(State_VMT['Urban_rural']=='U') & (State_VMT['F_System']==1),'roadTypeID']=4
-    State_VMT.loc[(State_VMT['Urban_rural']=='U') & (State_VMT['F_System']!=1),'roadTypeID']=5
-    State_VMT.loc[(State_VMT['Urban_rural']=='R') & (State_VMT['F_System']==1),'roadTypeID']=2
-    State_VMT.loc[(State_VMT['Urban_rural']=='R') & (State_VMT['F_System']!=1),'roadTypeID']=3
-    State_VMT=State_VMT.groupby(['County_Code','roadTypeID'], as_index=False)['VMT'].sum()
+    State_VMT_Temp['Adjusted_VMT'] = State_VMT_Temp['Statewide_VMT']*State_VMT_Temp['County_Class_Miles']/State_VMT_Temp['Class_Miles']
+    State_VMT_Temp.loc[((State_VMT_Temp['F_System']==6)&(State_VMT_Temp['Urban_rural']=='R'))|
+                       ((State_VMT_Temp['F_System']==7)&(State_VMT_Temp['Urban_rural'].isin(['R', 'U']))), 'VMT'] = State_VMT_Temp['Adjusted_VMT']
+    State_VMT_Temp = State_VMT_Temp[['County_Code', 'Urban_rural', 'F_System', 'VMT']]
+    
+    State_VMT_Temp.dropna(subset=['VMT'], inplace=True)
+    State_VMT_Temp['roadTypeID']=''
+    State_VMT_Temp.loc[(State_VMT_Temp['Urban_rural']=='U') & (State_VMT_Temp['F_System']==1),'roadTypeID']=4
+    State_VMT_Temp.loc[(State_VMT_Temp['Urban_rural']=='U') & (State_VMT_Temp['F_System']!=1),'roadTypeID']=5
+    State_VMT_Temp.loc[(State_VMT_Temp['Urban_rural']=='R') & (State_VMT_Temp['F_System']==1),'roadTypeID']=2
+    State_VMT_Temp.loc[(State_VMT_Temp['Urban_rural']=='R') & (State_VMT_Temp['F_System']!=1),'roadTypeID']=3
+    State_VMT=State_VMT_Temp.groupby(['County_Code','roadTypeID'], as_index=False)['VMT'].sum()
     
     now=lapTimer('  took: ',now)
     ####################################################################################################

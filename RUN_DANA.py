@@ -13,7 +13,7 @@ import os
 import sys
 
 # Basic Input Parameters
-step = 2
+step = 3
 
 testOption = 1
 if testOption:
