@@ -45,8 +45,8 @@ def f_tmc_config():
     roads.insert(0,'')
     directions = geo_tmc['direction'].unique().tolist()
     directions.insert(0,'')
-    kmlfiles = os.listdir('KML Polygon/')
-    kmlfiles.insert(0,"")
+    #kmlfiles = os.listdir('KML Polygon/')
+    #kmlfiles.insert(0,"")
     
     county.config(values=counties)
     road.config(values=roads)
@@ -85,7 +85,8 @@ def ReadPolygon():
     return Poly
 
 def PrintResults(tmc_list):
-    text = open('inputs.txt', 'w')
+    
+    text = open('FinalTMC_Selection_Results.txt', 'w')
     for i in tmc_list:
         text.write(i+',')
     text.close()
@@ -159,38 +160,38 @@ def SelectData():
 #We create the GUI
 root = Tk()
 root.title("Data Selection Tool")
-mainframe = ttk.Frame(root)
-mainframe.grid(sticky=(N, W, E, S))
-mainframe.columnconfigure(0, weight=1)
-mainframe.rowconfigure(0, weight=1)
+TMCSelection_frame = ttk.Frame(root)
+TMCSelection_frame.grid(sticky=(N, W, E, S))
+TMCSelection_frame.columnconfigure(0, weight=1)
+TMCSelection_frame.rowconfigure(0, weight=1)
 
-ttk.Label(mainframe, wraplength = 500, text='To select specific data from the National Traffic Dataset, please select the desired features').grid(row=0, column=0, columnspan= 5)
-w_tmc_config = ttk.Button(mainframe, text='Select TMC Config File', command=f_tmc_config).grid(column=0, row=1, columnspan=2, sticky="w")
-pl_tmc_config = ttk.Label(mainframe)
+ttk.Label(TMCSelection_frame, wraplength = 500, text='To select specific data from the National Traffic Dataset, please select the desired features').grid(row=0, column=0, columnspan= 5)
+w_tmc_config = ttk.Button(TMCSelection_frame, text='Select TMC Config File', command=f_tmc_config).grid(column=0, row=1, columnspan=2, sticky="w")
+pl_tmc_config = ttk.Label(TMCSelection_frame)
 pl_tmc_config.grid(column=2, row=1, columnspan=3, sticky="w")
 
-w_kml = ttk.Button(mainframe, text='Select KML File', command=f_kml).grid(column=0, row=2, columnspan=2, sticky="w")
-pl_kml = ttk.Label(mainframe)
+w_kml = ttk.Button(TMCSelection_frame, text='Select KML File', command=f_kml).grid(column=0, row=2, columnspan=2, sticky="w")
+pl_kml = ttk.Label(TMCSelection_frame)
 pl_kml.grid(column=2, row=2, columnspan=3, sticky="w")
 
-ttk.Label(mainframe, text='Select with County:').grid(row=3,column=0, columnspan=2, sticky="w")
-ttk.Label(mainframe, text='Select a Specific Road:').grid(row=4,column=0, columnspan=2, sticky="w")
-ttk.Label(mainframe, text='Select a Specific Direction:').grid(row=5,column=0, columnspan=2, sticky="w")
+ttk.Label(TMCSelection_frame, text='Select with County:').grid(row=3,column=0, columnspan=2, sticky="w")
+ttk.Label(TMCSelection_frame, text='Select a Specific Road:').grid(row=4,column=0, columnspan=2, sticky="w")
+ttk.Label(TMCSelection_frame, text='Select a Specific Direction:').grid(row=5,column=0, columnspan=2, sticky="w")
 
 CountyValue = StringVar()
-county = ttk.Combobox(mainframe, textvariable=CountyValue, state='readonly', width=50)
+county = ttk.Combobox(TMCSelection_frame, textvariable=CountyValue, state='readonly', width=50)
 county.grid(column=2, row=3, columnspan=3, sticky="w")
 
 RoadValue = StringVar()
-road = ttk.Combobox(mainframe, textvariable=RoadValue, state='readonly', width=50)
+road = ttk.Combobox(TMCSelection_frame, textvariable=RoadValue, state='readonly', width=50)
 road.grid(column=2, row=4, columnspan=3, sticky="w")
 
 DirectionValue = StringVar()
-direction = ttk.Combobox(mainframe, textvariable=DirectionValue, state='readonly', width=50)
+direction = ttk.Combobox(TMCSelection_frame, textvariable=DirectionValue, state='readonly', width=50)
 direction.grid(column=2, row=5, columnspan=3, sticky="w")
 
-ttk.Button(mainframe, text="Select Data", command=SelectData).grid(column=0, row=7, columnspan=5)
+ttk.Button(TMCSelection_frame, text="Select Data", command=SelectData).grid(column=0, row=7, columnspan=5)
 
-for child in mainframe.winfo_children(): child.grid_configure(padx=2, pady=4)
+for child in TMCSelection_frame.winfo_children(): child.grid_configure(padx=2, pady=4)
 
 root.mainloop()

@@ -74,7 +74,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     ##########################################################################################
     
     # NPMRDS
-    # FIPS/NEI have names and codes; TMC_Identification only has names; repcty only in code; Use codeo 
+    # FIPS/NEI have names and codes; TMC_Identification only has names; repcty only in code; Use code
     fips_header = ['STATE_NAME','STATE_CODE','COUNTY_CODE','COUNTY_NAME','FIPS_TYPE']
     fips = pd.read_csv(PATH_FIPS,header=None,names=fips_header)
     repcty = pd.read_csv(PATH_NEI)
