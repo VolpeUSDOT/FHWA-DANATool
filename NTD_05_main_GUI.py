@@ -239,6 +239,7 @@ def PrintTMCinput(tmc_list):
     text = open('TMC input.txt', 'w')
     for i in tmc_list:
         text.write(i+'\n')
+        
     text.close()
 
 def checkProgress():
@@ -249,6 +250,7 @@ def checkProgress():
     
     root.update_idletasks()
     canvas.configure(scrollregion=canvas.bbox('all'))
+    TMCSelect_canvas.configure(scrollregion=TMCSelect_canvas.bbox('all'))
     
     removeList = []
     for i in range(len(runningThreads)):
@@ -261,13 +263,6 @@ def checkProgress():
         del runningThreads[i]
         startButton["state"] = NORMAL
         statusLabel["text"] = "No Process Currently Running"
-    if os.path.isdir('NPMRDS_Intermediate_Output/') and (StateValue.get()+'_Composite_Emissions.parquet' in os.listdir('NPMRDS_Intermediate_Output/')):
-       pl_npmrds_clean_1.config(text=os.getcwd()+'\\NPMRDS_Intermediate_Output\\'+StateValue.get()+'_Composite_Emissions.parquet')
-       pl_npmrds_clean_2.config(text=os.getcwd()+'\\NPMRDS_Intermediate_Output\\'+StateValue.get()+'_Composite_Emissions.parquet')
-       fn_npmrds_clean = 'NPMRDS_Intermediate_Output/'+StateValue.get()+'_Composite_Emissions.parquet'
-    else:
-       pl_npmrds_clean_1.config(text='')
-       pl_npmrds_clean_2.config(text='')
     
     root.after(1000, checkProgress)
         
@@ -382,7 +377,7 @@ def ProcessData():
         else:
             SELECT_STATE = StateValue.get()
             SELECT_TMC = re.split(',\s+',tmcEntry.get())
-            PrintTMCinput(SELECT_TMC)
+            #PrintTMCinput(SELECT_TMC)
             PATH_NPMRDS = fn_npmrds_clean
             NOISE_Proc = mp.Process(target=process_handler, name=step4, args=(NTD_04_NOISE.NOISE, thread_queue, (SELECT_STATE, SELECT_TMC, PATH_NPMRDS)))
             startButton["state"] = DISABLED
@@ -493,6 +488,7 @@ def PrintResults(tmc_list, county, road, direction):
     for i in tmc_list:
         text.write(i+',')
     text.close()
+    tmcEntry.set(','.join(tmc_list))
     PopUpCompletedSelection(outputpath, filename)
 
 def PopUpNoSelection():
@@ -712,14 +708,14 @@ preprocess_tmas_checkbox.grid(row=6,column=0, columnspan=1, sticky="w")
 
 ##################################################
 
-#1. Label
+#1. Header
 ttk.Label(mainframe, wraplength = 500, text='To select the desired script and inputs').grid(row=0, column=0, columnspan= 1, sticky="w")
 ttk.Label(mainframe, text='Select State:').grid(row=1,column=0, columnspan=1, sticky="w")
 ttk.Label(mainframe, text='Select Processing Steps:').grid(row=2,column=0, columnspan=1, sticky="w")
 ttk.Label(mainframe, text='Select inputs under the selected step and press the process data button.  Repeat for each step that you want to run.').grid(row=3,column=0, columnspan=3, sticky="w")
 startButton = ttk.Button(mainframe, text="Process Data", command=ProcessData)
 startButton.grid(column=0, row=4, columnspan=1 ,sticky="w")
-ttk.Button(mainframe, text="Cancel Data Processing", command=CancelProcess).grid(column=0, row=4, columnspan=1 ,sticky="E")
+cancelButton = ttk.Button(mainframe, text="Cancel Data Processing", command=CancelProcess).grid(column=0, row=4, columnspan=1 ,sticky="E")
 statusLabel = ttk.Label(mainframe, text="No Process Currently Running", relief=SUNKEN)
 statusLabel.grid(column=1, row=4, columnspan=1, sticky="W")
 
@@ -793,6 +789,7 @@ w_npmrds_clean_1 = ttk.Button(mainframe, text='Select Processed NPMRDS', command
 
 # script 4
 w_npmrds_clean_2 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=34, columnspan=1, sticky="w")
+tmc_selection_button = ttk.Button(mainframe, text = 'TMC Selection Tool', command=lambda: notebook.select('.!notebook.!frame3')).grid(column=1, row=33, columnspan=1, sticky="w")
 # Entry
 tmcEntry = StringVar()
 ttk.Entry(mainframe, textvariable=tmcEntry).grid(column=1, row=35, columnspan=1, sticky="ew")
@@ -856,6 +853,11 @@ pl_tmas_station_state_1.config(text='')
 # TMAS Class
 pl_tmas_class_clean_1.config(text='')
 pl_tmas_class_clean_2.config(text='')
+
+defaultpath = 'Default Input Files/'
+pathlib.Path(defaultpath).mkdir(exist_ok=True) 
+outputpath = 'Final Output/'
+pathlib.Path(outputpath).mkdir(exist_ok=True) 
 
 # FIPS
 if ('FIPS_County_Codes.csv' in os.listdir('Default Input Files/')):
