@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created by Cambridge Systematics
+Modified By: Volpe National Transportation Systems Center
 
 """
 import pandas as pd
@@ -13,8 +14,12 @@ import geopandas as gpd
 from geopandas import GeoDataFrame
 from shapely.geometry import Point
 import pathlib
+from .load_shapes import *
+import pkg_resources
 
-def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_all, PATH_npmrds_raw_pass,PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI):
+PATH_tmc_shp = pkg_resources.resource_filename('lib', resource_name='ShapeFiles/')
+
+def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass,PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI):
     #!!! INPUT Parameters
     filepath = 'NPMRDS_Intermediate_Output/'
     pathlib.Path(filepath).mkdir(exist_ok=True) 
@@ -86,7 +91,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     #a.	TMC Identification
     print ('Reading TMC Configuration Data')
     tmc = pd.read_csv(PATH_tmc_identification)
-    tmc=tmc.loc[~tmc['type'].str.contains('.', regex=False)]
+    #tmc=tmc.loc[~tmc['type'].str.contains('.', regex=False)]
     #a1. Clean raw TMC data (dir, AADT<100 = 100)
     tmc.loc[tmc['aadt']<=100, 'aadt'] = 100
     #a2. Clean the direction field; Drop addtional columns
@@ -285,7 +290,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
         #b1. Preparing TMC data for geoprocessing
         #Read the TMC shapefile
         print('Geoprocessing TMC data')
-        shp = gpd.read_file(PATH_tmc_shp)
+        shp = load_shape(PATH_tmc_shp)
         #b2. Merge the TMC shapefile with the tmc identification dataset
         tmc_new = pd.merge(tmc, shp, left_on='tmc', right_on='Tmc', how='inner')
         tmc_new.drop('Tmc', axis=1,inplace=True)

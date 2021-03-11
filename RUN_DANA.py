@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Oct 20 10:34:05 2020
+Created By: Volpe National Transportation Systems Center
 
-@author: wchupp
 """
 
 from lib import NTD_01_NPMRDS
@@ -13,7 +12,7 @@ import os
 import sys
 
 # Basic Input Parameters
-step = 3
+step = 1
 
 testOption = 1
 if testOption == 1:
@@ -72,7 +71,7 @@ PATH_npmrds_raw_pass = pathPrefix2 + '/NPMRDS Data/{}_{}_{}_PASSENGER.csv'.forma
 PATH_npmrds_raw_truck = pathPrefix2 + '/NPMRDS Data/{}_{}_{}_TRUCKS.csv'.format(state.upper(), county.upper(),npmrds_year)
 PATH_tmc_identification = pathPrefix2 + '/NPMRDS Data/TMC_Identification.csv'
 
-PATH_tmc_shp = pathPrefix1 + '/National TMC Shapefile/NationalMerge.shp'
+PATH_tmc_shp = 'lib/ShapeFiles/'
 PATH_emission = pathPrefix1 + '/NEI_National_Emissions_Rates_Basis.csv'
 
 PATH_HPMS  = pathPrefix2 + '/HPMS Data/{}_HPMS_{}.csv'.format(state.upper(), tmas_year) # Need to confirm - ALH
@@ -84,7 +83,7 @@ PATH_NPMRDS = pathPrefix3 + '/{}_Composite_Emissions.parquet'.format(state) # Ne
 
 
 if step == 1:
-    NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI)
+    NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI)
 elif step == 2:
     NTD_02_MOVES.MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)
 elif step == 3:

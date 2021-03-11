@@ -335,7 +335,7 @@ def ProcessData():
             PATH_TMAS_CLASS_CLEAN = fn_tmas_class_clean
             PATH_FIPS = fn_fips 
             PATH_NEI = fn_nei
-            NPMRDS_Proc = mp.Process(target=process_handler, name=step1, args=(NTD_01_NPMRDS.NPMRDS, thread_queue, (SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI)))
+            NPMRDS_Proc = mp.Process(target=process_handler, name=step1, args=(NTD_01_NPMRDS.NPMRDS, thread_queue, (SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI)))
             startButton["state"] = DISABLED
             NPMRDS_Proc.start()
             runningThreads.append(NPMRDS_Proc)
@@ -773,7 +773,7 @@ w_npmrds_all = ttk.Button(mainframe, text='Select NPMRDS (All)', command=f_npmrd
 w_npmrds_pass = ttk.Button(mainframe, text='Select NPMRDS (Passenger)', command=f_npmrds_pass).grid(column=0, row=16, columnspan=1, sticky="w")
 w_npmrds_truck = ttk.Button(mainframe, text='Select NPMRDS (Truck)', command=f_npmrds_truck).grid(column=0, row=17, columnspan=1, sticky="w")
 w_npmrds_tmc = ttk.Button(mainframe, text='Select TMC Configuration', command=f_npmrds_tmc).grid(column=0, row=18, columnspan=1, sticky="w")
-w_npmrds_shp = ttk.Button(mainframe, text='Select TMC shapefile', command=f_npmrds_shp).grid(column=0, row=19, columnspan=1, sticky="w")
+#w_npmrds_shp = ttk.Button(mainframe, text='Select TMC shapefile', command=f_npmrds_shp).grid(column=0, row=19, columnspan=1, sticky="w")
 w_emission = ttk.Button(mainframe, text='Select Emission Rates', command=f_emission).grid(column=0, row=20, columnspan=1, sticky="w")
 w_fips_2 = ttk.Button(mainframe, text='Select FIPS File', command=f_fips).grid(column=0, row=21, columnspan=1, sticky="w")
 w_nei_2 = ttk.Button(mainframe, text='Select National Emission Inventory File', command=f_nei).grid(column=0, row=22, columnspan=1, sticky="w")
@@ -819,8 +819,8 @@ pl_npmrds_truck = ttk.Label(mainframe)
 pl_npmrds_truck.grid(column=1, row=17, columnspan=1, sticky="w")
 pl_npmrds_tmc = ttk.Label(mainframe)
 pl_npmrds_tmc.grid(column=1, row=18, columnspan=1, sticky="w")
-pl_npmrds_shp = ttk.Label(mainframe)
-pl_npmrds_shp.grid(column=1, row=19, columnspan=1, sticky="w")
+#pl_npmrds_shp = ttk.Label(mainframe)
+#pl_npmrds_shp.grid(column=1, row=19, columnspan=1, sticky="w")
 pl_emission = ttk.Label(mainframe)
 pl_emission.grid(column=1, row=20, columnspan=1, sticky="w")
 pl_fips_2 = ttk.Label(mainframe)
@@ -899,8 +899,8 @@ if False:
     pl_npmrds_truck.config(text=fn_npmrds_truck.replace('/','\\'))
     fn_npmrds_tmc = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/Example_MiddlesexCounty_Massachusetts/2018 NPMRDS Data/TMC_Identification.csv'
     pl_npmrds_tmc.config(text=fn_npmrds_tmc.replace('/','\\'))
-    fn_npmrds_shp = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/National TMC Shapefile/NationalMerge.shp'
-    pl_npmrds_shp.config(text=fn_npmrds_shp.replace('/','\\'))
+    #fn_npmrds_shp = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/National TMC Shapefile/NationalMerge.shp'
+    #pl_npmrds_shp.config(text=fn_npmrds_shp.replace('/','\\'))
 
 ##################################################
 
