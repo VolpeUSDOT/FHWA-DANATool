@@ -488,7 +488,7 @@ def PrintResults(tmc_list, county, road, direction):
     for i in tmc_list:
         text.write(i+',')
     text.close()
-    tmcEntry.set(','.join(tmc_list))
+    #tmcEntry.set(','.join(tmc_list))
     PopUpCompletedSelection(outputpath, filename)
 
 def PopUpNoSelection():
@@ -624,6 +624,7 @@ main_container = tk.Frame(notebook)
 main_container.grid(row=0, column=0, sticky="news")
 main_container.grid_rowconfigure(0, weight=1)
 main_container.grid_columnconfigure(0, weight=1)
+main_container.configure(bg = 'light green')
 notebook.add(main_container, text='Data Processing')
 
 canvas = tk.Canvas(main_container)

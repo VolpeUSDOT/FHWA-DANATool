@@ -86,7 +86,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     #a.	TMC Identification
     print ('Reading TMC Configuration Data')
     tmc = pd.read_csv(PATH_tmc_identification)
-    #tmc=tmc.loc[~tmc['type'].str.contains('.', regex=False)]
+    tmc=tmc.loc[~tmc['type'].str.contains('.', regex=False)]
     #a1. Clean raw TMC data (dir, AADT<100 = 100)
     tmc.loc[tmc['aadt']<=100, 'aadt'] = 100
     #a2. Clean the direction field; Drop addtional columns
@@ -689,6 +689,6 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
         pq.write_table(npmrds_emissions_select, outputpath+SELECT_STATE+'_Composite_Emissions_select.parquet')
         now=lapTimer('  took: ',now)
     ''' 
-    print('Outputs saved in Output\\')
+    print('Outputs saved in {}'.format(filepath))
     print('**********Process Completed**********')
     print('')

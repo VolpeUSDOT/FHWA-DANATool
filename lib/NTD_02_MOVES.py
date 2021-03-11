@@ -100,7 +100,7 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     vm2_state.append({'Urban_rural':'R', 'F_System':5, 'VMT':vm2.loc['R_Major_Col']})
     vm2_state.append({'Urban_rural':'R', 'F_System':6, 'VMT':vm2.loc['R_Minor_Col']})
     vm2_state.append({'Urban_rural':'R', 'F_System':7, 'VMT':vm2.loc['R_Local']})
-    vm2_state.append({'Urban_rural':'R', 'F_System':-1, 'VMT':vm2.loc['R_Total']})
+    vm2_state.append({'Urban_rural':'R', 'F_System':-1, 'VMT':vm2.loc['R_Total']}) # not a functional class, it is the total (hence -1)
     vm2_state.append({'Urban_rural':'U', 'F_System':1, 'VMT':vm2.loc['U_Interstate']})
     vm2_state.append({'Urban_rural':'U', 'F_System':2, 'VMT':vm2.loc['U_Freeways_Exp']})
     vm2_state.append({'Urban_rural':'U', 'F_System':3, 'VMT':vm2.loc['U_Principal_Art']})
@@ -108,7 +108,7 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     vm2_state.append({'Urban_rural':'U', 'F_System':5, 'VMT':vm2.loc['U_Major_Col']})
     vm2_state.append({'Urban_rural':'U', 'F_System':6, 'VMT':vm2.loc['U_Minor_Col']})
     vm2_state.append({'Urban_rural':'U', 'F_System':7, 'VMT':vm2.loc['U_Local']})
-    vm2_state.append({'Urban_rural':'U', 'F_System':-1, 'VMT':vm2.loc['U_Total']})
+    vm2_state.append({'Urban_rural':'U', 'F_System':-1, 'VMT':vm2.loc['U_Total']}) # not a functional class, it is the total (hence -1)
     vm2_state = pd.DataFrame(vm2_state)
     vm2_state.set_index(keys = ['Urban_rural', 'F_System'], inplace=True)
     
@@ -146,7 +146,8 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     
     # Calculate HPMS statewide VMT by urban-rural F-system classification
     HPMS_FClass_VMT = HPMS.groupby(['Urban_rural','F_System'])['VMT'].sum().reset_index(drop=False)
-    HPMS_FClass_VMT = HPMS_FClass_VMT.loc[HPMS_FClass_VMT['F_System'].between(1, 5, inclusive=True)]
+    HPMS_FClass_VMT = HPMS_FClass_VMT.loc[(HPMS_FClass_VMT['F_System'].between(1, 5, inclusive=True)) | 
+                                          ((HPMS_FClass_VMT['F_System']==6)&(HPMS_FClass_VMT['Urban_rural']=='U'))]
     HPMS_FClass_VMT.reset_index(inplace=True)
     
     # Merge those together with the template
@@ -160,7 +161,7 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     State_VMT_Temp.rename(columns={'Adjusted_VMT':'VMT'}, inplace=True) 
     State_VMT_Temp = State_VMT_Temp[['County_Code', 'Urban_rural', 'F_System', 'Statewide_VMT', 'VMT']]
     
-    print('Processing VMT for functional system 6 and 7')
+    print('Processing VMT for rural functional system 6 and urban and rural 7')
     State_County.rename(columns={'RMC_L_System_Length':'Miles'}, inplace=True)
     County_Summary_Miles = State_County.groupby(['County_Code', 'Urban_rural','F_System'])['Miles'].sum().reset_index(drop=False)
     County_Summary_Miles = County_Summary_Miles.loc[((County_Summary_Miles['F_System']==6)&(County_Summary_Miles['Urban_rural']=='R'))|
@@ -183,10 +184,10 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     
     State_VMT_Temp.dropna(subset=['VMT'], inplace=True)
     State_VMT_Temp['roadTypeID']=''
-    State_VMT_Temp.loc[(State_VMT_Temp['Urban_rural']=='U') & (State_VMT_Temp['F_System']==1),'roadTypeID']=4
-    State_VMT_Temp.loc[(State_VMT_Temp['Urban_rural']=='U') & (State_VMT_Temp['F_System']!=1),'roadTypeID']=5
-    State_VMT_Temp.loc[(State_VMT_Temp['Urban_rural']=='R') & (State_VMT_Temp['F_System']==1),'roadTypeID']=2
-    State_VMT_Temp.loc[(State_VMT_Temp['Urban_rural']=='R') & (State_VMT_Temp['F_System']!=1),'roadTypeID']=3
+    State_VMT_Temp.loc[(State_VMT_Temp['Urban_rural']=='U') & (State_VMT_Temp['F_System']<=2),'roadTypeID']=4
+    State_VMT_Temp.loc[(State_VMT_Temp['Urban_rural']=='U') & (State_VMT_Temp['F_System']>2),'roadTypeID']=5
+    State_VMT_Temp.loc[(State_VMT_Temp['Urban_rural']=='R') & (State_VMT_Temp['F_System']<=2),'roadTypeID']=2
+    State_VMT_Temp.loc[(State_VMT_Temp['Urban_rural']=='R') & (State_VMT_Temp['F_System']>2),'roadTypeID']=3
     State_VMT=State_VMT_Temp.groupby(['County_Code','roadTypeID'], as_index=False)['VMT'].sum()
     
     now=lapTimer('  took: ',now)
@@ -201,10 +202,10 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     tmas_class['monthID']=tmas_class['MONTH']
     tmas_class['hourID']=tmas_class['HOUR']+1
     tmas_class['roadTypeID']=np.nan
-    tmas_class.loc[(tmas_class['URB_RURAL']=='U') & (tmas_class['F_SYSTEM']==1), 'roadTypeID'] = 4
-    tmas_class.loc[(tmas_class['URB_RURAL']=='U') & (tmas_class['F_SYSTEM']!=1), 'roadTypeID'] = 5
-    tmas_class.loc[(tmas_class['URB_RURAL']=='R') & (tmas_class['F_SYSTEM']==1), 'roadTypeID'] = 2
-    tmas_class.loc[(tmas_class['URB_RURAL']=='R') & (tmas_class['F_SYSTEM']!=1), 'roadTypeID'] = 3
+    tmas_class.loc[(tmas_class['URB_RURAL']=='U') & (tmas_class['F_SYSTEM']<=2), 'roadTypeID'] = 4
+    tmas_class.loc[(tmas_class['URB_RURAL']=='U') & (tmas_class['F_SYSTEM']>2), 'roadTypeID'] = 5
+    tmas_class.loc[(tmas_class['URB_RURAL']=='R') & (tmas_class['F_SYSTEM']<=2), 'roadTypeID'] = 2
+    tmas_class.loc[(tmas_class['URB_RURAL']=='R') & (tmas_class['F_SYSTEM']>2), 'roadTypeID'] = 3
     tmas_class['dayID']=np.nan
     tmas_class.loc[tmas_class['DAY_TYPE']=='WD', 'dayID'] = 5
     tmas_class.loc[tmas_class['DAY_TYPE']=='WE', 'dayID'] = 2

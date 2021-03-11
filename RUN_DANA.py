@@ -13,7 +13,7 @@ import os
 import sys
 
 # Basic Input Parameters
-step = 1
+step = 3
 
 testOption = 1
 if testOption == 1:
@@ -31,6 +31,11 @@ elif testOption == 3:
     npmrds_year = 2018
     state  = 'VA'
     county = 'Alexandria'
+elif testOption == 4:
+    tmas_year = 2018
+    npmrds_year = 2018
+    state = 'OR'
+    county = 'Marion'
 
 
 SELECT_TMC = ['129+04374', '129P09003']
