@@ -12,9 +12,9 @@ import os
 import sys
 
 # Basic Input Parameters
-step = 1
+step = 3
 
-testOption = 1
+testOption = 7
 if testOption == 1:
     tmas_year = 2018
     npmrds_year = 2018
@@ -35,6 +35,21 @@ elif testOption == 4:
     npmrds_year = 2018
     state = 'OR'
     county = 'Marion'
+elif testOption == 5:
+    tmas_year = 2019
+    npmrds_year = 2021
+    state = 'LA'
+    county = 'LaSalle'
+elif testOption == 6:
+    tmas_year = 2019
+    npmrds_year = 2021
+    state = 'VA'
+    county = '3Counties'
+elif testOption == 7:
+    tmas_year = 2019
+    npmrds_year = 2021
+    state = 'VA'
+    county = 'FairfaxCity'
 
 
 SELECT_TMC = ['129+04374', '129P09003']

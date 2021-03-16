@@ -315,8 +315,8 @@ def ProcessData():
             PopUp_Selection("NPMRDS Truck Data")
         elif fn_npmrds_tmc == '':
             PopUp_Selection("NPMRDS TMC Configuration")
-        elif fn_npmrds_shp == '':
-            PopUp_Selection("NPMRDS TMC Shapefile")
+        # elif fn_npmrds_shp == '':
+        #     PopUp_Selection("NPMRDS TMC Shapefile")
         elif fn_emission == '':
             PopUp_Selection("Emission Rates")
         elif fn_fips == '':
@@ -624,7 +624,6 @@ main_container = tk.Frame(notebook)
 main_container.grid(row=0, column=0, sticky="news")
 main_container.grid_rowconfigure(0, weight=1)
 main_container.grid_columnconfigure(0, weight=1)
-main_container.configure(bg = 'light green')
 notebook.add(main_container, text='Data Processing')
 
 canvas = tk.Canvas(main_container)
