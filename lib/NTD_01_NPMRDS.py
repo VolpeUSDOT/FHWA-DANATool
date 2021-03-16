@@ -160,13 +160,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     
     date_template = pd.date_range(start='1/1/'+str(input_year), end='1/1/'+str(int(input_year)+1), freq='H', closed='left')
     tmc_unique = tmc['tmc'].unique()
-    tmc_temp = []
-    date_temp =[]
-    for i in tmc_unique:
-        for date in date_template:
-            tmc_temp.append(i)
-            date_temp.append(date)
-    d = {'tmc_code':tmc_temp, 'measurement_tstamp':date_temp}
+    d = [{'tmc_code':i, 'measurement_tstamp': datetime} for i in tmc_unique for datetime in date_template]
     npmrds_template = pd.DataFrame(d)
     now=lapTimer('  took: ',now)
     
@@ -717,6 +711,10 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     
     print('Exporting Final Dataset')
     #df_emissions.to_csv(outputpath+SELECT_STATE+'_Composite_Emission.csv', index=False)
+    df_emissions_sample = df_emissions[0:100]
+    df_emissions_sample = df_emissions_sample.append(df_emissions[-100:-1])
+    df_emissions_sample.to_csv(filepath+SELECT_STATE+'_Composite_Emissions_SAMPLE.csv')
+    
     npmrds_emissions = pa.Table.from_pandas(df_emissions)
     pq.write_table(npmrds_emissions, filepath+SELECT_STATE+'_Composite_Emissions.parquet')
     now=lapTimer('  took: ',now)

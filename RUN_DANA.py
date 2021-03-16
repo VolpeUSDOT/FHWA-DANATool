@@ -12,9 +12,9 @@ import os
 import sys
 
 # Basic Input Parameters
-step = 3
+step = 1
 
-testOption = 7
+testOption = 5
 if testOption == 1:
     tmas_year = 2018
     npmrds_year = 2018
