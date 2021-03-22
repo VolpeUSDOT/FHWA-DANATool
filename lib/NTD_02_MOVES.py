@@ -750,11 +750,11 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     regionVMTFraction = pd.melt(veh_tmc, id_vars=['state', 'county', 'yearID', 'baseYearOffNetVMT'], 
                                    value_vars=['VMT10','VMT25','VMT40','VMT50','VMT60'], 
                                    var_name='VMT_TYPE', value_name='HPMSBaseYearVMT')
-    regionVMTFraction.loc[regionVMTFraction['VMT_TYPE']=='VMT10', 'HPMStypeID']=10
-    regionVMTFraction.loc[regionVMTFraction['VMT_TYPE']=='VMT25', 'HPMStypeID']=25
-    regionVMTFraction.loc[regionVMTFraction['VMT_TYPE']=='VMT40', 'HPMStypeID']=40
-    regionVMTFraction.loc[regionVMTFraction['VMT_TYPE']=='VMT50', 'HPMStypeID']=50
-    regionVMTFraction.loc[regionVMTFraction['VMT_TYPE']=='VMT60', 'HPMStypeID']=60
+    regionVMTFraction.loc[regionVMTFraction['VMT_TYPE']=='VMT10', 'HPMSVtypeID']=10
+    regionVMTFraction.loc[regionVMTFraction['VMT_TYPE']=='VMT25', 'HPMSVtypeID']=25
+    regionVMTFraction.loc[regionVMTFraction['VMT_TYPE']=='VMT40', 'HPMSVtypeID']=40
+    regionVMTFraction.loc[regionVMTFraction['VMT_TYPE']=='VMT50', 'HPMSVtypeID']=50
+    regionVMTFraction.loc[regionVMTFraction['VMT_TYPE']=='VMT60', 'HPMSVtypeID']=60
     regionVMTFraction.drop('VMT_TYPE', axis=1, inplace=True)
     regionVMTFraction.sort_values(by='county', inplace=True)
     # Exporting data
@@ -763,7 +763,7 @@ def MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_
     pathlib.Path(df3_filepath).mkdir(exist_ok=True) 
     regionVMTFraction.to_csv(outputpath+SELECT_STATE+'_REGIONAL_VMT.csv', index=False)
     for name, group in df3_county:
-        group.to_csv(df3_filepath+SELECT_STATE+'_REGIONAL_VMT'+'_'+str(name)+'.csv', index=False, columns=['county','HPMStypeID','yearID','HPMSBaseYearVMT','baseYearOffNetVMT'])
+        group.to_csv(df3_filepath+SELECT_STATE+'_REGIONAL_VMT'+'_'+str(name)+'.csv', index=False, columns=['county','HPMSVtypeID','yearID','HPMSBaseYearVMT','baseYearOffNetVMT'])
     now=lapTimer('  took: ',now)
     ####################################################################################################
     

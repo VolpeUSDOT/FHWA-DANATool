@@ -591,6 +591,7 @@ def bind_tree(widget, event, callback):
         bind_tree(child, event, callback)
 
 def main_mouse_wheel(event):
+    #if main_container.winfo_height() 
     canvas.yview_scroll(int(-1*event.delta/120), "units")
     
 def output_mouse_wheel(event):
@@ -617,7 +618,7 @@ iconPath = resource_path('lib\\dot.png')
 p1 = tk.PhotoImage(file = iconPath)
 root.iconphoto(True, p1)
 
-notebook = ttk.Notebook(root, width=850, height=400)
+notebook = ttk.Notebook(root, width=1000, height=700)
 notebook.grid(row=0, column=0, sticky="news")
 
 main_container = tk.Frame(notebook)

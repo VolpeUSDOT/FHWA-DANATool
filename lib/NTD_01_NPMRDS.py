@@ -714,6 +714,9 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     df_emissions_sample = df_emissions[0:100]
     df_emissions_sample = df_emissions_sample.append(df_emissions[-100:-1])
     df_emissions_sample.to_csv(filepath+SELECT_STATE+'_Composite_Emissions_SAMPLE.csv')
+    df_emissions_summary = df_emissions.groupby(['state', 'county', 'tmc', 'road'])['speed_all', 'aadt'].mean().reset_index().dropna()
+    df_emissions_summary.rename({'speed_all': 'Average_Speed', 'aadt':'Average AADT'}, inplace=True)
+    df_emissions_summary.to_csv(filepath+SELECT_STATE+'_Composite_Emissions_SUMMARY.csv')
     
     npmrds_emissions = pa.Table.from_pandas(df_emissions)
     pq.write_table(npmrds_emissions, filepath+SELECT_STATE+'_Composite_Emissions.parquet')
