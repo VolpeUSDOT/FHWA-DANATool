@@ -16,7 +16,7 @@ step = 2
 
 testOption = 1
 if testOption == 1:
-    tmas_year = 2016
+    tmas_year = 2018
     npmrds_year = 2018
     state  = 'MA'
     county = 'Middlesex'
