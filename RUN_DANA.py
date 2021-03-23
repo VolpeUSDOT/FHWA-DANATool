@@ -12,7 +12,7 @@ import os
 import sys
 
 # Basic Input Parameters
-step = 2
+step = 3
 
 testOption = 1
 if testOption == 1:
@@ -100,7 +100,7 @@ PATH_NPMRDS = pathPrefix3 + '/{}_Composite_Emissions.parquet'.format(state) # Ne
 if step == 1:
     NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI)
 elif step == 2:
-    NTD_02_MOVES.MOVES(SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)
+    NTD_02_MOVES.MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)
 elif step == 3:
     NTD_03_SPEED.SPEED(SELECT_STATE, PATH_NPMRDS)  
 elif step == 4:
