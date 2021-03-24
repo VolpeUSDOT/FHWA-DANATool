@@ -57,7 +57,7 @@ def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE):
     HPMS.columns=[x.lower() for x in HPMS.columns]
     HPMS.rename(columns={'f_system':'F_System', 'urban_code': 'Urban_Code', 'aadt': 'AADT', 
                          'begin_point': 'Begin_Point', 'begin_poin': 'Begin_Point', 'end_point': 'End_Point', 
-                         'county_cod': 'County_Code', 'County_Cod': 'County_Code', 'county_code': 'County_Code'}, inplace=True)
+                         'county_cod': 'County_Code', 'County_Cod': 'County_Code', 'county_code': 'County_Code', 'year_recor': 'year_record'}, inplace=True)
     #HPMS.drop(HPMS[HPMS['F_System']==6].index, inplace=True)
     #HPMS.drop(HPMS[HPMS['F_System']==7].index, inplace=True)
     HPMS['Urban_rural']=''

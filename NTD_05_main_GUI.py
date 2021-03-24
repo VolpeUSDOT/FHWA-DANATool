@@ -169,6 +169,7 @@ def f_npmrds_clean():
         filetypes=[('parquet file', '.parquet'),('csv file', '.csv')])
     pl_npmrds_clean_1.config(text=fn_npmrds_clean.replace('/','\\'))
     pl_npmrds_clean_2.config(text=fn_npmrds_clean.replace('/','\\'))
+    pl_npmrds_clean_3.config(text=fn_npmrds_clean.replace('/','\\'))
 def f_tmas_station_state():
     global fn_tmas_station
     fn_tmas_station = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose Processed TMAS Station File',
@@ -342,15 +343,15 @@ def ProcessData():
             notebook.select('.!notebook.!frame2')
     
     elif ScriptValue.get() == step2:
-        if fn_tmas_class_clean == '':
-            PopUpCleanTMASSelection()
+        if fn_npmrds_clean == '':
+            PopUpCleanNPMRDSSelection()
         else:
             SELECT_STATE = StateValue.get()
-            PATH_TMAS_CLASS_CLEAN = fn_tmas_class_clean
+            PATH_NPMRDS = fn_npmrds_clean
             PATH_HPMS = fn_hpms
             PATH_VM2 = fn_vm2
             PATH_COUNTY_MILEAGE = fn_county_mileage
-            MOVES_Proc = mp.Process(target=process_handler, name=step2, args=(NTD_02_MOVES.MOVES, thread_queue, (SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)))
+            MOVES_Proc = mp.Process(target=process_handler, name=step2, args=(NTD_02_MOVES.MOVES, thread_queue, (SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)))
             startButton["state"] = DISABLED
             MOVES_Proc.start()
             runningThreads.append(MOVES_Proc)
@@ -780,16 +781,16 @@ w_nei_2 = ttk.Button(mainframe, text='Select National Emission Inventory File', 
 
 # script 2
 #w_tmas_station_state_2 = ttk.Button(mainframe, text='Select Processed TMAS Station', command=f_tmas_station_state).grid(column=0, row=19, columnspan=1, sticky="w")
-w_tmas_class_clean_2 = ttk.Button(mainframe, text='Select Processed TMAS Class', command=f_tmas_class_clean).grid(column=0, row=25, columnspan=1, sticky="w")
+w_npmrds_clean_1 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=25, columnspan=1, sticky="w")
 w_hpms = ttk.Button(mainframe, text='Select HPMS', command=f_hpms).grid(column=0, row=26, columnspan=1, sticky="w")
 w_vm2 = ttk.Button(mainframe, text='Select VM2', command=f_vm2).grid(column=0, row=27, columnspan=1, sticky="w")
 w_county_mileage = ttk.Button(mainframe, text='Select County Mileage file', command=f_county_mileage).grid(column=0, row=28, columnspan=1, sticky="w")
 
 # script 3
-w_npmrds_clean_1 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=31, columnspan=1, sticky="w")
+w_npmrds_clean_2 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=31, columnspan=1, sticky="w")
 
 # script 4
-w_npmrds_clean_2 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=34, columnspan=1, sticky="w")
+w_npmrds_clean_3 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=34, columnspan=1, sticky="w")
 tmc_selection_button = ttk.Button(mainframe, text = 'TMC Selection Tool', command=lambda: notebook.select('.!notebook.!frame3')).grid(column=1, row=33, columnspan=1, sticky="w")
 # Entry
 tmcEntry = StringVar()
@@ -797,7 +798,7 @@ ttk.Entry(mainframe, textvariable=tmcEntry).grid(column=1, row=35, columnspan=1,
 ##################################################
 
 # 4. Pathlabels
-# script 1
+# script 0
 pl_tmas_station = ttk.Label(mainframe)
 pl_tmas_station.grid(column=1, row=7, columnspan=1, sticky="w")
 pl_tmas_class = ttk.Label(mainframe)
@@ -827,23 +828,23 @@ pl_fips_2 = ttk.Label(mainframe)
 pl_fips_2.grid(column=1, row=21, columnspan=1, sticky="w")
 pl_nei_2 = ttk.Label(mainframe)
 pl_nei_2.grid(column=1, row=22, columnspan=1, sticky="w")
-# script 3
+# script 2
 #pl_tmas_station_state_2 = ttk.Label(mainframe)
 #pl_tmas_station_state_2.grid(column=1, row=19, columnspan=1, sticky="w")
-pl_tmas_class_clean_2 = ttk.Label(mainframe)
-pl_tmas_class_clean_2.grid(column=1, row=25, columnspan=1, sticky="w")
+pl_npmrds_clean_1 = ttk.Label(mainframe)
+pl_npmrds_clean_1.grid(column=1, row=25, columnspan=1, sticky="w")
 pl_hpms = ttk.Label(mainframe)
 pl_hpms.grid(column=1, row=26, columnspan=1, sticky="w")
 pl_vm2 = ttk.Label(mainframe)
 pl_vm2.grid(column=1, row=27, columnspan=1, sticky="w")
 pl_county_mileage = ttk.Label(mainframe)
 pl_county_mileage.grid(column=1, row=28, columnspan=1, sticky="w")
-# script 4
-pl_npmrds_clean_1 = ttk.Label(mainframe)
-pl_npmrds_clean_1.grid(column=1, row=31, columnspan=1, sticky="w")
-# script 5
+# script 3
 pl_npmrds_clean_2 = ttk.Label(mainframe)
-pl_npmrds_clean_2.grid(column=1, row=34, columnspan=1, sticky="w")
+pl_npmrds_clean_2.grid(column=1, row=31, columnspan=1, sticky="w")
+# script 4
+pl_npmrds_clean_3 = ttk.Label(mainframe)
+pl_npmrds_clean_3.grid(column=1, row=34, columnspan=1, sticky="w")
 ##################################################
 
 # 5. Check available pre-processed files
@@ -853,7 +854,6 @@ pl_tmas_station_state_1.config(text='')
 
 # TMAS Class
 pl_tmas_class_clean_1.config(text='')
-pl_tmas_class_clean_2.config(text='')
 
 defaultpath = 'Default Input Files/'
 pathlib.Path(defaultpath).mkdir(exist_ok=True) 
