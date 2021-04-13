@@ -162,7 +162,6 @@ def f_tmas_class_clean():
     fn_tmas_class_clean = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose Processed TMAS Class File',
         filetypes=[('csv file', '.csv')])
     pl_tmas_class_clean_1.config(text=fn_tmas_class_clean.replace('/','\\'))
-    pl_tmas_class_clean_2.config(text=fn_tmas_class_clean.replace('/','\\'))
 def f_npmrds_clean():
     global fn_npmrds_clean
     fn_npmrds_clean = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose Processed NPMRDS File',
@@ -250,8 +249,14 @@ def checkProgress():
         output_text.insert(tk.END, thread_queue.get())
     
     root.update_idletasks()
-    canvas.configure(scrollregion=canvas.bbox('all'))
-    TMCSelect_canvas.configure(scrollregion=TMCSelect_canvas.bbox('all'))
+    canvasScrollRegion = (0, 0, 
+                          max(canvas.winfo_width()-4, canvas.bbox('all')[2]),
+                          max(canvas.winfo_height()-4, canvas.bbox('all')[3]))
+    canvas.configure(scrollregion=canvasScrollRegion)
+    TMCcanvasScrollRegion = (0, 0, 
+                          max(TMCSelect_canvas.winfo_width()-4, TMCSelect_canvas.bbox('all')[2]-1),
+                          max(TMCSelect_canvas.winfo_height()-4, TMCSelect_canvas.bbox('all')[3]-1))
+    TMCSelect_canvas.configure(scrollregion=TMCcanvasScrollRegion)
     
     removeList = []
     for i in range(len(runningThreads)):
@@ -265,7 +270,7 @@ def checkProgress():
         startButton["state"] = NORMAL
         statusLabel["text"] = "No Process Currently Running"
     
-    root.after(1000, checkProgress)
+    root.after(100, checkProgress)
         
 
 def process_handler(proc_target, thread_queue, args): 
@@ -666,7 +671,7 @@ TMCSelect_canvas.grid(row=0, column=0, sticky="news")
 TMCSelect_canvas.configure(yscrollcommand = TMCSelect_scrollbar.set)
 
 TMCSelection_frame = tk.Frame(TMCSelect_canvas)
-TMCSelect_canvas.create_window((0,0), window=TMCSelection_frame, anchor='nw')
+TMCSelect_canvas.create_window((0,0), window=TMCSelection_frame, anchor='nw', )
 
 ttk.Label(TMCSelection_frame, wraplength = 500, text='To select specific data from the National Traffic Dataset, please select the desired features').grid(row=0, column=0, columnspan= 5)
 w_tmc_config = ttk.Button(TMCSelection_frame, text='Select TMC Config File', command=f_tmc_config).grid(column=0, row=1, columnspan=2, sticky="w")
@@ -693,7 +698,7 @@ DirectionValue = StringVar()
 direction = ttk.Combobox(TMCSelection_frame, textvariable=DirectionValue, state='readonly', width=50)
 direction.grid(column=2, row=5, columnspan=3, sticky="w")
 
-ttk.Button(TMCSelection_frame, text="Select Data", command=SelectData).grid(column=0, row=7, columnspan=5)
+tmcButton = ttk.Button(TMCSelection_frame, text="Select Data", command=SelectData).grid(column=0, row=7, columnspan=5)
 
 for child in TMCSelection_frame.winfo_children(): child.grid_configure(padx=2, pady=4)
 
@@ -870,18 +875,18 @@ else:
     pl_fips_2.config(text='')
     
 # NEI
-if ('NEI_Representative_Counties.csv' in os.listdir('Default Input Files/')):
-    pl_nei_1.config(text=os.getcwd()+'\\Default Input Files\\NEI_Representative_Counties.xlsx')
-    pl_nei_2.config(text=os.getcwd()+'\\Default Input Files\\NEI_Representative_Counties.xlsx')
-    fn_nei = 'Default Input Files/NEI_Representative_Counties.csv'
+if ('NEI2017_RepresentativeCounties.csv' in os.listdir('Default Input Files/')):
+    pl_nei_1.config(text=os.getcwd()+'\\Default Input Files\\NEI2017_RepresentativeCounties.csv')
+    pl_nei_2.config(text=os.getcwd()+'\\Default Input Files\\NEI2017_RepresentativeCounties.csv')
+    fn_nei = 'Default Input Files/NEI2017_RepresentativeCounties.csv'
 else:
     pl_nei_1.config(text='')
     pl_nei_2.config(text='')
 
 # Emission Rates
-if ('NEI_National_Emissions_Rates_Basis.csv' in os.listdir('Default Input Files/')):
-    pl_emission.config(text=os.getcwd()+'\\Default Input Files\\NEI_National_Emissions_Rates_Basis.csv')
-    fn_emission = 'Default Input Files/NEI_National_Emissions_Rates_Basis.csv'
+if ('NEI2017_RepresentativeEmissionsRates.csv' in os.listdir('Default Input Files/')):
+    pl_emission.config(text=os.getcwd()+'\\Default Input Files\\NEI2017_RepresentativeEmissionsRates.csv')
+    fn_emission = 'Default Input Files/NEI2017_RepresentativeEmissionsRates.csv'
 else:
     pl_emission.config(text='')
        
@@ -924,8 +929,13 @@ if __name__ == "__main__":
     root.update_idletasks()
     bind_tree(main_container, "<MouseWheel>", main_mouse_wheel)
     bind_tree(TMCSelect_container, "<MouseWheel>", tmcselect_mouse_wheel)
-    canvas.configure(scrollregion=canvas.bbox('all'))
-    TMCSelect_canvas.configure(scrollregion=TMCSelect_canvas.bbox('all'))
+    canvasScrollRegion = (0, 0, 
+                          max(canvas.winfo_width()-4, canvas.bbox('all')[2]),
+                          max(canvas.winfo_height()-4, canvas.bbox('all')[3]))
+    canvas.configure(scrollregion=canvasScrollRegion)
+    TMCcanvasScrollRegion = (0, 0, 
+                          max(TMCSelect_canvas.winfo_width()-4, TMCSelect_canvas.bbox('all')[2]-1),
+                          max(TMCSelect_canvas.winfo_height()-4, TMCSelect_canvas.bbox('all')[3]-1))
     runningThreads = []
     checkProgress()
     root.mainloop()

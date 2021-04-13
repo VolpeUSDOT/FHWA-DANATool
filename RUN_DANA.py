@@ -12,9 +12,9 @@ import os
 import sys
 
 # Basic Input Parameters
-step = 2
+step = 1
 
-testOption = 2
+testOption = 1
 if testOption == 1:
     tmas_year = 2018
     npmrds_year = 2018
@@ -79,7 +79,7 @@ elif computerName == 'VOLSLBOS-06756':
 PATH_TMAS_STATION = pathPrefix1 + '/TMAS Data/TMAS {}/tmas_station_{}.csv'.format(tmas_year, tmas_year)
 PATH_TMAS_CLASS_CLEAN = pathPrefix1 + '/TMAS Data/TMAS {}/tmas_class_clean_{}.csv'.format(tmas_year, tmas_year)
 PATH_FIPS = pathPrefix1 + '/FIPS_County_Codes.csv'
-PATH_NEI = pathPrefix1 + '/NEI_Representative_Counties.csv'
+PATH_NEI = pathPrefix1 + '/NEI2017_RepresentativeCounties.csv'
 
 PATH_npmrds_raw_all = pathPrefix2 + '/NPMRDS Data/{}_{}_{}_ALL.csv'.format(state.upper(), county.upper(), npmrds_year)
 PATH_npmrds_raw_pass = pathPrefix2 + '/NPMRDS Data/{}_{}_{}_PASSENGER.csv'.format(state.upper(), county.upper(),npmrds_year)
@@ -87,7 +87,7 @@ PATH_npmrds_raw_truck = pathPrefix2 + '/NPMRDS Data/{}_{}_{}_TRUCKS.csv'.format(
 PATH_tmc_identification = pathPrefix2 + '/NPMRDS Data/TMC_Identification.csv'
 
 PATH_tmc_shp = 'lib/ShapeFiles/'
-PATH_emission = pathPrefix1 + '/NEI_National_Emissions_Rates_Basis.csv'
+PATH_emission = pathPrefix1 + '/NEI2017_RepresentativeEmissionsRates.csv'
 
 PATH_HPMS  = pathPrefix2 + '/HPMS Data/{}_HPMS_{}.csv'.format(state.upper(), npmrds_year) # Need to confirm - ALH
 PATH_VM2 = pathPrefix2 + '/HPMS Data/VM2_{}.csv'.format(npmrds_year) # Need to confirm - ALH
