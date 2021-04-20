@@ -28,11 +28,11 @@ python NTD_05_main_GUI.py
 ```
 To use the data processing functions separately:
 ```python
-from FHWA-DANATool.lib import NTD_00_TMAS
-from FHWA-DANATool.lib import NTD_01_NPMRDS
-from FHWA-DANATool.lib import NTD_02_MOVES
-from FHWA-DANATool.lib import NTD_03_SPEED
-from FHWA-DANATool.lib import NTD_04_NOISE
+from lib import NTD_00_TMAS
+from lib import NTD_01_NPMRDS
+from lib import NTD_02_MOVES
+from lib import NTD_03_SPEED
+from lib import NTD_04_NOISE
 ```
 See the [RUN_DANA.py](https://github.com/VolpeUSDOT/FHWA-DANATool/blob/main/RUN_DANA.py) file included in this repository for examples of how each processing function is used.
 
