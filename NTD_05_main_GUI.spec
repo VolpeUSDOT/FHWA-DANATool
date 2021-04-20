@@ -8,7 +8,7 @@ from PyInstaller.utils.hooks import collect_dynamic_libs
 a = Analysis(['NTD_05_main_GUI.py'],
              pathex=['C:\\Users\\William.Chupp\\Documents\\DANAToolTesting\\FHWA-DANATool'],
              binaries=collect_dynamic_libs("rtree"),
-             datas=[('..\dot.png', 'lib')],
+             datas=[('..\dot.png', 'lib'), ('lib\ShapeFiles', 'lib\ShapeFiles')],
              hiddenimports=['fiona._shim', 'fiona.schema'],
              hookspath=[],
              runtime_hooks=[],

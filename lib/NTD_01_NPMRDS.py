@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created by Cambridge Systematics
+Modified By: Volpe National Transportation Systems Center
 
 """
 import pandas as pd
@@ -13,10 +14,14 @@ import geopandas as gpd
 from geopandas import GeoDataFrame
 from shapely.geometry import Point
 import pathlib
+from .load_shapes import *
+import pkg_resources
 
-def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_all, PATH_npmrds_raw_pass,PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI):
+PATH_tmc_shp = pkg_resources.resource_filename('lib', resource_name='ShapeFiles/')
+
+def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass,PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI):
     #!!! INPUT Parameters
-    filepath = 'NPMRDS_Intermediate_Output/'
+    filepath = 'Final Output/Process1_LinkLevelDataset/'
     pathlib.Path(filepath).mkdir(exist_ok=True) 
     outputpath = 'Final Output/'
     pathlib.Path(outputpath).mkdir(exist_ok=True) 
@@ -58,14 +63,13 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     
     # State definition
     states = {
-    'AL':['Alabama',1],'AK':['Alaska',2],'AZ':['Arizona',4],'AR':['Arkansas',5],'CA':['California',6],'CO':['Colorado',8],
-    'CT':['Connecticut',9],'DE':['Delaware',10],'DC':['District of Columbia',11],'FL':['Florida',12],'GA':['Georgia',13],
-    'HI':['Hawaii',15],'ID':['Idaho',16],'IL':['Illinois',17],'IN':['Indiana',18],'IA':['Iowa',19],'KS':['Kansas',20],
+    'AL':['Alabama',1],'AZ':['Arizona',4],'AR':['Arkansas',5],'CA':['California',6],'CO':['Colorado',8],
+    'CT':['Connecticut',9],'DE':['Delaware',10],'DC':['District of Columbia',11],'FL':['Florida',12],'GA':['Georgia',13],'ID':['Idaho',16],'IL':['Illinois',17],'IN':['Indiana',18],'IA':['Iowa',19],'KS':['Kansas',20],
     'KY':['Kentucky',21],'LA':['Louisiana',22],'ME':['Maine',23],'MD':['Maryland',24],'MA':['Massachusetts',25],
     'MI':['Michigan',26],'MN':['Minnesota',27],'MS':['Mississippi',28],'MO':['Missouri',29],'MT':['Montana',30],'NE':['Nebraska',31],
     'NV':['Nevada',32],'NH':['New Hampshire',33],'NJ':['New Jersey',34],'NM':['New Mexico',35],'NY':['New York',36],
     'NC':['North Carolina',37],'ND':['North Dakota',38],'OH':['Ohio',39],'OK':['Oklahoma',40],'OR':['Oregon',41],
-    'PA':['Pennsylvania',42],'PR':['Puerto Rico',72],'RI':['Rhode Island',44],'SC':['South Carolina',46],'SD':['South Dakota',46],
+    'PA':['Pennsylvania',42],'RI':['Rhode Island',44],'SC':['South Carolina',46],'SD':['South Dakota',46],
     'TN':['Tennessee',47],'TX':['Texas',48],'UT':['Utah',49],'VT':['Vermont',50],'VA':['Virginia',51],
     'WA':['Washington',53],'WV':['West Virginia',54],'WI':['Wisconsin',55],'WY':['Wyoming',56]}
     
@@ -74,14 +78,14 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     ##########################################################################################
     
     # NPMRDS
-    # FIPS/NEI have names and codes; TMC_Identification only has names; repcty only in code; Use codeo 
+    # FIPS/NEI have names and codes; TMC_Identification only has names; repcty only in code; Use code
     fips_header = ['STATE_NAME','STATE_CODE','COUNTY_CODE','COUNTY_NAME','FIPS_TYPE']
     fips = pd.read_csv(PATH_FIPS,header=None,names=fips_header)
     repcty = pd.read_csv(PATH_NEI)
     state_county = pd.merge(fips, repcty, left_on=['STATE_CODE','COUNTY_NAME'], right_on=['stateid','County_Name'], how='inner')
     state_county.drop(['stateid','countyid','County_Name'], inplace=True, axis=1)
     state_county.rename(columns={'State_Name':'STATE_FULL_NAME'}, inplace=True)
-    state_county['COUNTY_NAME']=state_county['COUNTY_NAME'].str.replace(' County', '').str.upper()
+    state_county['COUNTY_NAME']=state_county['COUNTY_NAME'].str.replace(' County', '').str.lower()
     
     #a.	TMC Identification
     print ('Reading TMC Configuration Data')
@@ -108,6 +112,40 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     tmc.loc[tmc['urban_code']<99999, 'urban_rural']='U'
     tmc.loc[tmc['urban_code']>=99999, 'urban_rural']='R'
     #a4. Add REPCTY
+    tmc['state'] = tmc['state'].str.upper()
+    tmc['county'] = tmc['county'].str.lower().str.replace(' county', '').str.replace('(', '').str.replace(')', '')
+    
+    tmc_state_county = tmc.groupby(['state', 'county']).size().reset_index()[['state', 'county']]
+    for index, row in tmc_state_county.iterrows():
+        test_row = row.copy()
+        fips_matches = state_county.loc[(state_county['STATE_NAME']==test_row['state'])&
+                                        (state_county['COUNTY_NAME']==test_row['county'])]
+        if len(fips_matches)==1:
+            continue
+        else: test_row['county'] = test_row['county']+' city'
+        
+        fips_matches = state_county.loc[(state_county['STATE_NAME']==test_row['state'])&
+                                        (state_county['COUNTY_NAME']==test_row['county'])]
+        
+        if len(fips_matches)==1:
+            tmc.loc[(tmc['state']==row['state'])&
+                    (tmc['county']==row['county']), 'county'] = test_row['county']
+            continue
+        else: 
+            test_row = row.copy()
+            test_row['county'] = test_row['county']+' parish'
+        
+        fips_matches = state_county.loc[(state_county['STATE_NAME']==test_row['state'])&
+                                        (state_county['COUNTY_NAME']==test_row['county'])]
+        
+        if len(fips_matches)==1:
+            tmc.loc[(tmc['state']==row['state'])&
+                    (tmc['county']==row['county']), 'county'] = test_row['county']
+            continue
+        else:
+            er = RuntimeError("State and county combination in NPMRDS configuration file was not found in FIPS code definition. Check the county name and try again.")
+            raise er
+            
     tmc = pd.merge(tmc, state_county, left_on=['state','county'], right_on=['STATE_NAME','COUNTY_NAME'], how='inner')
     tmc.drop(['state','county','STATE_NAME','COUNTY_NAME','FIPS_TYPE','STATE_FULL_NAME'], axis=1, inplace=True)
     tmc.rename(columns={'STATE_CODE':'state','COUNTY_CODE':'county'}, inplace=True)
@@ -121,13 +159,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     
     date_template = pd.date_range(start='1/1/'+str(input_year), end='1/1/'+str(int(input_year)+1), freq='H', closed='left')
     tmc_unique = tmc['tmc'].unique()
-    tmc_temp = []
-    date_temp =[]
-    for i in tmc_unique:
-        for date in date_template:
-            tmc_temp.append(i)
-            date_temp.append(date)
-    d = {'tmc_code':tmc_temp, 'measurement_tstamp':date_temp}
+    d = [{'tmc_code':i, 'measurement_tstamp': datetime} for i in tmc_unique for datetime in date_template]
     npmrds_template = pd.DataFrame(d)
     now=lapTimer('  took: ',now)
     
@@ -232,6 +264,19 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     npmrds_tmc = pd.merge(npmrds, tmc, left_on='tmc_code', right_on='tmc', how='left')
     npmrds_tmc = npmrds_tmc.dropna(axis=0, subset=['route_sign'])
     now=lapTimer('  took: ',now)
+    
+    tmc['tier'] = np.nan
+    crs = {'init' :'epsg:4326'}
+    #b1. Preparing TMC data for geoprocessing
+    #Read the TMC shapefile
+    print('Geoprocessing TMC data')
+    shp = load_shape(PATH_tmc_shp)
+    #b2. Merge the TMC shapefile with the tmc identification dataset
+    tmc_new = pd.merge(tmc, shp, left_on='tmc', right_on='Tmc', how='inner')
+    tmc_new.drop('Tmc', axis=1,inplace=True)
+    #b3. Create a new feature as shapely LineString from the start and end points
+    geo_tmc = GeoDataFrame(tmc_new, crs=crs, geometry='geometry')
+    now=lapTimer('  took: ',now)
     '''
     print ('Exporting output')
     table = pa.Table.from_pandas(npmrds_tmc)
@@ -244,6 +289,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     print('Reading TMAS Data')    #This takes like 10 min
     tmas_class = pd.read_csv(PATH_TMAS_CLASS_CLEAN, dtype={'STATION_ID':str, 'ROUTE_NUMBER':str})
     states_avlb=tmas_class['STATE_NAME'].drop_duplicates()
+    now=lapTimer('  took: ',now)
     if SELECT_STATE in states_avlb.values:
         tmas_class_state = tmas_class[tmas_class['STATE_NAME']==SELECT_STATE]
         #tmas_class_state['ROUTE_NUMBER'] = pd.to_numeric(tmas_class_state['ROUTE_NUMBER'], errors='coerce')
@@ -264,7 +310,6 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
         tmas_station_clean['geometry']=tmas_station_clean.apply(lambda row: Point(row["LONG"], row["LAT"]), axis=1)
         tmas_station_clean.reset_index(drop=True, inplace=True)    #Start the dataframe index from 0
         #Create a geodataframe to test geopandas capabilities
-        crs = {'init' :'epsg:4326'}
         geo_tmas = GeoDataFrame(tmas_station_clean, crs=crs, geometry='geometry')
         now=lapTimer('  took: ',now)
         #b Read TMC Indentification data
@@ -280,18 +325,6 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
         tmc['dir_num'].loc[tmc['direction']=='SB']=5
         tmc['dir_num'].loc[tmc['direction']=='WB']=7
         '''
-        tmc['tier'] = np.nan
-        
-        #b1. Preparing TMC data for geoprocessing
-        #Read the TMC shapefile
-        print('Geoprocessing TMC data')
-        shp = gpd.read_file(PATH_tmc_shp)
-        #b2. Merge the TMC shapefile with the tmc identification dataset
-        tmc_new = pd.merge(tmc, shp, left_on='tmc', right_on='Tmc', how='inner')
-        tmc_new.drop('Tmc', axis=1,inplace=True)
-        #b3. Create a new feature as shapely LineString from the start and end points
-        geo_tmc = GeoDataFrame(tmc_new, crs=crs, geometry='geometry')
-        now=lapTimer('  took: ',now)
         
         ##################################################
         #c. Tier 1: space join
@@ -587,10 +620,15 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     df = df.to_pandas()
     df_test = df[0:10]
     '''
+    
+    del npmrds
+    del tmas_class
+    
     #a. Read the MOVES emission rate files from ERG: nhs lpp rates_{state}_wbt.cs monthid dayid hourid roadtypeid hpmsvtypeid pollutantid avgspeedbinid grams_per_mile
     # updated rates table based on NEI region and 3-month
     print ('Reading and Processing Emission Rate Files')
     emissions = pd.read_csv(PATH_emission)
+    emissions.rename(columns={'season': 'monthid3'}, inplace=True)
     emissions.loc[:,'state']=emissions['repcty'] // 1000
     emissions.loc[:,'repcty_1']=emissions['repcty'] % 1000
     emissions['hpmsvtypeid'] = emissions['hpmsvtypeid'].astype('str')
@@ -598,11 +636,12 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     emissions_state = emissions.loc[emissions['state']==states.get(SELECT_STATE)[1]]
     emissions_state.drop(['repcty','state'], axis=1, inplace=True)
     emissions_state.rename(columns={'repcty_1':'repcty', 'monthid':'monthid3'}, inplace=True)
+    
         
-    #Sort by: MONTHID DAYID HOURID ROADTYPEID HPMSTYPEID POLLUTANTID AVGSPEEDBINID 
-    emissions_state.sort_values(['repcty','monthid3','dayid','hourid','roadtypeid','hpmsvtypeid','pollutantid','avgspeedbinid'],inplace=True)
+    #Sort by: MONTHID HOURID ROADTYPEID HPMSTYPEID POLLUTANTID AVGSPEEDBINID 
+    emissions_state.sort_values(['repcty','monthid3','hourid','roadtypeid','hpmsvtypeid','pollutantid','avgspeedbinid'],inplace=True)
     #b. Create grams per mile values for vehicletype/pollutant combinations. They will be in this order from the sort:
-    emissions2=emissions_state.pivot_table(index=['repcty','monthid3','dayid','hourid','roadtypeid','avgspeedbinid'], 
+    emissions2=emissions_state.pivot_table(index=['repcty','monthid3','hourid','roadtypeid','avgspeedbinid'], 
                                      columns=['hpmsvtypeid','pollutantid'], values='grams_per_mile')
     #Reduce column levels
     emissions2.columns = emissions2.columns.map('_'.join)
@@ -668,16 +707,50 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
     df.loc[df['monthid']==11, 'monthid3'] = 91011
     df.loc[df['monthid']==12, 'monthid3'] = 120102
     
+    df['repcty'] = df['repcty'] % 1000
+    
     df['VMT'] = (df['PCT_TYPE10']+df['PCT_TYPE25']+df['PCT_TYPE40']+df['PCT_TYPE50']+df['PCT_TYPE60'])*df['aadt']*df['tmc_length']
     now=lapTimer('  took: ',now)
     
     #d. Merge the emission rates with the NPMRDS dataset
     print('Merging Emission Rates to NPMRDS data')
-    df_emissions = df.merge(emissions2, how='left', on=['repcty','monthid3','dayid','hourid','roadtypeid','avgspeedbinid'])
+    df_emissions = df.merge(emissions2, how='left', on=['repcty','monthid3','hourid','roadtypeid','avgspeedbinid'])
     now=lapTimer('  took: ',now)
+    
+    del emissions2
+    del emissions
+    del npmrds_all
+    del npmrds_pass
+    del npmrds_truck
+    del df
     
     print('Exporting Final Dataset')
     #df_emissions.to_csv(outputpath+SELECT_STATE+'_Composite_Emission.csv', index=False)
+    df_emissions_sample = df_emissions[0:1000]
+    df_emissions_sample = df_emissions_sample.append(df_emissions[-1000:-1])
+    df_emissions_sample.to_csv(filepath+SELECT_STATE+'_Composite_Emissions_SAMPLE.csv') 
+    
+    df_emissions_summary_cols = df_emissions[['tmc', 'road', 'tmc_length', 'speed_all', 'aadt']]
+    pollutants = [2, 3, 5, 6, 87, 90, 98, 100, 110]
+    vehtypes = [10, 25, 40, 50, 60]
+    for pol in pollutants:
+        df_emissions_summary_cols['TotEmissionsPerMile_{}'.format(pol)] = 0
+        for veh in vehtypes:
+            df_emissions_summary_cols['TotEmissionsPerMile_{}'.format(pol)] = df_emissions_summary_cols['TotEmissionsPerMile_{}'.format(pol)] + \
+                df_emissions['PCT_TYPE{}'.format(veh)]*df_emissions['VMT']*df_emissions['{}_{}'.format(veh, pol)]
+        
+        df_emissions_summary_cols['TotEmissionsPerMile_{}'.format(pol)] = df_emissions_summary_cols['TotEmissionsPerMile_{}'.format(pol)]/df_emissions_summary_cols['tmc_length']                                          
+    
+    df_emissions_summary = df_emissions_summary_cols.groupby(['tmc', 'road'])
+    df_emissions_summary = df_emissions_summary.agg({'tmc_length':'mean', 'speed_all':'mean', 'aadt':'mean', 'TotEmissionsPerMile_2':'sum', 'TotEmissionsPerMile_3':'sum', 'TotEmissionsPerMile_5':'sum', 'TotEmissionsPerMile_6':'sum', 'TotEmissionsPerMile_87':'sum', 'TotEmissionsPerMile_90':'sum', 'TotEmissionsPerMile_98':'sum', 'TotEmissionsPerMile_100':'sum', 'TotEmissionsPerMile_110':'sum'}).reset_index()
+    
+    #df_emissions_summary = df_emissions_summary.loc[geo_df['TotEmissions110'] != 0]
+    #df_emissions_summary.reset_index(inplace=True)
+    df_emissions_summary = pd.merge(df_emissions_summary, geo_tmc[['tmc', 'geometry']], how='inner', on=('tmc'))
+    df_emissions_summary['geometry'] = df_emissions_summary['geometry'].astype('string')
+    df_emissions_summary.rename(columns = {'speed_all': 'Average_Speed', 'aadt':'Average AADT'}, inplace=True)
+    df_emissions_summary.to_csv(filepath+SELECT_STATE+'_Composite_Emissions_SUMMARY.csv', index=False)
+    
     npmrds_emissions = pa.Table.from_pandas(df_emissions)
     pq.write_table(npmrds_emissions, filepath+SELECT_STATE+'_Composite_Emissions.parquet')
     now=lapTimer('  took: ',now)
@@ -689,6 +762,6 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_
         pq.write_table(npmrds_emissions_select, outputpath+SELECT_STATE+'_Composite_Emissions_select.parquet')
         now=lapTimer('  took: ',now)
     ''' 
-    print('Outputs saved in Output\\')
+    print('Outputs saved in {}'.format(filepath))
     print('**********Process Completed**********')
     print('')

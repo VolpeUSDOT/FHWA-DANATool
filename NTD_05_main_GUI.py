@@ -162,13 +162,13 @@ def f_tmas_class_clean():
     fn_tmas_class_clean = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose Processed TMAS Class File',
         filetypes=[('csv file', '.csv')])
     pl_tmas_class_clean_1.config(text=fn_tmas_class_clean.replace('/','\\'))
-    pl_tmas_class_clean_2.config(text=fn_tmas_class_clean.replace('/','\\'))
 def f_npmrds_clean():
     global fn_npmrds_clean
     fn_npmrds_clean = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose Processed NPMRDS File',
         filetypes=[('parquet file', '.parquet'),('csv file', '.csv')])
     pl_npmrds_clean_1.config(text=fn_npmrds_clean.replace('/','\\'))
     pl_npmrds_clean_2.config(text=fn_npmrds_clean.replace('/','\\'))
+    pl_npmrds_clean_3.config(text=fn_npmrds_clean.replace('/','\\'))
 def f_tmas_station_state():
     global fn_tmas_station
     fn_tmas_station = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose Processed TMAS Station File',
@@ -239,6 +239,7 @@ def PrintTMCinput(tmc_list):
     text = open('TMC input.txt', 'w')
     for i in tmc_list:
         text.write(i+'\n')
+        
     text.close()
 
 def checkProgress():
@@ -248,7 +249,14 @@ def checkProgress():
         output_text.insert(tk.END, thread_queue.get())
     
     root.update_idletasks()
-    canvas.configure(scrollregion=canvas.bbox('all'))
+    canvasScrollRegion = (0, 0, 
+                          max(canvas.winfo_width()-4, canvas.bbox('all')[2]),
+                          max(canvas.winfo_height()-4, canvas.bbox('all')[3]))
+    canvas.configure(scrollregion=canvasScrollRegion)
+    TMCcanvasScrollRegion = (0, 0, 
+                          max(TMCSelect_canvas.winfo_width()-4, TMCSelect_canvas.bbox('all')[2]-1),
+                          max(TMCSelect_canvas.winfo_height()-4, TMCSelect_canvas.bbox('all')[3]-1))
+    TMCSelect_canvas.configure(scrollregion=TMCcanvasScrollRegion)
     
     removeList = []
     for i in range(len(runningThreads)):
@@ -261,15 +269,8 @@ def checkProgress():
         del runningThreads[i]
         startButton["state"] = NORMAL
         statusLabel["text"] = "No Process Currently Running"
-    if os.path.isdir('NPMRDS_Intermediate_Output/') and (StateValue.get()+'_Composite_Emissions.parquet' in os.listdir('NPMRDS_Intermediate_Output/')):
-       pl_npmrds_clean_1.config(text=os.getcwd()+'\\NPMRDS_Intermediate_Output\\'+StateValue.get()+'_Composite_Emissions.parquet')
-       pl_npmrds_clean_2.config(text=os.getcwd()+'\\NPMRDS_Intermediate_Output\\'+StateValue.get()+'_Composite_Emissions.parquet')
-       fn_npmrds_clean = 'NPMRDS_Intermediate_Output/'+StateValue.get()+'_Composite_Emissions.parquet'
-    else:
-       pl_npmrds_clean_1.config(text='')
-       pl_npmrds_clean_2.config(text='')
     
-    root.after(1000, checkProgress)
+    root.after(100, checkProgress)
         
 
 def process_handler(proc_target, thread_queue, args): 
@@ -320,8 +321,8 @@ def ProcessData():
             PopUp_Selection("NPMRDS Truck Data")
         elif fn_npmrds_tmc == '':
             PopUp_Selection("NPMRDS TMC Configuration")
-        elif fn_npmrds_shp == '':
-            PopUp_Selection("NPMRDS TMC Shapefile")
+        # elif fn_npmrds_shp == '':
+        #     PopUp_Selection("NPMRDS TMC Shapefile")
         elif fn_emission == '':
             PopUp_Selection("Emission Rates")
         elif fn_fips == '':
@@ -340,22 +341,22 @@ def ProcessData():
             PATH_TMAS_CLASS_CLEAN = fn_tmas_class_clean
             PATH_FIPS = fn_fips 
             PATH_NEI = fn_nei
-            NPMRDS_Proc = mp.Process(target=process_handler, name=step1, args=(NTD_01_NPMRDS.NPMRDS, thread_queue, (SELECT_STATE, PATH_tmc_identification, PATH_tmc_shp, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI)))
+            NPMRDS_Proc = mp.Process(target=process_handler, name=step1, args=(NTD_01_NPMRDS.NPMRDS, thread_queue, (SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI)))
             startButton["state"] = DISABLED
             NPMRDS_Proc.start()
             runningThreads.append(NPMRDS_Proc)
             notebook.select('.!notebook.!frame2')
     
     elif ScriptValue.get() == step2:
-        if fn_tmas_class_clean == '':
-            PopUpCleanTMASSelection()
+        if fn_npmrds_clean == '':
+            PopUpCleanNPMRDSSelection()
         else:
             SELECT_STATE = StateValue.get()
-            PATH_TMAS_CLASS_CLEAN = fn_tmas_class_clean
+            PATH_NPMRDS = fn_npmrds_clean
             PATH_HPMS = fn_hpms
             PATH_VM2 = fn_vm2
             PATH_COUNTY_MILEAGE = fn_county_mileage
-            MOVES_Proc = mp.Process(target=process_handler, name=step2, args=(NTD_02_MOVES.MOVES, thread_queue, (SELECT_STATE, PATH_TMAS_CLASS_CLEAN, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)))
+            MOVES_Proc = mp.Process(target=process_handler, name=step2, args=(NTD_02_MOVES.MOVES, thread_queue, (SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)))
             startButton["state"] = DISABLED
             MOVES_Proc.start()
             runningThreads.append(MOVES_Proc)
@@ -382,7 +383,7 @@ def ProcessData():
         else:
             SELECT_STATE = StateValue.get()
             SELECT_TMC = re.split(',\s+',tmcEntry.get())
-            PrintTMCinput(SELECT_TMC)
+            #PrintTMCinput(SELECT_TMC)
             PATH_NPMRDS = fn_npmrds_clean
             NOISE_Proc = mp.Process(target=process_handler, name=step4, args=(NTD_04_NOISE.NOISE, thread_queue, (SELECT_STATE, SELECT_TMC, PATH_NPMRDS)))
             startButton["state"] = DISABLED
@@ -406,6 +407,179 @@ def CancelProcess():
             statusLabel["text"] = "No Process Currently Running"
 
     runningThreads = []
+    
+
+# TMC Selection Functions
+################################################################################
+
+fn_tmc_config = ''
+fn_kml = ''
+counties = ['']
+roads = ['']
+directions = ['']
+kmlfiles = ['']
+tmc = pd.DataFrame()
+
+def f_tmc_config():
+    global fn_tmc_config, tmc, geo_tmc, counties, roads, directions, kmlfiles
+    fn_tmc_config = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose TMC Config File',
+        filetypes=[('csv file', '.csv')])
+    pl_tmc_config.config(text=fn_tmc_config.replace('/','\\'))
+    tmc = pd.read_csv(fn_tmc_config)
+    dir_dic = {'EASTBOUND':'EB', 'NORTHBOUND':'NB', 'WESTBOUND':'WB', 'SOUTHBOUND':'SB'}
+    tmc['direction'].replace(dir_dic, inplace=True)
+    tmc['direction']=tmc['direction'].str.extract('(EB|NB|SB|WB)')
+    tmc['direction'].value_counts()
+    #We create a column with all of the points together to create polygons from them
+    tmc['start']= tmc.apply(lambda row: (row["start_longitude"],row["start_latitude"]),axis=1)
+    tmc['end']= tmc.apply(lambda row: (row["end_longitude"],row["end_latitude"]),axis=1)
+    # We create a new feature as shapely LineString from the start and end points
+    tmc['geometry'] = tmc.apply(lambda row: LineString([row['start'],row['end']]),axis=1)
+    #We create a GeoDataFrame with the polygon data
+    crs = {'init' :'epsg:4326'}
+    geo_tmc = GeoDataFrame(tmc, crs=crs, geometry='geometry')
+
+    # We read the selection attributes from the tmc file
+    counties = geo_tmc['county'].unique().tolist()
+    counties.sort()
+    counties.insert(0,'')
+    roads = geo_tmc['road'].unique().tolist()
+    roads.insert(0,'')
+    directions = geo_tmc['direction'].unique().tolist()
+    directions.insert(0,'')
+    # kmlfiles = os.listdir('KML Polygon/')
+    # kmlfiles.insert(0,"")
+    
+    county.config(values=counties)
+    road.config(values=roads)
+    direction.config(values=directions)
+    
+def f_kml():
+    global fn_kml
+    fn_kml = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose KML File',
+        filetypes=[('kml file', '.kml')])
+    pl_kml.config(text=fn_kml.replace('/','\\'))
+    
+
+#We create a function to crop tmc using kml polygon
+def ReadPolygon():
+    #Read kml polygon and parse it as an xml file
+    kml_path = fn_kml
+    tree_poly = ET.parse(kml_path)
+    #Read the coordinates from xml file
+    lineRing = tree_poly.findall('.//{http://www.opengis.net/kml/2.2}LinearRing')
+    for attributes in lineRing:
+        for subAttribute in attributes:
+            if subAttribute.tag == '{http://www.opengis.net/kml/2.2}coordinates':
+                coordinates_string = subAttribute.text
+    #Separate coordinates from string into list
+    coordinates = coordinates_string.split()
+    sep_coord = []
+    for i in coordinates:
+        sep_coord.append(i.split(','))
+    #Change coordinates from string to floats
+    numb_coord = []
+    for i in sep_coord:
+        numb_coord.append([float(j) for j in i])
+    #Create shapely polygon with coordinates
+    Poly_Tuples = list(tuple(x[0:2]) for x in numb_coord)
+    Poly = Polygon(Poly_Tuples)
+    return Poly
+
+def PrintResults(tmc_list, county, road, direction):
+    outputpath = 'Final Output/TMC_Selection/'
+    pathlib.Path(outputpath).mkdir(exist_ok=True)
+    filename = 'TMCs_{}_{}_{}.txt'.format(county, road, direction)
+    text = open(outputpath+filename, 'w')
+    for i in tmc_list:
+        text.write(i+',')
+    text.close()
+    #tmcEntry.set(','.join(tmc_list))
+    PopUpCompletedSelection(outputpath, filename)
+
+def PopUpNoSelection():
+    popup = Tk()
+    popup.wm_title("Warning")
+    label = ttk.Label(popup, text="No selection criteria were defined, all of State TMC links will be used. You may close the tool, or select again.")
+    label.pack(side="top", pady=5, padx=5)
+    popup.mainloop
+    
+def PopUpWrongSelection():
+    popup = Tk()
+    popup.wm_title("Error")
+    label = ttk.Label(popup, text="No links were found with the selection parameters. Please modify the selection parameters")
+    label.pack(side="top", pady=5, padx=5)
+    popup.mainloop
+    
+def PopUpNoFile():
+    popup = Tk()
+    popup.wm_title("Error")
+    label = ttk.Label(popup, text="No input file chosen. Please choose a TMC or KML configuration file first.")
+    label.pack(side="top", pady=5, padx=5)
+    popup.mainloop
+    
+def PopUpCompletedSelection(outputpath, filename):
+    popup = Tk()
+    popup.wm_title("TMC Selection Complete")
+    head = ttk.Label(popup, text='TMC Selection Completed'.format(outputpath+filename))
+    head.pack(side="top", pady=5, padx=5)
+    label = ttk.Label(popup, text='TMC Selection Results saved to {}'.format(outputpath+filename))
+    label.pack(side="top", pady=5, padx=5)
+    popup.mainloop
+
+# We create the CheckRoad function
+def CheckIntersect(tmc_to_check, tmc):
+    intersect = tmc_to_check[tmc_to_check.isin(tmc)]
+    if len(intersect)==0:
+        return None
+    else:
+        return intersect
+
+# We create the SelectData function
+def SelectData():
+    #Read polygon file or pass if none is selected    
+    if fn_kml == '':
+        if tmc.empty:
+            PopUpNoFile()
+            return
+        selected_tmc = tmc['tmc']
+    else:
+        #Read tmcs within polygon
+        tmc_polygon = ReadPolygon()
+        polygon_selection = geo_tmc['geometry'].within(tmc_polygon)
+        selected_tmc = tmc.loc[polygon_selection,'tmc']
+    #Read County name or pass if none is selected
+    if CountyValue.get() == '':
+        pass
+    else:
+        county_select = tmc.loc[tmc['county']==CountyValue.get(), 'tmc']
+        county_tmc = CheckIntersect(county_select, selected_tmc)
+        selected_tmc = county_tmc
+    #Read Road name or pass if none is selected
+    if RoadValue.get() == '':
+        pass
+    elif selected_tmc is None:
+        pass
+    else:
+        road_select = tmc.loc[tmc['road']==RoadValue.get(), 'tmc']
+        road_tmc = CheckIntersect(road_select, selected_tmc)
+        selected_tmc = road_tmc
+    #Read Direction name or pass if none is selected
+    if DirectionValue.get() == '':
+        pass
+    elif selected_tmc is None:
+        pass
+    else:
+        dir_select = tmc.loc[tmc['direction']==DirectionValue.get(), 'tmc']
+        dir_tmc = CheckIntersect(dir_select, selected_tmc)
+        selected_tmc = dir_tmc
+    if selected_tmc is None:
+        PopUpWrongSelection()
+    elif len(selected_tmc)==len(tmc['tmc']):
+        PopUpNoSelection()
+        PrintResults(selected_tmc, CountyValue.get(), RoadValue.get(), DirectionValue.get())
+    else:
+        PrintResults(selected_tmc, CountyValue.get(), RoadValue.get(), DirectionValue.get())
 
 # GUI
    
@@ -413,9 +587,24 @@ def CancelProcess():
 #Some important user interface callback functions
 
 # Bind Mouse Wheel to GUI
-def mouse_wheel(event):
+
+def bind_tree(widget, event, callback):
+    "Binds an event to a widget and all its descendants."
+
+    widget.bind(event, callback)
+
+    for child in widget.children.values():
+        bind_tree(child, event, callback)
+
+def main_mouse_wheel(event):
+    #if main_container.winfo_height() 
     canvas.yview_scroll(int(-1*event.delta/120), "units")
-    #output_canvas.yview_scroll(int(-1*event.delta/120), "units")
+    
+def output_mouse_wheel(event):
+    output_text.yview_scroll(int(-1*event.delta/120), "units")
+
+def tmcselect_mouse_wheel(event):
+    TMCSelect_canvas.yview_scroll(int(-1*event.delta/120), "units")
     
 # bind ctrl events so the text can be coppied
 def ctrlEvent(event):
@@ -435,9 +624,7 @@ iconPath = resource_path('lib\\dot.png')
 p1 = tk.PhotoImage(file = iconPath)
 root.iconphoto(True, p1)
 
-root.bind("<MouseWheel>", mouse_wheel)
-
-notebook = ttk.Notebook(root, width=850, height=400)
+notebook = ttk.Notebook(root, width=1000, height=700)
 notebook.grid(row=0, column=0, sticky="news")
 
 main_container = tk.Frame(notebook)
@@ -447,7 +634,7 @@ main_container.grid_columnconfigure(0, weight=1)
 notebook.add(main_container, text='Data Processing')
 
 canvas = tk.Canvas(main_container)
-main_scrollbar = tk.Scrollbar(main_container, orient="vertical")
+main_scrollbar = tk.Scrollbar(main_container, orient="vertical", command=canvas.yview)
 main_scrollbar.grid(row=0, column=1, sticky='ns')
 canvas.grid(row=0, column=0, sticky="news")
 canvas.configure(yscrollcommand = main_scrollbar.set)
@@ -463,10 +650,57 @@ notebook.add(output_container, text='Progress Log')
 
 output_text = tk.Text(output_container, height=400, width=80,  wrap=WORD)
 output_text.grid(row=0, column=0, sticky="news")
-output_scrollbar = tk.Scrollbar(output_container, orient="vertical")
+output_scrollbar = tk.Scrollbar(output_container, orient="vertical", command=output_text.yview)
 output_scrollbar.grid(row=0, column=1, sticky='ns')
 output_text.configure(yscrollcommand = output_scrollbar.set)
+output_text.bind("<MouseWheel>", output_mouse_wheel)
 output_text.bind("<Key>", lambda e: ctrlEvent(e))
+
+# TMC Select GUI
+
+TMCSelect_container = tk.Frame(notebook)
+TMCSelect_container.grid(row=0, column=0, sticky="news")
+TMCSelect_container.grid_rowconfigure(0, weight=1)
+TMCSelect_container.grid_columnconfigure(0, weight=1)
+notebook.add(TMCSelect_container, text='TMC Selection')
+
+TMCSelect_canvas = tk.Canvas(TMCSelect_container)
+TMCSelect_scrollbar = tk.Scrollbar(TMCSelect_container, orient="vertical", command=TMCSelect_canvas.yview)
+TMCSelect_scrollbar.grid(row=0, column=1, sticky='ns')
+TMCSelect_canvas.grid(row=0, column=0, sticky="news")
+TMCSelect_canvas.configure(yscrollcommand = TMCSelect_scrollbar.set)
+
+TMCSelection_frame = tk.Frame(TMCSelect_canvas)
+TMCSelect_canvas.create_window((0,0), window=TMCSelection_frame, anchor='nw', )
+
+ttk.Label(TMCSelection_frame, wraplength = 500, text='To select specific data from the National Traffic Dataset, please select the desired features').grid(row=0, column=0, columnspan= 5)
+w_tmc_config = ttk.Button(TMCSelection_frame, text='Select TMC Config File', command=f_tmc_config).grid(column=0, row=1, columnspan=2, sticky="w")
+pl_tmc_config = ttk.Label(TMCSelection_frame)
+pl_tmc_config.grid(column=2, row=1, columnspan=3, sticky="w")
+
+w_kml = ttk.Button(TMCSelection_frame, text='Select KML File', command=f_kml).grid(column=0, row=2, columnspan=2, sticky="w")
+pl_kml = ttk.Label(TMCSelection_frame)
+pl_kml.grid(column=2, row=2, columnspan=3, sticky="w")
+
+ttk.Label(TMCSelection_frame, text='Select with County:').grid(row=3,column=0, columnspan=2, sticky="w")
+ttk.Label(TMCSelection_frame, text='Select a Specific Road:').grid(row=4,column=0, columnspan=2, sticky="w")
+ttk.Label(TMCSelection_frame, text='Select a Specific Direction:').grid(row=5,column=0, columnspan=2, sticky="w")
+
+CountyValue = StringVar()
+county = ttk.Combobox(TMCSelection_frame, textvariable=CountyValue, state='readonly', width=50)
+county.grid(column=2, row=3, columnspan=3, sticky="w")
+
+RoadValue = StringVar()
+road = ttk.Combobox(TMCSelection_frame, textvariable=RoadValue, state='readonly', width=50)
+road.grid(column=2, row=4, columnspan=3, sticky="w")
+
+DirectionValue = StringVar()
+direction = ttk.Combobox(TMCSelection_frame, textvariable=DirectionValue, state='readonly', width=50)
+direction.grid(column=2, row=5, columnspan=3, sticky="w")
+
+tmcButton = ttk.Button(TMCSelection_frame, text="Select Data", command=SelectData).grid(column=0, row=7, columnspan=5)
+
+for child in TMCSelection_frame.winfo_children(): child.grid_configure(padx=2, pady=4)
 
 #print(notebook.tabs())
 
@@ -481,14 +715,14 @@ preprocess_tmas_checkbox.grid(row=6,column=0, columnspan=1, sticky="w")
 
 ##################################################
 
-#1. Label
+#1. Header
 ttk.Label(mainframe, wraplength = 500, text='To select the desired script and inputs').grid(row=0, column=0, columnspan= 1, sticky="w")
 ttk.Label(mainframe, text='Select State:').grid(row=1,column=0, columnspan=1, sticky="w")
 ttk.Label(mainframe, text='Select Processing Steps:').grid(row=2,column=0, columnspan=1, sticky="w")
 ttk.Label(mainframe, text='Select inputs under the selected step and press the process data button.  Repeat for each step that you want to run.').grid(row=3,column=0, columnspan=3, sticky="w")
 startButton = ttk.Button(mainframe, text="Process Data", command=ProcessData)
 startButton.grid(column=0, row=4, columnspan=1 ,sticky="w")
-ttk.Button(mainframe, text="Cancel Data Processing", command=CancelProcess).grid(column=0, row=4, columnspan=1 ,sticky="E")
+cancelButton = ttk.Button(mainframe, text="Cancel Data Processing", command=CancelProcess).grid(column=0, row=4, columnspan=1 ,sticky="E")
 statusLabel = ttk.Label(mainframe, text="No Process Currently Running", relief=SUNKEN)
 statusLabel.grid(column=1, row=4, columnspan=1, sticky="W")
 
@@ -510,9 +744,8 @@ ttk.Label(mainframe, text='          ').grid(row=36,column=0, columnspan=1, stic
 
 # 2. Combobox
 # List of States Combobox
-list_states = ['','AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA',
-               'ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA',
-               'PR','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']
+list_states = ['','AL','AZ','AR','CA','CO','CT','DE','DC','FL','GA','ID','IL','IN','IA','KS','KY','LA',
+               'ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']
 StateValue = StringVar()
 w_state = ttk.Combobox(mainframe, textvariable=StateValue, state='readonly', width=60)
 w_state['values'] = list_states
@@ -545,30 +778,31 @@ w_npmrds_all = ttk.Button(mainframe, text='Select NPMRDS (All)', command=f_npmrd
 w_npmrds_pass = ttk.Button(mainframe, text='Select NPMRDS (Passenger)', command=f_npmrds_pass).grid(column=0, row=16, columnspan=1, sticky="w")
 w_npmrds_truck = ttk.Button(mainframe, text='Select NPMRDS (Truck)', command=f_npmrds_truck).grid(column=0, row=17, columnspan=1, sticky="w")
 w_npmrds_tmc = ttk.Button(mainframe, text='Select TMC Configuration', command=f_npmrds_tmc).grid(column=0, row=18, columnspan=1, sticky="w")
-w_npmrds_shp = ttk.Button(mainframe, text='Select TMC shapefile', command=f_npmrds_shp).grid(column=0, row=19, columnspan=1, sticky="w")
+#w_npmrds_shp = ttk.Button(mainframe, text='Select TMC shapefile', command=f_npmrds_shp).grid(column=0, row=19, columnspan=1, sticky="w")
 w_emission = ttk.Button(mainframe, text='Select Emission Rates', command=f_emission).grid(column=0, row=20, columnspan=1, sticky="w")
 w_fips_2 = ttk.Button(mainframe, text='Select FIPS File', command=f_fips).grid(column=0, row=21, columnspan=1, sticky="w")
 w_nei_2 = ttk.Button(mainframe, text='Select National Emission Inventory File', command=f_nei).grid(column=0, row=22, columnspan=1, sticky="w")
 
 # script 2
 #w_tmas_station_state_2 = ttk.Button(mainframe, text='Select Processed TMAS Station', command=f_tmas_station_state).grid(column=0, row=19, columnspan=1, sticky="w")
-w_tmas_class_clean_2 = ttk.Button(mainframe, text='Select Processed TMAS Class', command=f_tmas_class_clean).grid(column=0, row=25, columnspan=1, sticky="w")
+w_npmrds_clean_1 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=25, columnspan=1, sticky="w")
 w_hpms = ttk.Button(mainframe, text='Select HPMS', command=f_hpms).grid(column=0, row=26, columnspan=1, sticky="w")
 w_vm2 = ttk.Button(mainframe, text='Select VM2', command=f_vm2).grid(column=0, row=27, columnspan=1, sticky="w")
 w_county_mileage = ttk.Button(mainframe, text='Select County Mileage file', command=f_county_mileage).grid(column=0, row=28, columnspan=1, sticky="w")
 
 # script 3
-w_npmrds_clean_1 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=31, columnspan=1, sticky="w")
+w_npmrds_clean_2 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=31, columnspan=1, sticky="w")
 
 # script 4
-w_npmrds_clean_2 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=34, columnspan=1, sticky="w")
+w_npmrds_clean_3 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=34, columnspan=1, sticky="w")
+tmc_selection_button = ttk.Button(mainframe, text = 'TMC Selection Tool', command=lambda: notebook.select('.!notebook.!frame3')).grid(column=1, row=33, columnspan=1, sticky="w")
 # Entry
 tmcEntry = StringVar()
 ttk.Entry(mainframe, textvariable=tmcEntry).grid(column=1, row=35, columnspan=1, sticky="ew")
 ##################################################
 
 # 4. Pathlabels
-# script 1
+# script 0
 pl_tmas_station = ttk.Label(mainframe)
 pl_tmas_station.grid(column=1, row=7, columnspan=1, sticky="w")
 pl_tmas_class = ttk.Label(mainframe)
@@ -590,31 +824,31 @@ pl_npmrds_truck = ttk.Label(mainframe)
 pl_npmrds_truck.grid(column=1, row=17, columnspan=1, sticky="w")
 pl_npmrds_tmc = ttk.Label(mainframe)
 pl_npmrds_tmc.grid(column=1, row=18, columnspan=1, sticky="w")
-pl_npmrds_shp = ttk.Label(mainframe)
-pl_npmrds_shp.grid(column=1, row=19, columnspan=1, sticky="w")
+#pl_npmrds_shp = ttk.Label(mainframe)
+#pl_npmrds_shp.grid(column=1, row=19, columnspan=1, sticky="w")
 pl_emission = ttk.Label(mainframe)
 pl_emission.grid(column=1, row=20, columnspan=1, sticky="w")
 pl_fips_2 = ttk.Label(mainframe)
 pl_fips_2.grid(column=1, row=21, columnspan=1, sticky="w")
 pl_nei_2 = ttk.Label(mainframe)
 pl_nei_2.grid(column=1, row=22, columnspan=1, sticky="w")
-# script 3
+# script 2
 #pl_tmas_station_state_2 = ttk.Label(mainframe)
 #pl_tmas_station_state_2.grid(column=1, row=19, columnspan=1, sticky="w")
-pl_tmas_class_clean_2 = ttk.Label(mainframe)
-pl_tmas_class_clean_2.grid(column=1, row=25, columnspan=1, sticky="w")
+pl_npmrds_clean_1 = ttk.Label(mainframe)
+pl_npmrds_clean_1.grid(column=1, row=25, columnspan=1, sticky="w")
 pl_hpms = ttk.Label(mainframe)
 pl_hpms.grid(column=1, row=26, columnspan=1, sticky="w")
 pl_vm2 = ttk.Label(mainframe)
 pl_vm2.grid(column=1, row=27, columnspan=1, sticky="w")
 pl_county_mileage = ttk.Label(mainframe)
 pl_county_mileage.grid(column=1, row=28, columnspan=1, sticky="w")
-# script 4
-pl_npmrds_clean_1 = ttk.Label(mainframe)
-pl_npmrds_clean_1.grid(column=1, row=31, columnspan=1, sticky="w")
-# script 5
+# script 3
 pl_npmrds_clean_2 = ttk.Label(mainframe)
-pl_npmrds_clean_2.grid(column=1, row=34, columnspan=1, sticky="w")
+pl_npmrds_clean_2.grid(column=1, row=31, columnspan=1, sticky="w")
+# script 4
+pl_npmrds_clean_3 = ttk.Label(mainframe)
+pl_npmrds_clean_3.grid(column=1, row=34, columnspan=1, sticky="w")
 ##################################################
 
 # 5. Check available pre-processed files
@@ -624,7 +858,11 @@ pl_tmas_station_state_1.config(text='')
 
 # TMAS Class
 pl_tmas_class_clean_1.config(text='')
-pl_tmas_class_clean_2.config(text='')
+
+defaultpath = 'Default Input Files/'
+pathlib.Path(defaultpath).mkdir(exist_ok=True) 
+outputpath = 'Final Output/'
+pathlib.Path(outputpath).mkdir(exist_ok=True) 
 
 # FIPS
 if ('FIPS_County_Codes.csv' in os.listdir('Default Input Files/')):
@@ -636,18 +874,18 @@ else:
     pl_fips_2.config(text='')
     
 # NEI
-if ('NEI_Representative_Counties.csv' in os.listdir('Default Input Files/')):
-    pl_nei_1.config(text=os.getcwd()+'\\Default Input Files\\NEI_Representative_Counties.xlsx')
-    pl_nei_2.config(text=os.getcwd()+'\\Default Input Files\\NEI_Representative_Counties.xlsx')
-    fn_nei = 'Default Input Files/NEI_Representative_Counties.csv'
+if ('NEI2017_RepresentativeCounties.csv' in os.listdir('Default Input Files/')):
+    pl_nei_1.config(text=os.getcwd()+'\\Default Input Files\\NEI2017_RepresentativeCounties.csv')
+    pl_nei_2.config(text=os.getcwd()+'\\Default Input Files\\NEI2017_RepresentativeCounties.csv')
+    fn_nei = 'Default Input Files/NEI2017_RepresentativeCounties.csv'
 else:
     pl_nei_1.config(text='')
     pl_nei_2.config(text='')
 
 # Emission Rates
-if ('NEI_National_Emissions_Rates_Basis.csv' in os.listdir('Default Input Files/')):
-    pl_emission.config(text=os.getcwd()+'\\Default Input Files\\NEI_National_Emissions_Rates_Basis.csv')
-    fn_emission = 'Default Input Files/NEI_National_Emissions_Rates_Basis.csv'
+if ('NEI2017_RepresentativeEmissionsRates.csv' in os.listdir('Default Input Files/')):
+    pl_emission.config(text=os.getcwd()+'\\Default Input Files\\NEI2017_RepresentativeEmissionsRates.csv')
+    fn_emission = 'Default Input Files/NEI2017_RepresentativeEmissionsRates.csv'
 else:
     pl_emission.config(text='')
        
@@ -665,8 +903,8 @@ if False:
     pl_npmrds_truck.config(text=fn_npmrds_truck.replace('/','\\'))
     fn_npmrds_tmc = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/Example_MiddlesexCounty_Massachusetts/2018 NPMRDS Data/TMC_Identification.csv'
     pl_npmrds_tmc.config(text=fn_npmrds_tmc.replace('/','\\'))
-    fn_npmrds_shp = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/National TMC Shapefile/NationalMerge.shp'
-    pl_npmrds_shp.config(text=fn_npmrds_shp.replace('/','\\'))
+    #fn_npmrds_shp = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/National TMC Shapefile/NationalMerge.shp'
+    #pl_npmrds_shp.config(text=fn_npmrds_shp.replace('/','\\'))
 
 ##################################################
 
@@ -688,7 +926,15 @@ if __name__ == "__main__":
     sys.stdout = redir
     sys.stderr = sys.stdout
     root.update_idletasks()
-    canvas.configure(scrollregion=canvas.bbox('all'))
+    bind_tree(main_container, "<MouseWheel>", main_mouse_wheel)
+    bind_tree(TMCSelect_container, "<MouseWheel>", tmcselect_mouse_wheel)
+    canvasScrollRegion = (0, 0, 
+                          max(canvas.winfo_width()-4, canvas.bbox('all')[2]),
+                          max(canvas.winfo_height()-4, canvas.bbox('all')[3]))
+    canvas.configure(scrollregion=canvasScrollRegion)
+    TMCcanvasScrollRegion = (0, 0, 
+                          max(TMCSelect_canvas.winfo_width()-4, TMCSelect_canvas.bbox('all')[2]-1),
+                          max(TMCSelect_canvas.winfo_height()-4, TMCSelect_canvas.bbox('all')[3]-1))
     runningThreads = []
     checkProgress()
     root.mainloop()
