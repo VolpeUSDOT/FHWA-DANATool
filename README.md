@@ -16,7 +16,7 @@ The fully compiled, standalone DANA tool can be downloaded and installed from FH
 
 [https://www.fhwa.dot.gov/environment/air_quality/methodologies/dana](https://www.fhwa.dot.gov/environment/air_quality/methodologies/dana)
 
-I full user guide describing the data inputs and outputs of the DANA tool as well as the usage of the GUI can be found at the above page as well.
+A full user guide describing the data inputs and outputs of the DANA tool as well as the usage of the GUI can be found at the above page as well.
 
 If you would like to use the source python scripts in the DANA tool library, you may clone this repository and use the 5 data processing functions defined in the library in your own Python scripts or projects.
 ```bash
