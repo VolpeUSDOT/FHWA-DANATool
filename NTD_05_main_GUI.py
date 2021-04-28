@@ -768,7 +768,7 @@ w_tmas_class = ttk.Button(mainframe, text='Select TMAS Class File', command=f_tm
 w_tmas_class.grid(column=0, row=8, columnspan=1, sticky="w")
 w_fips_1 = ttk.Button(mainframe, text='Select FIPS File', command=f_fips)
 w_fips_1.grid(column=0, row=9, columnspan=1, sticky="w")
-w_nei_1 = ttk.Button(mainframe, text='Select National Emission Inventory File', command=f_nei)
+w_nei_1 = ttk.Button(mainframe, text='Select NEI Representative Counties', command=f_nei)
 w_nei_1.grid(column=0, row=10, columnspan=1, sticky="w")
 
 # script 1
@@ -781,7 +781,7 @@ w_npmrds_tmc = ttk.Button(mainframe, text='Select TMC Configuration', command=f_
 #w_npmrds_shp = ttk.Button(mainframe, text='Select TMC shapefile', command=f_npmrds_shp).grid(column=0, row=19, columnspan=1, sticky="w")
 w_emission = ttk.Button(mainframe, text='Select Emission Rates', command=f_emission).grid(column=0, row=20, columnspan=1, sticky="w")
 w_fips_2 = ttk.Button(mainframe, text='Select FIPS File', command=f_fips).grid(column=0, row=21, columnspan=1, sticky="w")
-w_nei_2 = ttk.Button(mainframe, text='Select National Emission Inventory File', command=f_nei).grid(column=0, row=22, columnspan=1, sticky="w")
+w_nei_2 = ttk.Button(mainframe, text='Select NEI Representative Counties', command=f_nei).grid(column=0, row=22, columnspan=1, sticky="w")
 
 # script 2
 #w_tmas_station_state_2 = ttk.Button(mainframe, text='Select Processed TMAS Station', command=f_tmas_station_state).grid(column=0, row=19, columnspan=1, sticky="w")
