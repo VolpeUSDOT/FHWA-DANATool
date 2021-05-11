@@ -1,16 +1,14 @@
-Default Input Files/
-User Input Files/
-Final Output/
-NPMRDS_Intermediate_Output/
-lib/__pycache__/
-build/
-dist/
-__pycache__/
-DANATool.exe
 .vscode/
 Scratch_Code.py
 test.csv
 test.zip
+Default Input Files/
+User Input Files/
+NPMRDS_Intermediate_Output/
+Final Output/
+lib/__pycache__/
+build/
+__pycache__/
+DANATool.exe
+NTD_05_main_GUI.spec
 DANAPackage.zip
-scratch.py
-TMAS_Intermediate_Output/
