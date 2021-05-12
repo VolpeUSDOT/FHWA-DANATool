@@ -32,11 +32,11 @@ PrivilegesRequired=none
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
-Source: "D:\DANA\Installer\Final V1.0\Default Input Files\TMAS Data\TMAS 2015\*"; DestDir: "{app}\Defaults Input Files\TMAS Data\TMAS 2015"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "D:\DANA\Installer\Final V1.0\Default Input Files\TMAS Data\TMAS 2016\*"; DestDir: "{app}\Defaults Input Files\TMAS Data\TMAS 2016"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "D:\DANA\Installer\Final V1.0\Default Input Files\TMAS Data\TMAS 2017\*"; DestDir: "{app}\Defaults Input Files\TMAS Data\TMAS 2017"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "D:\DANA\Installer\Final V1.0\Default Input Files\TMAS Data\TMAS 2018\*"; DestDir: "{app}\Defaults Input Files\TMAS Data\TMAS 2018"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "D:\DANA\Installer\Final V1.0\Default Input Files\TMAS Data\TMAS 2019\*"; DestDir: "{app}\Defaults Input Files\TMAS Data\TMAS 2019"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "D:\DANA\Installer\Final V1.0\Default Input Files\TMAS Data\TMAS 2015\*"; DestDir: "{app}\Default Input Files\TMAS Data\TMAS 2015"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "D:\DANA\Installer\Final V1.0\Default Input Files\TMAS Data\TMAS 2016\*"; DestDir: "{app}\Default Input Files\TMAS Data\TMAS 2016"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "D:\DANA\Installer\Final V1.0\Default Input Files\TMAS Data\TMAS 2017\*"; DestDir: "{app}\Default Input Files\TMAS Data\TMAS 2017"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "D:\DANA\Installer\Final V1.0\Default Input Files\TMAS Data\TMAS 2018\*"; DestDir: "{app}\Default Input Files\TMAS Data\TMAS 2018"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "D:\DANA\Installer\Final V1.0\Default Input Files\TMAS Data\TMAS 2019\*"; DestDir: "{app}\Default Input Files\TMAS Data\TMAS 2019"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
