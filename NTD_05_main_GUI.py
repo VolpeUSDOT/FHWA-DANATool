@@ -247,7 +247,7 @@ def checkProgress():
     global fn_npmrds_clean
     while not thread_queue.empty():
         output_text.insert(tk.END, thread_queue.get())
-    
+        
     root.update_idletasks()
     canvasScrollRegion = (0, 0, 
                           max(canvas.winfo_width()-4, canvas.bbox('all')[2]),
@@ -610,6 +610,10 @@ def tmcselect_mouse_wheel(event):
 def ctrlEvent(event):
     if(12==event.state and event.keysym=='c' ):
         return
+    elif(12==event.state and event.keysym=='Tab'):
+        return
+    elif(event.keysym=='Left' or event.keysym=='Right' or event.keysym=='Up' or event.keysym=='Down'):
+        return
     else:
         return "break"
 
@@ -706,13 +710,6 @@ for child in TMCSelection_frame.winfo_children(): child.grid_configure(padx=2, p
 
 ##################################################
 
-# checkbox for process 1
-
-preprocess_checkvar = IntVar()
-preprocess_checkvar.set(False)
-preprocess_tmas_checkbox = ttk.Checkbutton(mainframe, text=step0, variable=preprocess_checkvar, command=enable_tmas_preprocess)
-preprocess_tmas_checkbox.grid(row=6,column=0, columnspan=1, sticky="w")
-
 ##################################################
 
 #1. Header
@@ -720,11 +717,6 @@ ttk.Label(mainframe, wraplength = 500, text='To select the desired script and in
 ttk.Label(mainframe, text='Select State:').grid(row=1,column=0, columnspan=1, sticky="w")
 ttk.Label(mainframe, text='Select Processing Steps:').grid(row=2,column=0, columnspan=1, sticky="w")
 ttk.Label(mainframe, text='Select inputs under the selected step and press the process data button.  Repeat for each step that you want to run.').grid(row=3,column=0, columnspan=3, sticky="w")
-startButton = ttk.Button(mainframe, text="Process Data", command=ProcessData)
-startButton.grid(column=0, row=4, columnspan=1 ,sticky="w")
-cancelButton = ttk.Button(mainframe, text="Cancel Data Processing", command=CancelProcess).grid(column=0, row=4, columnspan=1 ,sticky="E")
-statusLabel = ttk.Label(mainframe, text="No Process Currently Running", relief=SUNKEN)
-statusLabel.grid(column=1, row=4, columnspan=1, sticky="W")
 
 ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=5,column=0, columnspan=5, sticky="ew")
 #ttk.Label(mainframe, text=step0).grid(row=6,column=1, columnspan=1, sticky="w")
@@ -758,6 +750,22 @@ w_script = ttk.Combobox(mainframe, textvariable=ScriptValue, state='readonly', w
 w_script['values'] = list_scripts
 w_script.current(0)
 w_script.grid(column=1, row=2, columnspan=1, sticky="w")
+
+########
+## Start Buttons
+
+startButton = ttk.Button(mainframe, text="Process Data", command=ProcessData)
+startButton.grid(column=0, row=4, columnspan=1 ,sticky="w")
+cancelButton = ttk.Button(mainframe, text="Cancel Data Processing", command=CancelProcess).grid(column=0, row=4, columnspan=1 ,sticky="E")
+statusLabel = ttk.Label(mainframe, text="No Process Currently Running", relief=SUNKEN)
+statusLabel.grid(column=1, row=4, columnspan=1, sticky="W")
+
+### checkbox for process 1
+
+preprocess_checkvar = IntVar()
+preprocess_checkvar.set(False)
+preprocess_tmas_checkbox = ttk.Checkbutton(mainframe, text=step0, variable=preprocess_checkvar, command=enable_tmas_preprocess)
+preprocess_tmas_checkbox.grid(row=6,column=0, columnspan=1, sticky="w")
 ##################################################
 
 # 3. File Browsing Buttons
