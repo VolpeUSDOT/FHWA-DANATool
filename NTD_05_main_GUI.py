@@ -109,7 +109,7 @@ fn_vm2 = ''
 fn_county_mileage = ''
 fn_fips = ''
 fn_nei = ''
-step0 = '0. Pre-Process Raw TMAS Data'
+step0 = '0. Pre-Process Raw TMAS Data (optional)'
 step1 = '1. Process Raw NPMRDS Data'
 step2 = '2. Produce MOVES Inputs'
 step3 = '3. Produce Speed Distributions'
@@ -207,6 +207,7 @@ def f_nei():
 def enable_tmas_preprocess():
     global list_scripts
     if preprocess_checkvar.get() == 0:
+        p0Canvas.grid_remove()
         w_tmas_station.grid_remove()
         w_tmas_class.grid_remove()
         w_fips_1.grid_remove()
@@ -216,11 +217,9 @@ def enable_tmas_preprocess():
         pl_tmas_class.grid_remove()
         pl_fips_1.grid_remove()
         pl_nei_1.grid_remove()
-        
-        list_scripts = ['', step1, step2, step3, step4]
-        w_script['values'] = list_scripts
 
     else:
+        p0Canvas.grid()
         w_tmas_station.grid()
         w_tmas_class.grid()
         w_fips_1.grid()
@@ -230,9 +229,6 @@ def enable_tmas_preprocess():
         pl_tmas_class.grid()
         pl_fips_1.grid()
         pl_nei_1.grid()
-        
-        list_scripts = ['', step0, step1, step2, step3, step4]
-        w_script['values'] = list_scripts    
         
 # Func - Print TMC Input
 def PrintTMCinput(tmc_list):
@@ -258,17 +254,19 @@ def checkProgress():
                           max(TMCSelect_canvas.winfo_height()-4, TMCSelect_canvas.bbox('all')[3]-1))
     TMCSelect_canvas.configure(scrollregion=TMCcanvasScrollRegion)
     
+    #There will only every be one process running at a time, but we look at all
+    #running threads to make sure it is working cleanly
     removeList = []
     for i in range(len(runningThreads)):
         if not runningThreads[i].is_alive():
             removeList.append(i)
         else:
-            statusLabel["text"] = "Step {} is currently running".format(runningThreads[i].name)
+            disable_buttons(runningThreads[i].name)
     for i in removeList:
         print("*** {} has finished running ***".format(runningThreads[i].name))
+        enable_buttons()
         del runningThreads[i]
-        startButton["state"] = NORMAL
-        statusLabel["text"] = "No Process Currently Running"
+
     
     root.after(100, checkProgress)
         
@@ -283,13 +281,13 @@ def process_handler(proc_target, thread_queue, args):
         print(traceback.format_exc())            
     
 # Func - ProcessData Function
-def ProcessData():
+def ProcessData(procNum):
     global runningThreads
     #output_text.delete('1.0', END)
     tmc_chars = set('0123456789+-PN, ')
     if StateValue.get() == '':
         PopUp_Selection("State")
-    elif ScriptValue.get() == step0:
+    elif procNum == step0:
         if fn_tmas_station == '':
             PopUp_Selection("TMAS Station file")
         elif fn_tmas_class == '':
@@ -305,12 +303,12 @@ def ProcessData():
             PATH_FIPS = fn_fips 
             PATH_NEI = fn_nei
             TMAS_Proc = mp.Process(target=process_handler, name=step0, args=(NTD_00_TMAS.TMAS, thread_queue, (SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI)))
-            startButton["state"] = DISABLED
+            disable_buttons(step0)
             TMAS_Proc.start()
             runningThreads.append(TMAS_Proc)
             notebook.select('.!notebook.!frame2')
             
-    elif ScriptValue.get() == step1:
+    elif procNum == step1:
         if fn_tmas_station == '' or fn_tmas_class_clean == '':
             PopUpCleanTMASSelection()            
         elif fn_npmrds_all == '':
@@ -342,12 +340,12 @@ def ProcessData():
             PATH_FIPS = fn_fips 
             PATH_NEI = fn_nei
             NPMRDS_Proc = mp.Process(target=process_handler, name=step1, args=(NTD_01_NPMRDS.NPMRDS, thread_queue, (SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI)))
-            startButton["state"] = DISABLED
+            disable_buttons(step1)
             NPMRDS_Proc.start()
             runningThreads.append(NPMRDS_Proc)
             notebook.select('.!notebook.!frame2')
     
-    elif ScriptValue.get() == step2:
+    elif procNum == step2:
         if fn_npmrds_clean == '':
             PopUpCleanNPMRDSSelection()
         else:
@@ -357,24 +355,24 @@ def ProcessData():
             PATH_VM2 = fn_vm2
             PATH_COUNTY_MILEAGE = fn_county_mileage
             MOVES_Proc = mp.Process(target=process_handler, name=step2, args=(NTD_02_MOVES.MOVES, thread_queue, (SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)))
-            startButton["state"] = DISABLED
+            disable_buttons(step2)
             MOVES_Proc.start()
             runningThreads.append(MOVES_Proc)
             notebook.select('.!notebook.!frame2')
             
-    elif ScriptValue.get() == step3:    # needs update
+    elif procNum == step3:    # needs update
         SELECT_STATE = StateValue.get()
         if fn_npmrds_clean == '':
             PopUpCleanNPMRDSSelection()
         else:
             PATH_NPMRDS = fn_npmrds_clean
             SPEED_Proc = mp.Process(target=process_handler, name=step3, args=(NTD_03_SPEED.SPEED, thread_queue, (SELECT_STATE, PATH_NPMRDS)))
-            startButton["state"] = DISABLED
+            disable_buttons(step3)
             SPEED_Proc.start()
             runningThreads.append(SPEED_Proc)
             notebook.select('.!notebook.!frame2')
 
-    elif ScriptValue.get() == step4:    # needs update
+    elif procNum == step4:    # needs update
         SELECT_STATE = StateValue.get()
         if fn_npmrds_clean == '':
             PopUpCleanNPMRDSSelection()
@@ -386,7 +384,7 @@ def ProcessData():
             #PrintTMCinput(SELECT_TMC)
             PATH_NPMRDS = fn_npmrds_clean
             NOISE_Proc = mp.Process(target=process_handler, name=step4, args=(NTD_04_NOISE.NOISE, thread_queue, (SELECT_STATE, SELECT_TMC, PATH_NPMRDS)))
-            startButton["state"] = DISABLED
+            disable_buttons(step4)
             NOISE_Proc.start()
             runningThreads.append(NOISE_Proc)
             notebook.select('.!notebook.!frame2')
@@ -394,6 +392,54 @@ def ProcessData():
     else:
         PopUp_Selection("Step")
     #root.destroy()
+
+def disable_buttons(step):
+    p0startButton['state'] = DISABLED
+    p1startButton['state'] = DISABLED
+    p2startButton['state'] = DISABLED
+    p3startButton['state'] = DISABLED
+    p4startButton['state'] = DISABLED
+
+    p0cancelButton["state"] = DISABLED
+    p1cancelButton["state"] = DISABLED
+    p2cancelButton["state"] = DISABLED
+    p3cancelButton["state"] = DISABLED
+    p4cancelButton["state"] = DISABLED
+    
+    if step == step0:
+        p0cancelButton["state"] = NORMAL
+        p0statusLabel.grid()
+    elif step == step1:
+        p1cancelButton["state"] = NORMAL
+        p1statusLabel.grid()
+    elif step == step2:
+        p2cancelButton["state"] = NORMAL
+        p2statusLabel.grid()
+    elif step == step3:
+        p3cancelButton["state"] = NORMAL
+        p3statusLabel.grid()
+    elif step == step4:
+        p4cancelButton["state"] = NORMAL
+        p4statusLabel.grid()
+
+def enable_buttons():
+    p0startButton['state'] = NORMAL
+    p1startButton['state'] = NORMAL
+    p2startButton['state'] = NORMAL
+    p3startButton['state'] = NORMAL
+    p4startButton['state'] = NORMAL
+
+    p0cancelButton["state"] = NORMAL
+    p1cancelButton["state"] = NORMAL
+    p2cancelButton["state"] = NORMAL
+    p3cancelButton["state"] = NORMAL
+    p4cancelButton["state"] = NORMAL
+    
+    p0statusLabel.grid_remove()
+    p1statusLabel.grid_remove()
+    p2statusLabel.grid_remove()
+    p3statusLabel.grid_remove()
+    p4statusLabel.grid_remove()
     
 def CancelProcess():
     global runningThreads
@@ -403,10 +449,6 @@ def CancelProcess():
         
         if not proc.is_alive():
             print("************* Canceled Step {} **************".format(proc.name))
-            startButton["state"] = NORMAL
-            statusLabel["text"] = "No Process Currently Running"
-
-    runningThreads = []
     
 
 # TMC Selection Functions
@@ -620,16 +662,19 @@ def ctrlEvent(event):
 ################################################################################
 
 root = Tk()
-root.title("DANA Tool")
-root.grid_rowconfigure(0, weight=1)
+root.title("FHWA DANA Tool")
+root.grid_rowconfigure(0, weight=0)
+root.grid_rowconfigure(1, weight=1)
 root.grid_columnconfigure(0, weight=1)
 
 iconPath = resource_path('lib\\dot.png')
 p1 = tk.PhotoImage(file = iconPath)
 root.iconphoto(True, p1)
 
-notebook = ttk.Notebook(root, width=1000, height=700)
-notebook.grid(row=0, column=0, sticky="news")
+headerFont = ("Ariel", 15, "bold")
+ttk.Label(root, wraplength = 500, text="Welcome to FHWA's DANA Tool", font=headerFont).grid(row=0, column=0, columnspan= 1, sticky="w")
+notebook = ttk.Notebook(root, height=500, width=1200)
+notebook.grid(row=1, column=0, sticky="news")
 
 main_container = tk.Frame(notebook)
 main_container.grid(row=0, column=0, sticky="news")
@@ -713,10 +758,9 @@ for child in TMCSelection_frame.winfo_children(): child.grid_configure(padx=2, p
 ##################################################
 
 #1. Header
-ttk.Label(mainframe, wraplength = 500, text='To select the desired script and inputs').grid(row=0, column=0, columnspan= 1, sticky="w")
+
 ttk.Label(mainframe, text='Select State:').grid(row=1,column=0, columnspan=1, sticky="w")
-ttk.Label(mainframe, text='Select Processing Steps:').grid(row=2,column=0, columnspan=1, sticky="w")
-ttk.Label(mainframe, text='Select inputs under the selected step and press the process data button.  Repeat for each step that you want to run.').grid(row=3,column=0, columnspan=3, sticky="w")
+ttk.Label(mainframe, text='Select inputs under the desired process and press the “Run Process” button.').grid(row=3,column=0, columnspan=3, sticky="w")
 
 ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=5,column=0, columnspan=5, sticky="ew")
 #ttk.Label(mainframe, text=step0).grid(row=6,column=1, columnspan=1, sticky="w")
@@ -729,8 +773,8 @@ ttk.Label(mainframe, text=step3).grid(row=30,column=0, columnspan=1, sticky="w")
 ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=32,column=0, columnspan=5, sticky="ew")
 ttk.Label(mainframe, text=step4).grid(row=33,column=0, columnspan=1, sticky="w")
 
-ttk.Label(mainframe, text=' Enter TMC Codes (separate by comma)').grid(row=35, column=0, columnspan=1, sticky="w")
-ttk.Label(mainframe, text='          ').grid(row=36,column=0, columnspan=1, sticky="w")
+ttk.Label(mainframe, text=' Enter TMC Codes (separate by comma)').grid(row=36, column=0, columnspan=1, sticky="w")
+ttk.Label(mainframe, text='          ').grid(row=37,column=0, columnspan=1, sticky="w")
 
 ##################################################
 
@@ -739,34 +783,29 @@ ttk.Label(mainframe, text='          ').grid(row=36,column=0, columnspan=1, stic
 list_states = ['','AL','AZ','AR','CA','CO','CT','DE','DC','FL','GA','ID','IL','IN','IA','KS','KY','LA',
                'ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']
 StateValue = StringVar()
-w_state = ttk.Combobox(mainframe, textvariable=StateValue, state='readonly', width=60)
+w_state = ttk.Combobox(mainframe, textvariable=StateValue, state='readonly', width=30)
 w_state['values'] = list_states
 w_state.current(0)
 w_state.grid(column=1, row=1, columnspan=1, sticky="w")
-# List of Scripts Combobox
-list_scripts = ['', step0, step1, step2, step3, step4]
-ScriptValue = StringVar()
-w_script = ttk.Combobox(mainframe, textvariable=ScriptValue, state='readonly', width=60)
-w_script['values'] = list_scripts
-w_script.current(0)
-w_script.grid(column=1, row=2, columnspan=1, sticky="w")
 
-########
-## Start Buttons
-
-startButton = ttk.Button(mainframe, text="Process Data", command=ProcessData)
-startButton.grid(column=0, row=4, columnspan=1 ,sticky="w")
-cancelButton = ttk.Button(mainframe, text="Cancel Data Processing", command=CancelProcess).grid(column=0, row=4, columnspan=1 ,sticky="E")
-statusLabel = ttk.Label(mainframe, text="No Process Currently Running", relief=SUNKEN)
-statusLabel.grid(column=1, row=4, columnspan=1, sticky="W")
-
-### checkbox for process 1
+### checkbox for process 0
 
 preprocess_checkvar = IntVar()
 preprocess_checkvar.set(False)
 preprocess_tmas_checkbox = ttk.Checkbutton(mainframe, text=step0, variable=preprocess_checkvar, command=enable_tmas_preprocess)
 preprocess_tmas_checkbox.grid(row=6,column=0, columnspan=1, sticky="w")
-##################################################
+
+########
+## Start Buttons
+p0Canvas = tk.Canvas(mainframe)
+p0Canvas.grid(column=1, row=6, sticky='W')
+p0startButton = ttk.Button(p0Canvas, text="Run Process 0", command=lambda: ProcessData(step0))
+p0startButton.grid(column=0, row=0, columnspan=1 ,sticky="W", padx=(0, 5))
+p0cancelButton = ttk.Button(p0Canvas, text="Cancel Process 0", command=CancelProcess)
+p0cancelButton.grid(column=1, row=0, columnspan=1, padx=(5, 5), sticky="W")
+p0statusLabel = ttk.Label(p0Canvas, text="Process 0 Running", relief=SUNKEN)
+p0statusLabel.grid(column=2, row=0, columnspan=1, padx=(5, 0), sticky="W")
+p0statusLabel.grid_remove()
 
 # 3. File Browsing Buttons
 # script 0
@@ -780,6 +819,16 @@ w_nei_1 = ttk.Button(mainframe, text='Select NEI Representative Counties', comma
 w_nei_1.grid(column=0, row=10, columnspan=1, sticky="w")
 
 # script 1
+p1Canvas = tk.Canvas(mainframe)
+p1Canvas.grid(column=1, row=12, sticky='W')
+p1startButton = ttk.Button(p1Canvas, text="Run Process 1", command=lambda: ProcessData(step1))
+p1startButton.grid(column=0, row=0, columnspan=1 ,sticky="W", padx=(0, 5))
+p1cancelButton = ttk.Button(p1Canvas, text="Cancel Process 1", command=CancelProcess)
+p1cancelButton.grid(column=1, row=0, columnspan=1, padx=(5, 5), sticky="W")
+p1statusLabel = ttk.Label(p1Canvas, text="Process 1 Running", relief=SUNKEN)
+p1statusLabel.grid(column=2, row=0, columnspan=1, padx=(5, 0), sticky="W")
+p1statusLabel.grid_remove()
+
 w_tmas_station_state_1 = ttk.Button(mainframe, text='Select Processed TMAS Station', command=f_tmas_station_state).grid(column=0, row=13, columnspan=1, sticky="w")
 w_tmas_class_clean_1 = ttk.Button(mainframe, text='Select Processed TMAS Class', command=f_tmas_class_clean).grid(column=0, row=14, columnspan=1, sticky="w")
 w_npmrds_all = ttk.Button(mainframe, text='Select NPMRDS (All)', command=f_npmrds_all).grid(column=0, row=15, columnspan=1, sticky="w")
@@ -793,20 +842,50 @@ w_nei_2 = ttk.Button(mainframe, text='Select NEI Representative Counties', comma
 
 # script 2
 #w_tmas_station_state_2 = ttk.Button(mainframe, text='Select Processed TMAS Station', command=f_tmas_station_state).grid(column=0, row=19, columnspan=1, sticky="w")
+p2Canvas = tk.Canvas(mainframe)
+p2Canvas.grid(column=1, row=24, sticky='W')
+p2startButton = ttk.Button(p2Canvas, text="Run Process 2", command=lambda: ProcessData(step2))
+p2startButton.grid(column=0, row=0, columnspan=1 ,sticky="W", padx=(0, 5))
+p2cancelButton = ttk.Button(p2Canvas, text="Cancel Process 2", command=CancelProcess)
+p2cancelButton.grid(column=1, row=0, columnspan=1, padx=(5, 5), sticky="W")
+p2statusLabel = ttk.Label(p2Canvas, text="Process 2 Running", relief=SUNKEN)
+p2statusLabel.grid(column=2, row=0, columnspan=1, padx=(5, 0), sticky="W")
+p2statusLabel.grid_remove()
+
 w_npmrds_clean_1 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=25, columnspan=1, sticky="w")
 w_hpms = ttk.Button(mainframe, text='Select HPMS', command=f_hpms).grid(column=0, row=26, columnspan=1, sticky="w")
-w_vm2 = ttk.Button(mainframe, text='Select VM2', command=f_vm2).grid(column=0, row=27, columnspan=1, sticky="w")
+w_vm2 = ttk.Button(mainframe, text='Select Road Class Mileage', command=f_vm2).grid(column=0, row=27, columnspan=1, sticky="w")
 w_county_mileage = ttk.Button(mainframe, text='Select County Mileage file', command=f_county_mileage).grid(column=0, row=28, columnspan=1, sticky="w")
 
 # script 3
+p3Canvas = tk.Canvas(mainframe)
+p3Canvas.grid(column=1, row=30, sticky='W')
+p3startButton = ttk.Button(p3Canvas, text="Run Process 3", command=lambda: ProcessData(step3))
+p3startButton.grid(column=0, row=0, columnspan=1 ,sticky="W", padx=(0, 5))
+p3cancelButton = ttk.Button(p3Canvas, text="Cancel Process 3", command=CancelProcess)
+p3cancelButton.grid(column=1, row=0, columnspan=1, padx=(5, 5), sticky="W")
+p3statusLabel = ttk.Label(p3Canvas, text="Process 3 Running", relief=SUNKEN)
+p3statusLabel.grid(column=2, row=0, columnspan=1, padx=(5, 0), sticky="W")
+p3statusLabel.grid_remove()
+
 w_npmrds_clean_2 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=31, columnspan=1, sticky="w")
 
 # script 4
-w_npmrds_clean_3 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=34, columnspan=1, sticky="w")
-tmc_selection_button = ttk.Button(mainframe, text = 'TMC Selection Tool', command=lambda: notebook.select('.!notebook.!frame3')).grid(column=1, row=33, columnspan=1, sticky="w")
+p4Canvas = tk.Canvas(mainframe)
+p4Canvas.grid(column=1, row=33, sticky='W')
+p4startButton = ttk.Button(p4Canvas, text="Run Process 4", command=lambda: ProcessData(step4))
+p4startButton.grid(column=0, row=0, columnspan=1 ,sticky="W", padx=(0, 5))
+p4cancelButton = ttk.Button(p4Canvas, text="Cancel Process 4", command=CancelProcess)
+p4cancelButton.grid(column=1, row=0, columnspan=1, padx=(5, 5), sticky="W")
+p4statusLabel = ttk.Label(p4Canvas, text="Process 4 Running", relief=SUNKEN)
+p4statusLabel.grid(column=2, row=0, columnspan=1, padx=(5, 0), sticky="W")
+p4statusLabel.grid_remove()
+
+tmc_selection_button = ttk.Button(mainframe, text = 'TMC Selection Tool', command=lambda: notebook.select('.!notebook.!frame3')).grid(column=0, row=34, columnspan=1, sticky="w")
+w_npmrds_clean_3 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=35, columnspan=1, sticky="w")
 # Entry
 tmcEntry = StringVar()
-ttk.Entry(mainframe, textvariable=tmcEntry).grid(column=1, row=35, columnspan=1, sticky="ew")
+ttk.Entry(mainframe, textvariable=tmcEntry).grid(column=1, row=36, columnspan=1, sticky="ew")
 ##################################################
 
 # 4. Pathlabels
@@ -856,7 +935,7 @@ pl_npmrds_clean_2 = ttk.Label(mainframe)
 pl_npmrds_clean_2.grid(column=1, row=31, columnspan=1, sticky="w")
 # script 4
 pl_npmrds_clean_3 = ttk.Label(mainframe)
-pl_npmrds_clean_3.grid(column=1, row=34, columnspan=1, sticky="w")
+pl_npmrds_clean_3.grid(column=1, row=35, columnspan=1, sticky="w")
 ##################################################
 
 # 5. Check available pre-processed files
@@ -897,19 +976,19 @@ if ('NEI2017_RepresentativeEmissionsRates.csv' in os.listdir('Default Input File
 else:
     pl_emission.config(text='')
        
-if False:
-    w_state.current(22)
+if True:
+    w_state.current(20)
     fn_tmas_station = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2017/TMAS_Station_2017.csv'
     pl_tmas_station_state_1.config(text=fn_tmas_station.replace('/','\\'))
     fn_tmas_class_clean = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2017/TMAS_Class_Clean_2017.csv'
     pl_tmas_class_clean_1.config(text=fn_tmas_class_clean.replace('/','\\'))
-    fn_npmrds_all = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/Example_MiddlesexCounty_Massachusetts/2018 NPMRDS Data/MA_MIDDLESEX_2018_ALL.csv'
+    fn_npmrds_all = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/Middlesex_MA/NPMRDS Data/MA_MIDDLESEX_2018_ALL.csv'
     pl_npmrds_all.config(text=fn_npmrds_all.replace('/','\\'))
-    fn_npmrds_pass = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/Example_MiddlesexCounty_Massachusetts/2018 NPMRDS Data/MA_MIDDLESEX_2018_PASSENGER.csv'
+    fn_npmrds_pass = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/Middlesex_MA/NPMRDS Data/MA_MIDDLESEX_2018_PASSENGER.csv'
     pl_npmrds_pass.config(text=fn_npmrds_pass.replace('/','\\'))
-    fn_npmrds_truck = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/Example_MiddlesexCounty_Massachusetts/2018 NPMRDS Data/MA_MIDDLESEX_2018_TRUCKS.csv'
+    fn_npmrds_truck = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/Middlesex_MA/NPMRDS Data/MA_MIDDLESEX_2018_TRUCKS.csv'
     pl_npmrds_truck.config(text=fn_npmrds_truck.replace('/','\\'))
-    fn_npmrds_tmc = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/Example_MiddlesexCounty_Massachusetts/2018 NPMRDS Data/TMC_Identification.csv'
+    fn_npmrds_tmc = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/Middlesex_MA/NPMRDS Data/TMC_Identification.csv'
     pl_npmrds_tmc.config(text=fn_npmrds_tmc.replace('/','\\'))
     #fn_npmrds_shp = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/National TMC Shapefile/NationalMerge.shp'
     #pl_npmrds_shp.config(text=fn_npmrds_shp.replace('/','\\'))
