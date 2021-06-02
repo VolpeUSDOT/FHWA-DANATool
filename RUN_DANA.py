@@ -50,6 +50,12 @@ elif testOption == 7:
     npmrds_year = 2021
     state = 'VA'
     county = 'FairfaxCity'
+    
+elif testOption == 7:
+    tmas_year = 2019
+    npmrds_year = 2019
+    state = 'CA'
+    county = 'LosAngeles'
 
 
 SELECT_TMC = ['129+04374', '129P09003']
