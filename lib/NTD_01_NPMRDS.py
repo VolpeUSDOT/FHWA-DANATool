@@ -81,8 +81,9 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     # FIPS/NEI have names and codes; TMC_Identification only has names; repcty only in code; Use code
     fips_header = ['STATE_NAME','STATE_CODE','COUNTY_CODE','COUNTY_NAME','FIPS_TYPE']
     fips = pd.read_csv(PATH_FIPS,header=None,names=fips_header)
+    fips['COUNTY_ID'] = fips['STATE_CODE']*1000 + fips['COUNTY_CODE']
     repcty = pd.read_csv(PATH_NEI)
-    state_county = pd.merge(fips, repcty, left_on=['STATE_CODE','COUNTY_NAME'], right_on=['stateid','County_Name'], how='inner')
+    state_county = pd.merge(fips, repcty, left_on=['STATE_CODE','COUNTY_ID'], right_on=['stateid','countyid'], how='inner')
     state_county.drop(['stateid','countyid','County_Name'], inplace=True, axis=1)
     state_county.rename(columns={'State_Name':'STATE_FULL_NAME'}, inplace=True)
     state_county['COUNTY_NAME']=state_county['COUNTY_NAME'].str.replace(' County', '').str.lower()
@@ -113,7 +114,8 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     tmc.loc[tmc['urban_code']>=99999, 'urban_rural']='R'
     #a4. Add REPCTY
     tmc['state'] = tmc['state'].str.upper()
-    tmc['county'] = tmc['county'].str.lower().str.replace(' county', '').str.replace('(', '').str.replace(')', '')
+    tmc['county'] = tmc['county'].str.lower().str.replace(' county', '').str.replace('(', '').str.replace(')', '').str.replace('.', '').str.replace(' ', '')
+    state_county['COUNTY_NAME'] = state_county['COUNTY_NAME'].str.lower().str.replace(' county', '').str.replace('(', '').str.replace(')', '').str.replace('.', '').str.replace(' ', '')
     
     tmc_state_county = tmc.groupby(['state', 'county']).size().reset_index()[['state', 'county']]
     for index, row in tmc_state_county.iterrows():
@@ -122,7 +124,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
                                         (state_county['COUNTY_NAME']==test_row['county'])]
         if len(fips_matches)==1:
             continue
-        else: test_row['county'] = test_row['county']+' city'
+        else: test_row['county'] = test_row['county']+'city'
         
         fips_matches = state_county.loc[(state_county['STATE_NAME']==test_row['state'])&
                                         (state_county['COUNTY_NAME']==test_row['county'])]
@@ -133,7 +135,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
             continue
         else: 
             test_row = row.copy()
-            test_row['county'] = test_row['county']+' parish'
+            test_row['county'] = test_row['county']+'parish'
         
         fips_matches = state_county.loc[(state_county['STATE_NAME']==test_row['state'])&
                                         (state_county['COUNTY_NAME']==test_row['county'])]
@@ -143,7 +145,8 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
                     (tmc['county']==row['county']), 'county'] = test_row['county']
             continue
         else:
-            er = RuntimeError("State and county combination in NPMRDS configuration file was not found in FIPS code definition. Check the county name and try again.")
+            er = RuntimeError("State and county combination in NPMRDS configuration file was not found in FIPS code definition. "
+                              "Check the county name and try again. TMC County: {}".format(row['county']))
             raise er
             
     tmc = pd.merge(tmc, state_county, left_on=['state','county'], right_on=['STATE_NAME','COUNTY_NAME'], how='inner')

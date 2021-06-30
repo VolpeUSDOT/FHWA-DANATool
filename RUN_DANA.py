@@ -14,7 +14,7 @@ import sys
 # Basic Input Parameters
 step = 1
 
-testOption = 1
+testOption = 6
 if testOption == 1:
     tmas_year = 2018
     npmrds_year = 2018
@@ -56,6 +56,12 @@ elif testOption == 7:
     npmrds_year = 2019
     state = 'CA'
     county = 'LosAngeles'
+    
+elif testOption == 8:
+    tmas_year = 2019
+    npmrds_year = 2019
+    state = 'IL'
+    county = 'State'
 
 
 SELECT_TMC = ['129+04374', '129P09003']
@@ -76,9 +82,9 @@ elif computerName == 'OFFICEDESKTOP':
     pathPrefix2 = 'G:/Repos/FHWA-DANATool/User Input Files/Example_MiddlesexCounty_Massachusetts/2018 NPMRDS Data'
     pathPrefix3 = 'G:/Repos/FHWA-DANATool/NPMRDS_Intermediate_Output'
 elif computerName == 'VOLSLBOS-06756':
-    pathPrefix1 = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files'
-    pathPrefix2 = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/{}_{}'.format(county, state)
-    pathPrefix3 = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/NPMRDS_Intermediate_Output'
+    pathPrefix1 = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files'
+    pathPrefix2 = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/TestData/{}_{}'.format(county, state)
+    pathPrefix3 = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/NPMRDS_Intermediate_Output'
 
 
 # Set File Paths for Calling DANA Scripts
