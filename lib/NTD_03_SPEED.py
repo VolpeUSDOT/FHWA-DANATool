@@ -130,7 +130,7 @@ def SPEED(SELECT_STATE, PATH_NPMRDS):
     speeds = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
     for county in speedFraction['county'].unique():
         for source in speedFraction['sourceTypeID'].unique():
-            for road in speedFraction['roadtypeid'].unique():
+            for road in speedFraction.loc[speedFraction['county']==county]['roadtypeid'].unique():
                 for hour in speedFraction['hourdayID'].unique():
                     for i in speeds:
                         all_county.append(county)

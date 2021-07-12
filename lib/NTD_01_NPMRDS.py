@@ -114,8 +114,8 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     tmc.loc[tmc['urban_code']>=99999, 'urban_rural']='R'
     #a4. Add REPCTY
     tmc['state'] = tmc['state'].str.upper()
-    tmc['county'] = tmc['county'].str.lower().str.replace(' county', '').str.replace('(', '').str.replace(')', '').str.replace('.', '').str.replace(' ', '')
-    state_county['COUNTY_NAME'] = state_county['COUNTY_NAME'].str.lower().str.replace(' county', '').str.replace('(', '').str.replace(')', '').str.replace('.', '').str.replace(' ', '')
+    tmc['county'] = tmc['county'].str.lower().str.replace(' county', '').str.replace('(', '').str.replace(')', '').str.replace('.', '').str.replace(' ', '').str.replace("'", '')
+    state_county['COUNTY_NAME'] = state_county['COUNTY_NAME'].str.lower().str.replace(' county', '').str.replace('(', '').str.replace(')', '').str.replace('.', '').str.replace(' ', '').str.replace("'", '')
     
     tmc_state_county = tmc.groupby(['state', 'county']).size().reset_index()[['state', 'county']]
     for index, row in tmc_state_county.iterrows():

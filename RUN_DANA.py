@@ -14,7 +14,7 @@ import sys
 # Basic Input Parameters
 step = 1
 
-testOption = 6
+testOption = 1
 if testOption == 1:
     tmas_year = 2018
     npmrds_year = 2018
@@ -62,7 +62,11 @@ elif testOption == 8:
     npmrds_year = 2019
     state = 'IL'
     county = 'State'
-
+elif testOption == 9:
+    tmas_year = 2019
+    npmrds_year = 2019
+    state = 'MD'
+    county = 'State'
 
 SELECT_TMC = ['129+04374', '129P09003']
 SELECT_STATE = state
@@ -84,7 +88,7 @@ elif computerName == 'OFFICEDESKTOP':
 elif computerName == 'VOLSLBOS-06756':
     pathPrefix1 = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files'
     pathPrefix2 = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/TestData/{}_{}'.format(county, state)
-    pathPrefix3 = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/NPMRDS_Intermediate_Output'
+    pathPrefix3 = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Final Output'
 
 
 # Set File Paths for Calling DANA Scripts
@@ -102,10 +106,10 @@ PATH_tmc_shp = 'lib/ShapeFiles/'
 PATH_emission = pathPrefix1 + '/NEI2017_RepresentativeEmissionsRates.csv'
 
 PATH_HPMS  = pathPrefix2 + '/HPMS Data/{}_HPMS_{}.csv'.format(state.upper(), npmrds_year) # Need to confirm - ALH
-PATH_VM2 = pathPrefix2 + '/HPMS Data/VM2_{}.csv'.format(npmrds_year) # Need to confirm - ALH
+PATH_VM2 = pathPrefix1 + '/Statewide Functional Class VMT/State_VMT_by_Class_{}.csv'.format(npmrds_year) # Need to confirm - ALH
 PATH_COUNTY_MILEAGE = pathPrefix1 + '/HPMS County Road Mileage/County_Road_Mileage_{}.csv'.format(npmrds_year) # Need to confirm - ALH
 
-PATH_NPMRDS = pathPrefix3 + '/{}_Composite_Emissions.parquet'.format(state) # Need to confirm - ALH
+PATH_NPMRDS = pathPrefix3 + '/Process1_LinkLevelDataset/{}_Composite_Emissions.parquet'.format(state) # Need to confirm - ALH
 
 
 

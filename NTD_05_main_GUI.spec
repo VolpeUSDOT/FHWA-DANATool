@@ -6,7 +6,7 @@ from PyInstaller.utils.hooks import collect_dynamic_libs
 # pyinstaller --distpath . NTD_05_main_GUI.spec
 
 a = Analysis(['NTD_05_main_GUI.py'],
-             pathex=['C:\\Users\\William.Chupp\\Documents\\DANAToolTesting\\FHWA-DANATool'],
+             pathex=['C:\\Users\\William.Chupp\\OneDrive - DOT OST\\Documents\\DANAToolTesting\\FHWA-DANATool'],
              binaries=collect_dynamic_libs("rtree"),
              datas=[('..\dot.png', 'lib'), ('lib\ShapeFiles', 'lib\ShapeFiles')],
              hiddenimports=['fiona._shim', 'fiona.schema'],
@@ -33,4 +33,4 @@ exe = EXE(pyz,
           upx_exclude=[],
           runtime_tmpdir=None,
           console=False,
-          icon='C:\\Users\\William.Chupp\\Documents\\DANAToolTesting\\dot.ico')
+          icon='C:\\Users\\William.Chupp\\OneDrive - DOT OST\\Documents\\DANAToolTesting\\dot.ico')
