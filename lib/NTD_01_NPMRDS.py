@@ -93,6 +93,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     tmc = pd.read_csv(PATH_tmc_identification)
     #tmc=tmc.loc[~tmc['type'].str.contains('.', regex=False)]
     #a1. Clean raw TMC data (dir, AADT<100 = 100)
+    tmc['route_sign'] = tmc['route_sign']-1
     tmc.loc[tmc['aadt']<=100, 'aadt'] = 100
     #a2. Clean the direction field; Drop addtional columns
     dir_dic = {'EASTBOUND':'EB', 'NORTHBOUND':'NB', 'WESTBOUND':'WB', 'SOUTHBOUND':'SB'}
@@ -305,7 +306,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
         tmas_station = pd.read_csv(PATH_TMAS_STATION, dtype={'STATION_ID':str}, low_memory=False)
         tmas_station_State = tmas_station[tmas_station['STATE_NAME']==SELECT_STATE]
         tmas_station_State.reset_index(inplace=True, drop=True)
-        tmas_station_clean = tmas_station.loc[tmas_station['STATION_ID'].isin(clean_stations)]
+        tmas_station_clean = tmas_station_State.loc[tmas_station_State['STATION_ID'].isin(clean_stations)]
         
         #a2. Preparing TMAS station data for geoprocessing
         #Create a new attribute as points from lat and long
@@ -378,7 +379,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
         tier2_class = pd.concat([tier2_hpms_classification,tier2_noise_classification], axis=1)
         tier2_class.rename(index=str, columns={'HPMS_TYPE10':'PCT_TYPE10','HPMS_TYPE25':'PCT_TYPE25','HPMS_TYPE40':'PCT_TYPE40','HPMS_TYPE50':'PCT_TYPE50','HPMS_TYPE60':'PCT_TYPE60','NOISE_AUTO':'PCT_NOISE_AUTO','NOISE_MED_TRUCK':'PCT_NOISE_MED_TRUCK','NOISE_HVY_TRUCK':'PCT_NOISE_HVY_TRUCK','NOISE_BUS':'PCT_NOISE_BUS','NOISE_MC':'PCT_NOISE_MC'},inplace=True)
         tier2_class.to_csv(filepath+'tier2_class.csv',index=False)
-        now=lapTimer('  took: ',now)
+        now=lapTimer('  took: ', now)
         
         ##################################################
         #e. Creating Classification for Tier 3

@@ -4,6 +4,7 @@ Created By: Volpe National Transportation Systems Center
 
 """
 
+from lib import NTD_00_TMAS
 from lib import NTD_01_NPMRDS
 from lib import NTD_02_MOVES
 from lib import NTD_03_SPEED
@@ -12,7 +13,7 @@ import os
 import sys
 
 # Basic Input Parameters
-step = 1
+step = 0
 
 testOption = 1
 if testOption == 1:
@@ -49,24 +50,34 @@ elif testOption == 7:
     tmas_year = 2019
     npmrds_year = 2021
     state = 'VA'
-    county = 'FairfaxCity'
-    
-elif testOption == 7:
+    county = 'FairfaxCity'    
+elif testOption == 8:
     tmas_year = 2019
     npmrds_year = 2019
     state = 'CA'
-    county = 'LosAngeles'
-    
-elif testOption == 8:
+    county = 'LosAngeles'    
+elif testOption == 9:
     tmas_year = 2019
     npmrds_year = 2019
     state = 'IL'
     county = 'State'
-elif testOption == 9:
+elif testOption == 10:
     tmas_year = 2019
     npmrds_year = 2019
     state = 'MD'
     county = 'State'
+    
+elif testOption == 11:
+    tmas_year = 2019
+    npmrds_year = 2019
+    state = 'RI'
+    county = 'Providence'
+    
+elif testOption == 12:
+    tmas_year = 2019
+    npmrds_year = 2019
+    state = 'OK'
+    county = 'Oklahoma'
 
 SELECT_TMC = ['129+04374', '129P09003']
 SELECT_STATE = state
@@ -112,7 +123,9 @@ PATH_COUNTY_MILEAGE = pathPrefix1 + '/HPMS County Road Mileage/County_Road_Milea
 PATH_NPMRDS = pathPrefix3 + '/Process1_LinkLevelDataset/{}_Composite_Emissions.parquet'.format(state) # Need to confirm - ALH
 
 
-
+if step == 0:
+    NTD_00_TMAS.TMAS(SELECT_STATE, 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/TMAS 2019/TMAS_Station_2019.dat', 
+                     'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/TMAS 2019/TMAS_Class_2019.dat', PATH_FIPS, PATH_NEI)
 if step == 1:
     NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI)
 elif step == 2:
