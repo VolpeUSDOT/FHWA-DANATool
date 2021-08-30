@@ -11,7 +11,7 @@
 ; NOTE: The value of AppId uniquely identifies this application.
 ; Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{A8E58A55-0E3E-4799-BF3B-51BE18E7D180}
+AppId={{E0D1C64F-0B8E-47A7-A503-1396FD0D5663}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
@@ -22,9 +22,9 @@ AppUpdatesURL={#MyAppURL}
 DefaultDirName={localappdata}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
-OutputDir=D:\DANA\Installer
+OutputDir=D:\Installer
 OutputBaseFilename=Setup_DANA_Tool
-SetupIconFile=D:\DANA\Installer\icon.ico
+SetupIconFile=D:\Installer\icon.ico
 Compression=lzma
 SolidCompression=yes
 PrivilegesRequired=none
@@ -33,15 +33,15 @@ PrivilegesRequired=none
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
-Source: "D:\DANA\Installer\Final V1.0\DANATool.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\DANA\Installer\Final V1.0\NTD_05_main_GUI.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\DANA\Installer\Final V1.0\lib\*"; DestDir: "{app}\lib"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "D:\DANA\Installer\Final V1.0\User Input Files\*"; DestDir: "{app}\User Input Files"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "D:\DANA\Installer\Final V1.0\Default Input Files\FIPS_County_Codes.csv"; DestDir: "{app}\Default Input Files"; Flags: ignoreversion
-Source: "D:\DANA\Installer\Final V1.0\Default Input Files\NEI2017_RepresentativeCounties.csv"; DestDir: "{app}\Default Input Files"; Flags: ignoreversion
-Source: "D:\DANA\Installer\Final V1.0\Default Input Files\NEI2017_RepresentativeEmissionsRates.csv"; DestDir: "{app}\Default Input Files"; Flags: ignoreversion
-Source: "D:\DANA\Installer\Final V1.0\Default Input Files\HPMS County Road Mileage\*"; DestDir: "{app}\Default Input Files\HPMS County Road Mileage"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "D:\DANA\Installer\Final V1.0\Default Input Files\Statewide Functional Class VMT\*"; DestDir: "{app}\Default Input Files\Statewide Functional Class VMT"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "D:\Installer\Final V1.0\DANATool.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "D:\Installer\Final V1.0\NTD_05_main_GUI.py"; DestDir: "{app}"; Flags: ignoreversion
+Source: "D:\Installer\Final V1.0\lib\*"; DestDir: "{app}\lib"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "D:\Installer\Final V1.0\User Input Files\*"; DestDir: "{app}\User Input Files"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "D:\Installer\Final V1.0\Default Input Files\FIPS_County_Codes.csv"; DestDir: "{app}\Default Input Files"; Flags: ignoreversion
+Source: "D:\Installer\Final V1.0\Default Input Files\NEI2017_RepresentativeCounties.csv"; DestDir: "{app}\Default Input Files"; Flags: ignoreversion
+Source: "D:\Installer\Final V1.0\Default Input Files\NEI2017_RepresentativeEmissionsRates.csv"; DestDir: "{app}\Default Input Files"; Flags: ignoreversion
+Source: "D:\Installer\Final V1.0\Default Input Files\HPMS County Road Mileage\*"; DestDir: "{app}\Default Input Files\HPMS County Road Mileage"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "D:\Installer\Final V1.0\Default Input Files\Statewide Functional Class VMT\*"; DestDir: "{app}\Default Input Files\Statewide Functional Class VMT"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
