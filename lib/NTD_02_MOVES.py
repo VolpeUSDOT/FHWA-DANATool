@@ -148,8 +148,8 @@ def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE):
     
     # Calculate HPMS statewide VMT by urban-rural F-system classification
     HPMS_FClass_VMT = HPMS.groupby(['Urban_rural','F_System'])['VMT'].sum().reset_index(drop=False)
-    HPMS_FClass_VMT = HPMS_FClass_VMT.loc[(HPMS_FClass_VMT['F_System'].between(1, 5, inclusive=True)) | 
-                                          ((HPMS_FClass_VMT['F_System']==6)&(HPMS_FClass_VMT['Urban_rural']=='U'))]
+    #HPMS_FClass_VMT = HPMS_FClass_VMT.loc[(HPMS_FClass_VMT['F_System'].between(1, 5, inclusive=True)) | 
+    #                                      ((HPMS_FClass_VMT['F_System']==6)&(HPMS_FClass_VMT['Urban_rural']=='U'))]
     HPMS_FClass_VMT.reset_index(inplace=True)
     
     # Merge those together with the template
@@ -170,8 +170,6 @@ def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE):
                                                     ((County_Summary_Miles['F_System']==7)&(County_Summary_Miles['Urban_rural'].isin(['R', 'U'])))]
     County_Summary_Miles.reset_index(inplace=True)
     FClass_Summary_Miles = State_County.groupby(['Urban_rural','F_System'])['Miles'].sum().reset_index(drop=False)
-    FClass_Summary_Miles = FClass_Summary_Miles.loc[((County_Summary_Miles['F_System']==6)&(County_Summary_Miles['Urban_rural']=='R'))|
-                                                    ((County_Summary_Miles['F_System']==7)&(County_Summary_Miles['Urban_rural'].isin(['R', 'U'])))]
     FClass_Summary_Miles.reset_index(inplace=True)
     
     State_VMT_Temp = pd.merge(State_VMT_Temp, County_Summary_Miles, how="left", on=['County_Code', 'Urban_rural','F_System'])[['County_Code', 'Urban_rural','F_System', 'Statewide_VMT', 'VMT', 'Miles']]
@@ -244,29 +242,37 @@ def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE):
     
     #e. Developing Daily VMT fractions
     print('Developing daily VMT Fractions dataset')
-    df_dayVMT = composite_df.groupby(['county', 'monthid', 'roadtypeid', 'dayid']).agg({'PCT_TYPE10':'sum','PCT_TYPE25':'sum','PCT_TYPE40':'sum','PCT_TYPE50':'sum','PCT_TYPE60':'sum'})
-    df_dayVMT_class = df_dayVMT.groupby(level=[0,1,2]).apply(lambda x: x/x.sum())
-    df_dayVMT_class.reset_index(inplace=True)
+    df_dayVMT = composite_df.groupby(['county', 'monthid', 'f_system', 'urban_rural', 'dayid']).agg({'PCT_TYPE10':'sum','PCT_TYPE25':'sum','PCT_TYPE40':'sum','PCT_TYPE50':'sum','PCT_TYPE60':'sum'})
+    df_dayVMT.reset_index(inplace=True)
     
-    df_dayVMT_class['11'] = df_dayVMT_class['PCT_TYPE10']
-    df_dayVMT_class['21'] = df_dayVMT_class['PCT_TYPE25']
-    df_dayVMT_class['31'] = df_dayVMT_class['PCT_TYPE25']
-    df_dayVMT_class['32'] = df_dayVMT_class['PCT_TYPE25']
-    df_dayVMT_class['41'] = df_dayVMT_class['PCT_TYPE40']
-    df_dayVMT_class['42'] = df_dayVMT_class['PCT_TYPE40']
-    df_dayVMT_class['43'] = df_dayVMT_class['PCT_TYPE40']
-    df_dayVMT_class['51'] = df_dayVMT_class['PCT_TYPE50']
-    df_dayVMT_class['52'] = df_dayVMT_class['PCT_TYPE50']
-    df_dayVMT_class['53'] = df_dayVMT_class['PCT_TYPE50']
-    df_dayVMT_class['54'] = df_dayVMT_class['PCT_TYPE50']
-    df_dayVMT_class['61'] = df_dayVMT_class['PCT_TYPE60']
-    df_dayVMT_class['62'] = df_dayVMT_class['PCT_TYPE60']
+    df_dayVMT['11'] = df_dayVMT['PCT_TYPE10']
+    df_dayVMT['21'] = df_dayVMT['PCT_TYPE25']
+    df_dayVMT['31'] = df_dayVMT['PCT_TYPE25']
+    df_dayVMT['32'] = df_dayVMT['PCT_TYPE25']
+    df_dayVMT['41'] = df_dayVMT['PCT_TYPE40']
+    df_dayVMT['42'] = df_dayVMT['PCT_TYPE40']
+    df_dayVMT['43'] = df_dayVMT['PCT_TYPE40']
+    df_dayVMT['51'] = df_dayVMT['PCT_TYPE50']
+    df_dayVMT['52'] = df_dayVMT['PCT_TYPE50']
+    df_dayVMT['53'] = df_dayVMT['PCT_TYPE50']
+    df_dayVMT['54'] = df_dayVMT['PCT_TYPE50']
+    df_dayVMT['61'] = df_dayVMT['PCT_TYPE60']
+    df_dayVMT['62'] = df_dayVMT['PCT_TYPE60']
     
     #Wide to long format
-    dayVMTFrac = pd.melt(df_dayVMT_class, id_vars=['county', 'monthid', 'roadtypeid', 'dayid'], 
+    dayVMT_sources = pd.melt(df_dayVMT, id_vars=['county', 'monthid', 'f_system', 'urban_rural', 'dayid'], 
                                    value_vars=['11','21','31','32','41', '42', '43', '51', '52', '53', '54', '61', '62'], 
                                    var_name='sourceTypeID', value_name='dayVMTFraction')
-    dayVMTFrac['sourceTypeID'] = dayVMTFrac['sourceTypeID'].astype('int64')
+    dayVMT_sources['sourceTypeID'] = dayVMT_sources['sourceTypeID'].astype('int64')
+        
+    dayVMT_sources['roadTypeID']=''
+    dayVMT_sources.loc[(dayVMT_sources['urban_rural']=='U') & (dayVMT_sources['f_system']<=2),'roadTypeID']=4
+    dayVMT_sources.loc[(dayVMT_sources['urban_rural']=='U') & (dayVMT_sources['f_system']>2),'roadTypeID']=5
+    dayVMT_sources.loc[(dayVMT_sources['urban_rural']=='R') & (dayVMT_sources['f_system']<=2),'roadTypeID']=2
+    dayVMT_sources.loc[(dayVMT_sources['urban_rural']=='R') & (dayVMT_sources['f_system']>2),'roadTypeID']=3
+    
+    dayVMTFrac_grouped = dayVMT_sources.groupby(['county', 'monthid', 'roadTypeID', 'dayid', 'sourceTypeID'])['dayVMTFraction'].sum()
+    dayVMTFrac = dayVMTFrac_grouped.groupby(level=[0,1,2,4]).apply(lambda x: x/x.sum()).reset_index()
     
     dayVMTFrac.rename(columns = {'monthid':'monthID', 'roadtypeid':'roadTypeID', 'dayid': 'dayID'}, inplace=True)
     

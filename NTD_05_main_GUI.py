@@ -970,9 +970,9 @@ else:
     pl_nei_2.config(text='')
 
 # Emission Rates
-if ('NEI2017_RepresentativeEmissionsRates.csv' in os.listdir('Default Input Files/')):
-    pl_emission.config(text=os.getcwd()+'\\Default Input Files\\NEI2017_RepresentativeEmissionsRates.csv')
-    fn_emission = 'Default Input Files/NEI2017_RepresentativeEmissionsRates.csv'
+if ('NEI2017_RepresentativeEmissionsRates.parquet' in os.listdir('Default Input Files/')):
+    pl_emission.config(text=os.getcwd()+'\\Default Input Files\\NEI2017_RepresentativeEmissionsRates.parquet')
+    fn_emission = 'Default Input Files/NEI2017_RepresentativeEmissionsRates.parquet'
 else:
     pl_emission.config(text='')
        
@@ -1009,9 +1009,10 @@ if __name__ == "__main__":
     mp.freeze_support()  
     thread_queue = mp.Queue()
     old_stdout = sys.stdout
+    old_stderr = sys.stderr
     redir = RedirectText(thread_queue)
     sys.stdout = redir
-    sys.stderr = sys.stdout
+    sys.stderr = redir
     root.update_idletasks()
     bind_tree(main_container, "<MouseWheel>", main_mouse_wheel)
     bind_tree(TMCSelect_container, "<MouseWheel>", tmcselect_mouse_wheel)

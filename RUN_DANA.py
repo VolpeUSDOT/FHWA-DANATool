@@ -16,23 +16,25 @@ import sys
 step = 2
 
 testOption = 1
+
+
 if testOption == 1:
     tmas_year = 2018
     npmrds_year = 2018
     state  = 'MA'
     county = 'Middlesex'
 elif testOption == 2:
-    tmas_year = 2017
+    tmas_year = 2019
     npmrds_year = 2017
     state  = 'DC'
     county = 'District'
 elif testOption == 3:
-    tmas_year = 2016
-    npmrds_year = 2018
+    tmas_year = 2019
+    npmrds_year = 2019
     state  = 'VA'
     county = 'Alexandria'
 elif testOption == 4:
-    tmas_year = 2018
+    tmas_year = 2019
     npmrds_year = 2018
     state = 'OR'
     county = 'Marion'
@@ -96,9 +98,9 @@ elif computerName == 'OFFICEDESKTOP':
     pathPrefix1 = 'G:/Repos/FHWA-DANATool/Default Input Files'
     pathPrefix2 = 'G:/Repos/FHWA-DANATool/User Input Files/Example_MiddlesexCounty_Massachusetts/2018 NPMRDS Data'
     pathPrefix3 = 'G:/Repos/FHWA-DANATool/NPMRDS_Intermediate_Output'
-elif computerName == 'VOLSLBOS-06756':
+elif computerName in ('VOLSLBOS-06756', 'TSCPDBOS-05790'):
     pathPrefix1 = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files'
-    pathPrefix2 = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/TestData/{}_{}'.format(county, state)
+    pathPrefix2 = 'H:/TestData/{}_{}'.format(county, state)
     pathPrefix3 = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Final Output'
 
 
@@ -114,7 +116,7 @@ PATH_npmrds_raw_truck = pathPrefix2 + '/NPMRDS Data/{}_{}_{}_TRUCKS.csv'.format(
 PATH_tmc_identification = pathPrefix2 + '/NPMRDS Data/TMC_Identification.csv'
 
 PATH_tmc_shp = 'lib/ShapeFiles/'
-PATH_emission = pathPrefix1 + '/NEI2017_RepresentativeEmissionsRates.csv'
+PATH_emission = pathPrefix1 + '/NEI2017_RepresentativeEmissionsRates.parquet'
 
 PATH_HPMS  = pathPrefix2 + '/HPMS Data/{}_HPMS_{}.csv'.format(state.upper(), npmrds_year) # Need to confirm - ALH
 PATH_VM2 = pathPrefix1 + '/Statewide Functional Class VMT/State_VMT_by_Class_{}.csv'.format(npmrds_year) # Need to confirm - ALH
@@ -122,17 +124,16 @@ PATH_COUNTY_MILEAGE = pathPrefix1 + '/HPMS County Road Mileage/County_Road_Milea
 
 PATH_NPMRDS = pathPrefix3 + '/Process1_LinkLevelDataset/{}_Composite_Emissions.parquet'.format(state) # Need to confirm - ALH
 
-
-if step == 0:
-    NTD_00_TMAS.TMAS(SELECT_STATE, 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/TMAS 2019/TMAS_Station_2019.dat', 
-                     'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/TMAS 2019/TMAS_Class_2019.dat', PATH_FIPS, PATH_NEI)
-if step == 1:
-    NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI)
-elif step == 2:
-    NTD_02_MOVES.MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)
-elif step == 3:
-    NTD_03_SPEED.SPEED(SELECT_STATE, PATH_NPMRDS)  
-elif step == 4:
-    NTD_04_NOISE.NOISE(SELECT_STATE, SELECT_TMC, PATH_NPMRDS)
+if __name__ == '__main__':
+    if step == 0:
+        NTD_00_TMAS.TMAS(SELECT_STATE, r'H:/DANATool/TMAS_station.csv', r'H:/DANATool/TMAS_Class_2020.dat', PATH_FIPS, PATH_NEI, PREREADSTATION = True)
+    if step == 1:
+        NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI)
+    elif step == 2:
+        NTD_02_MOVES.MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)
+    elif step == 3:
+        NTD_03_SPEED.SPEED(SELECT_STATE, PATH_NPMRDS)  
+    elif step == 4:
+        NTD_04_NOISE.NOISE(SELECT_STATE, SELECT_TMC, PATH_NPMRDS)
 
     

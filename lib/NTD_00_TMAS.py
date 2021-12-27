@@ -5,10 +5,133 @@ Modified By: Volpe National Transportation Systems Center
 
 """
 import pandas as pd
-import pathlib
+import numpy as np
+import datetime as dt
+import pyarrow as pa
+import pyarrow.parquet as pq
 import time
+import geopandas as gpd
+from geopandas import GeoDataFrame
+from shapely.geometry import Point
+import pathlib
+import pkg_resources
+import requests
+import json
+import sys
+from tqdm.asyncio import tqdm
+from multiprocessing import Pool, TimeoutError
 
-def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI):
+from arcgis.features import FeatureLayer
+from arcgis import geometry
+
+def f2(chunk):
+    return chunk
+
+def f(tmas_station):
+    
+    tmas_station = tmas_station[1]
+    
+    states = {
+    'AL':['Alabama',1],'AZ':['Arizona',4],'AR':['Arkansas',5],'CA':['California',6],'CO':['Colorado',8],
+    'CT':['Connecticut',9],'DE':['Delaware',10],'DC':['District of Columbia',11],'FL':['Florida',12],'GA':['Georgia',13],'ID':['Idaho',16],'IL':['Illinois',17],'IN':['Indiana',18],'IA':['Iowa',19],'KS':['Kansas',20],
+    'KY':['Kentucky',21],'LA':['Louisiana',22],'ME':['Maine',23],'MD':['Maryland',24],'MA':['Massachusetts',25],
+    'MI':['Michigan',26],'MN':['Minnesota',27],'MS':['Mississippi',28],'MO':['Missouri',29],'MT':['Montana',30],'NE':['Nebraska',31],
+    'NV':['Nevada',32],'NH':['New Hampshire',33],'NJ':['New Jersey',34],'NM':['New Mexico',35],'NY':['New York',36],
+    'NC':['North Carolina',37],'ND':['North Dakota',38],'OH':['Ohio',39],'OK':['Oklahoma',40],'OR':['Oregon',41],
+    'PA':['Pennsylvania',42],'RI':['Rhode Island',44],'SC':['South Carolina',46],'SD':['South Dakota',46],
+    'TN':['Tennessee',47],
+    'TX':['Texas', 48], 
+    'UT':['Utah',49],'VT':['Vermont',50],'VA':['Virginia',51],
+    'WA':['Washington',53],'WV':['West Virginia',54],'WI':['Wisconsin',55],'WY':['Wyoming',56]}
+    
+    
+    
+    state_code = tmas_station['FIPS']
+    state = ''
+    for key, value in states.items():
+        if value[1] == state_code:
+            if key == 'TX': state = value[0]
+            else: state = key
+    if state == '':
+        return tmas_station
+
+    long = tmas_station['LONG']
+    lat = tmas_station['LAT']
+
+    url = "https://geo.dot.gov/server/rest/services/Hosted/HPMS_Full_{}_2019/FeatureServer/0".format(state)
+    result = 0
+    for i in range(5):
+        try:
+            Layer = FeatureLayer(url)
+            result = Layer.query(geometry="{},{}".format(long, lat), units = 'esriSRUnit_Meter', distance = 20)
+        except:
+            pass
+        if result != 0:
+            break
+    # if result == 0:
+    #     url = "https://geo.dot.gov/server/rest/services/Hosted/HPMS_Full_{}_2019/FeatureServer/0".format(state)
+    #     result = 0
+    #     for i in range(10):
+    #         try:
+    #             Layer = FeatureLayer(url)
+    #             result = Layer.query(geometry="{},{}".format(long, lat), units = 'esriSRUnit_Meter', distance = 20)
+    #         except:
+    #             pass
+    #         if result != 0:
+    #             break
+    if result == 0:
+        raise Exception('RuntimeError', 'URL {} did not work'.format(url))
+    gjson_string = result.to_geojson
+    gjson_dict = json.loads(gjson_string)
+    links = GeoDataFrame.from_features(gjson_dict['features'])
+    if len(links) == 1:
+        link = links.loc[0, :]
+        tmas_station.loc['FIPS_COUNTY'] = link.loc['county_code']
+        tmas_station.loc['URBAN_CODE'] = link.loc['urban_code']
+        tmas_station.loc['F_SYSTEM'] = link.loc['f_system']
+        tmas_station.loc['PR_SIGNING'] = link.loc['route_signing']
+        tmas_station.loc['PR_NUMBER'] = link.loc['route_number']
+    elif len(links) < 1:
+        pass
+    elif len(links) > 1:
+        if 'route_name' in links.columns:
+            links = links.loc[links['route_name'].str.isspace()==False].reset_index()
+            if (len(links['route_name'].unique())) == 1:
+                link = links.loc[0, :]
+                tmas_station.loc['FIPS_COUNTY'] = link.loc['county_code']
+                tmas_station.loc['URBAN_CODE'] = link.loc['urban_code']
+                tmas_station.loc['F_SYSTEM'] = link.loc['f_system']
+                tmas_station.loc['PR_SIGNING'] = link.loc['route_signing']
+                tmas_station.loc['PR_NUMBER'] = link.loc['route_number']
+        if 'route_number_t' in links.columns:
+            links = links.loc[links['route_number_t'].str.isspace()==False].reset_index()
+            if (len(links['route_number_t'].unique())) == 1:
+                link = links.loc[0, :]
+                tmas_station.loc['FIPS_COUNTY'] = link.loc['county_code']
+                tmas_station.loc['URBAN_CODE'] = link.loc['urban_code']
+                tmas_station.loc['F_SYSTEM'] = link.loc['f_system']
+                tmas_station.loc['PR_SIGNING'] = link.loc['route_signing']
+                tmas_station.loc['PR_NUMBER'] = link.loc['route_number']
+        elif len(links) < 1:
+            pass
+        else:    
+            route = pd.to_numeric(str(tmas_station['PR_NUMBER']).replace('I', ''), errors='coerce')
+            for index, link in links.iterrows():
+                if link['route_number']==route:
+                    
+                    tmas_station.loc['FIPS_COUNTY'] = link.loc['county_code']
+                    tmas_station.loc['URBAN_CODE'] = link.loc['urban_code']
+                    tmas_station.loc['F_SYSTEM'] = link.loc['f_system']
+                    tmas_station.loc['PR_SIGNING'] = link.loc['route_signing']
+                    tmas_station.loc['PR_NUMBER'] = link.loc['route_number']
+                    
+                    return tmas_station
+    else:
+        pass
+    
+    return tmas_station
+
+def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, PREREADSTATION = False):
     
     filepath = 'TMAS_Intermediate_Output/'
     pathlib.Path(filepath).mkdir(exist_ok=True) 
@@ -18,38 +141,54 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI):
         return time.time()
     
     now=time.time()
-    print('')
-    print ('********** Process Raw TMAS Data **********')
-    ##########################################################################################
-    # TMAS STATION
-    #a.	Read raw TMAS station data to file
-    print ('Reading and Processing TMAS Station Data')
-    station_width = [1,2,6,1,1,2,2,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,12,6,8,9,4,6,2,2,3,1,12,1,1,8,1,8,50]
-    station_name = ['TYPE','FIPS','STATION_ID','DIR','LANE','YEAR','FC_CODE','NO_LANES','SAMPLE_TYPE_VOL','LANES_MON_VOL','METHOD_VOL','SAMPLE_TYPE_CLASS','LANES_MON_CLASS','METHOD_CLASS','ALGO_CLASS','CLASS_SYST','SAMPLE_TYPE_TRCK','LANES_MON_TRCK','METHOD_TRCK','CALIB_TRCK','METHOD_DATA','SENSOR_TYPE','SENSOR_TYPE2','PURPOSE','LRS_ID','LRS_LOC','LAT','LONG','SHRP_ID','PREV_ID','YEAR_EST','YEAR_DISC','FIPS_COUNTY','HPMS_TYPE','HPMS_ID','NHS','PR_SIGNING','PR_NUMBER','CR_SIGNING','CR_NUMBER','LOCATION']
-    tmas_station_raw = pd.read_fwf(PATH_TMAS_STATION,widths=station_width,header=None,names=station_name)
-    tmas_station=tmas_station_raw[['FIPS','STATION_ID','DIR','LANE','YEAR','FC_CODE','NO_LANES','LRS_ID','LRS_LOC','LAT','LONG','FIPS_COUNTY','HPMS_TYPE','HPMS_ID','NHS','PR_SIGNING','PR_NUMBER','LOCATION']]
-    tmas_station=tmas_station.loc[tmas_station['FIPS_COUNTY']!=0]
-    #Cleanup TMAS station dataset
-    tmas_station['LONG']=(tmas_station['LONG']*-1)/1000000
-    tmas_station['LAT']=tmas_station['LAT']/1000000
-    tmas_station['F_SYSTEM'] = tmas_station['FC_CODE'].str[0]
-    tmas_station['URB_RURAL'] = tmas_station['FC_CODE'].str[1]
-    tmas_station.drop_duplicates(subset=['FIPS','STATION_ID','DIR'],inplace=True)
     
-    # b. Add composite of state and county names
-    # FIPS
-    fips_header = ['STATE_NAME','STATE_CODE','COUNTY_CODE','COUNTY_NAME','FIPS_TYPE']
-    fips = pd.read_csv(PATH_FIPS,header=None,names=fips_header)
-    tmas_station = pd.merge(tmas_station,fips,how='left',left_on=['FIPS','FIPS_COUNTY'],right_on=['STATE_CODE','COUNTY_CODE'])
-    # NEI repcty
-    repcty = pd.read_csv(PATH_NEI)
-    repcty['countyid'] = repcty['countyid'] % 1000
-    repcty['repcty'] = repcty['repcty'] % 1000
-    tmas_station = pd.merge(tmas_station, repcty, left_on=['FIPS','FIPS_COUNTY'], right_on=['stateid','countyid'], how='inner')
+    if PREREADSTATION:
+        print("Reading Pre-Processed TMAS Station Data")
+        tmas_station = pd.read_csv(PATH_TMAS_STATION)
+    else:    
+        filepath = 'TMAS_Intermediate_Output/'
+        pathlib.Path(filepath).mkdir(exist_ok=True) 
+        
+        print('')
+        print ('********** Process Raw TMAS Data **********')
+        ##########################################################################################
+        # TMAS STATION
+        #a.	Read raw TMAS station data to file
+        print ('Reading and Processing TMAS Station Data')
+        station_width = [1,2,6,1,1,2,2,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,12,6,8,9,4,6,2,2,3,1,12,1,1,8,1,8,50]
+        station_name = ['TYPE','FIPS','STATION_ID','DIR','LANE','YEAR','FC_CODE','NO_LANES','SAMPLE_TYPE_VOL','LANES_MON_VOL','METHOD_VOL','SAMPLE_TYPE_CLASS','LANES_MON_CLASS','METHOD_CLASS','ALGO_CLASS','CLASS_SYST','SAMPLE_TYPE_TRCK','LANES_MON_TRCK','METHOD_TRCK','CALIB_TRCK','METHOD_DATA','SENSOR_TYPE','SENSOR_TYPE2','PURPOSE','LRS_ID','LRS_LOC','LAT','LONG','SHRP_ID','PREV_ID','YEAR_EST','YEAR_DISC','FIPS_COUNTY','HPMS_TYPE','HPMS_ID','NHS','PR_SIGNING','PR_NUMBER','CR_SIGNING','CR_NUMBER','LOCATION']
+        tmas_station_raw = pd.read_fwf(PATH_TMAS_STATION,widths=station_width,header=None,names=station_name, engine='python')
+     
+        tmas_station_locs = tmas_station_raw[['FIPS', 'STATION_ID', 'LAT', 'LONG', 'DIR', 'PR_NUMBER']]
+        tmas_station_locs.loc[:, 'LONG']=(tmas_station_locs['LONG']*-1)/1000000
+        tmas_station_locs.loc[:, 'LAT']=tmas_station_locs['LAT']/1000000
+        
+        #t = f((472, tmas_station_locs.loc[423, :]))
     
-    tmas_station=tmas_station[['FIPS','FIPS_COUNTY','STATION_ID','DIR','URB_RURAL','F_SYSTEM','PR_SIGNING','PR_NUMBER','LAT','LONG','LOCATION','STATE_NAME','COUNTY_NAME','repcty']]
-    tmas_station.rename(columns={'FIPS': 'STATE', 'FIPS_COUNTY': 'COUNTY', 'PR_SIGNING':'ROUTE_SIGN', 'PR_NUMBER':'ROUTE_NUMBER', 'repcty':'REPCTY'}, inplace=True)
-    
+        n = len(tmas_station_locs)
+        with Pool(5) as p:
+            tmas_station = pd.DataFrame()
+            for sta in tqdm(p.imap(f, tmas_station_locs.iterrows(), chunksize=30), total=n):
+                tmas_station = tmas_station.append(sta)   
+        
+        tmas_station.drop_duplicates(subset=['FIPS','STATION_ID','DIR'],inplace=True)
+        
+        fips_header = ['STATE_NAME','STATE_CODE','COUNTY_CODE','COUNTY_NAME','FIPS_TYPE']
+        fips = pd.read_csv(PATH_FIPS,header=None,names=fips_header)
+        tmas_station = pd.merge(tmas_station,fips,how='left',left_on=['FIPS','FIPS_COUNTY'],right_on=['STATE_CODE','COUNTY_CODE'])
+        
+        # NEI repcty
+        repcty = pd.read_csv(PATH_NEI)
+        repcty['countyid'] = repcty['countyid'] % 1000
+        repcty['repcty'] = repcty['repcty'] % 1000
+        tmas_station = pd.merge(tmas_station, repcty, left_on=['FIPS','FIPS_COUNTY'], right_on=['stateid','countyid'], how='inner')
+        
+        tmas_station.loc[tmas_station['URBAN_CODE']<99999, 'URB_RURAL']='U'
+        tmas_station.loc[tmas_station['URBAN_CODE']>=99999, 'URB_RURAL']='R'
+        
+        tmas_station=tmas_station[['FIPS','FIPS_COUNTY','STATION_ID','DIR','URB_RURAL','F_SYSTEM','PR_SIGNING','PR_NUMBER','LAT','LONG','STATE_NAME','COUNTY_NAME','repcty']]
+        tmas_station.rename(columns={'FIPS': 'STATE', 'FIPS_COUNTY': 'COUNTY', 'PR_SIGNING':'ROUTE_SIGN', 'PR_NUMBER':'ROUTE_NUMBER', 'repcty':'REPCTY'}, inplace=True)
+        
     #c.	Select only desired State
     tmas_station_State = tmas_station[tmas_station['STATE_NAME']==SELECT_STATE]
     tmas_station_State.reset_index(inplace=True, drop=True)
@@ -59,6 +198,7 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI):
     tmas_station_State.to_csv(filepath+'TMAS_station_State.csv',index=False)
     #tmas_station.to_csv(PATH_TMAS_STATION.replace('.dat','.csv'), index=False)
     #tmas_station_State.to_csv(PATH_TMAS_STATION.replace('.dat','_State.csv'), index=False)
+    
     now=lapTimer('  took: ',now)
         
     ##########################################################################################
@@ -97,7 +237,10 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI):
         }
     tmas_class_raw_test = pd.read_fwf(PATH_TMAS_CLASS,widths=class_width,header=None,names=class_header,
                                       dtype=tmas_types, chunksize=100000)
-    tmas_class_raw=pd.concat(tmas_class_raw_test, ignore_index=True)
+    
+    tmas_class_raw = pd.DataFrame()
+    for chunk in tqdm(tmas_class_raw_test):
+        tmas_class_raw = tmas_class_raw.append(chunk, ignore_index=True)
     #tmas_class_raw.to_csv(filepath+'TMAS_Class.csv', index=False)
     now=lapTimer('  took: ',now)
     
@@ -193,7 +336,7 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI):
     tmas_class['NOISE_ALL'] = tmas_class['NOISE_AUTO']+tmas_class['NOISE_MED_TRUCK']+tmas_class['NOISE_HVY_TRUCK']+tmas_class['NOISE_BUS']+tmas_class['NOISE_MC']
     
     tmas_class_clean=tmas_class[['STATE','STATION_ID','DIR','DATE','YEAR','MONTH','DAY','HOUR','DAY_TYPE','PEAKING','VOL','F_SYSTEM','URB_RURAL',
-                                 'COUNTY','REPCTY','ROUTE_SIGN','ROUTE_NUMBER','LAT','LONG','STATE_NAME','COUNTY_NAME','LOCATION',
+                                 'COUNTY','REPCTY','ROUTE_SIGN','ROUTE_NUMBER','LAT','LONG','STATE_NAME','COUNTY_NAME',
                                  'HPMS_TYPE10','HPMS_TYPE25','HPMS_TYPE40','HPMS_TYPE50','HPMS_TYPE60','HPMS_ALL',
                                  'NOISE_AUTO','NOISE_MED_TRUCK','NOISE_HVY_TRUCK','NOISE_BUS','NOISE_MC','NOISE_ALL']]
     now=lapTimer('  took: ',now) 

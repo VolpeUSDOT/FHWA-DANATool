@@ -108,6 +108,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     tmc.drop(tmc[tmc['direction'].isnull()].index, axis=0, inplace=True)
     tmc.drop(['intersection','zip','timezone_name','type','country','tmclinear','frc','border_set','structype','route_qual',
               'altrtename','nhs_pct','strhnt_typ','strhnt_pct','truck'], inplace=True, axis=1)
+    
     #a3. Create data element for urban/rural designation to match the data element in the TMAS station data:
     print ('Creating data elements for Urban and Rural codes')
     tmc['urban_rural']=''
@@ -195,6 +196,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     #Merge hourly speeds/travel times to npmrds template
     npmrds_all.drop(['tmc_length','travel_time_seconds'], inplace=True, axis=1)
     npmrds0 = pd.merge(npmrds_template, npmrds_all, on=['tmc_code','measurement_tstamp'], how='left')
+    del npmrds_all, npmrds_raw
     now=lapTimer('  took: ',now)
     
     #Same process (c-c1-c2) for the Passenger NPMRDS dataset
@@ -214,6 +216,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     npmrds_pass.drop(['tmc_length','travel_time_seconds'], inplace=True, axis=1)
     print('Merging passenger speeds to all speeds')
     npmrds0 = pd.merge(npmrds0, npmrds_pass, on=['tmc_code','measurement_tstamp'], how='left')
+    del npmrds_pass, npmrds_raw
     now=lapTimer('  took: ',now)
     
     #Same process (c-c1-c2) for the Truck NPMRDS dataset
@@ -233,6 +236,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     npmrds_truck.drop(['tmc_length','travel_time_seconds'], inplace=True, axis=1)
     print('Merging truck speeds to all speeds')
     npmrds = pd.merge(npmrds0, npmrds_truck, on=['tmc_code','measurement_tstamp'], how='left')
+    del npmrds_truck, npmrds_raw, npmrds0
     now=lapTimer('  took: ',now)
     
     #c3. Create data elements for year, month, day of week, hour
@@ -267,6 +271,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     print ('Merging speeds to TMC')
     npmrds_tmc = pd.merge(npmrds, tmc, left_on='tmc_code', right_on='tmc', how='left')
     npmrds_tmc = npmrds_tmc.dropna(axis=0, subset=['route_sign'])
+    del npmrds
     now=lapTimer('  took: ',now)
     
     tmc['tier'] = np.nan
@@ -411,6 +416,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     #tier4_class = pd.concat([tier4_hpms_classification,tier4_noise_classification], axis=1, sort=False)
     tier4_class.rename(index=str, columns={'HPMS_TYPE10':'PCT_TYPE10','HPMS_TYPE25':'PCT_TYPE25','HPMS_TYPE40':'PCT_TYPE40','HPMS_TYPE50':'PCT_TYPE50','HPMS_TYPE60':'PCT_TYPE60','NOISE_AUTO':'PCT_NOISE_AUTO','NOISE_MED_TRUCK':'PCT_NOISE_MED_TRUCK','NOISE_HVY_TRUCK':'PCT_NOISE_HVY_TRUCK','NOISE_BUS':'PCT_NOISE_BUS','NOISE_MC':'PCT_NOISE_MC'},inplace=True)
     tier4_class.to_csv(filepath+'tier4_class.csv',index=False)
+    del tmas_class
     now=lapTimer('  took: ',now)
     
     
@@ -445,7 +451,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     #npmrds_tmc['faciltype'] = npmrds_tmc['faciltype'].astype('category')
     #npmrds_tmc['thrulanes'] = npmrds_tmc['thrulanes'].astype('category')
     npmrds_tmc['route_numb'] = npmrds_tmc['route_numb'].astype(str)
-    npmrds_tmc['route_sign'] = npmrds_tmc['route_sign'].astype('int32')
+    npmrds_tmc['route_sign'] = npmrds_tmc['route_sign'].astype('int32') + 1 # Adjust because this is off by one in the NPMRDS Data
     npmrds_tmc['aadt'] = npmrds_tmc['aadt'].astype('int32')
     npmrds_tmc['aadt_singl'] = npmrds_tmc['aadt_singl'].astype('int32')
     npmrds_tmc['aadt_combi'] = npmrds_tmc['aadt_combi'].astype('int32')
@@ -512,7 +518,8 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
         #tier2_class['COUNTY'] = tier2_class['COUNTY'].str.replace(' County','').str.upper()
         npmrds_for_tiers.drop(['DIR','MONTH','DAY_TYPE','HOUR','PCT_TYPE10','PCT_TYPE25','PCT_TYPE40','PCT_TYPE50','PCT_TYPE60','PCT_NOISE_AUTO','PCT_NOISE_MED_TRUCK','PCT_NOISE_HVY_TRUCK','PCT_NOISE_BUS','PCT_NOISE_MC','tier'], inplace=True, axis=1)
         #Merge with NPMRDS data
-        npmrds_tier2 = pd.merge(npmrds_for_tiers, tier2_class, left_on=['county','route_sign','route_numb','month','dow','peaking','hour'], right_on=['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','MONTH','DAY_TYPE','PEAKING','HOUR'], how='left')
+        npmrds_tier2 = pd.merge(npmrds_for_tiers, tier2_class, left_on=['county','route_sign','route_numb','month','dow','peaking','hour'], 
+                                right_on=['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','MONTH','DAY_TYPE','PEAKING','HOUR'], how='left')
         npmrds_for_tiers = npmrds_tier2[pd.isnull(npmrds_tier2['tier'])]
         npmrds_tier2 = npmrds_tier2[pd.notnull(npmrds_tier2['tier'])]
         now=lapTimer('  took: ',now)
@@ -597,6 +604,14 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     df.drop(['route_numb','route_sign','dir_num'],axis=1,inplace=True)
     now=lapTimer('  took: ',now)
     
+    del npmrds_tmc
+    del npmrds_template
+    del npmrds_tier4
+    del npmrds_tier3
+    del npmrds_tier2
+    del npmrds_tier1
+    del d
+    
     # QC
     total_tmc = df['tmc'].nunique()
     tier1_tmc = df.loc[df['tier']==1,'tmc'].nunique()
@@ -625,19 +640,19 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     df_test = df[0:10]
     '''
     
-    del npmrds
-    del tmas_class
-    
     #a. Read the MOVES emission rate files from ERG: nhs lpp rates_{state}_wbt.cs monthid dayid hourid roadtypeid hpmsvtypeid pollutantid avgspeedbinid grams_per_mile
     # updated rates table based on NEI region and 3-month
     print ('Reading and Processing Emission Rate Files')
-    emissions = pd.read_csv(PATH_emission)
+    emissions = pq.read_table(PATH_emission)
+    emissions = emissions.to_pandas()
     emissions.rename(columns={'season': 'monthid3'}, inplace=True)
     emissions.loc[:,'state']=emissions['repcty'] // 1000
-    emissions.loc[:,'repcty_1']=emissions['repcty'] % 1000
-    emissions['hpmsvtypeid'] = emissions['hpmsvtypeid'].astype('str')
-    emissions['pollutantid'] = emissions['pollutantid'].astype('str')
     emissions_state = emissions.loc[emissions['state']==states.get(SELECT_STATE)[1]]
+    del emissions
+    emissions_state.loc[:,'repcty_1']=emissions_state['repcty'] % 1000
+    emissions_state['hpmsvtypeid'] = emissions_state['hpmsvtypeid'].astype('str')
+    emissions_state['pollutantid'] = emissions_state['pollutantid'].astype('str')
+
     emissions_state.drop(['repcty','state'], axis=1, inplace=True)
     emissions_state.rename(columns={'repcty_1':'repcty', 'monthid':'monthid3'}, inplace=True)
     
@@ -647,6 +662,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     #b. Create grams per mile values for vehicletype/pollutant combinations. They will be in this order from the sort:
     emissions2=emissions_state.pivot_table(index=['repcty','monthid3','hourid','roadtypeid','avgspeedbinid'], 
                                      columns=['hpmsvtypeid','pollutantid'], values='grams_per_mile')
+    del emissions_state
     #Reduce column levels
     emissions2.columns = emissions2.columns.map('_'.join)
     emissions2.reset_index(inplace=True)
@@ -722,10 +738,6 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     now=lapTimer('  took: ',now)
     
     del emissions2
-    del emissions
-    del npmrds_all
-    del npmrds_pass
-    del npmrds_truck
     del df
     
     print('Exporting Final Dataset')
@@ -755,8 +767,9 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     df_emissions_summary.rename(columns = {'speed_all': 'Average_Speed', 'aadt':'Average AADT'}, inplace=True)
     df_emissions_summary.to_csv(filepath+SELECT_STATE+'_Composite_Emissions_SUMMARY.csv', index=False)
     
-    npmrds_emissions = pa.Table.from_pandas(df_emissions)
-    pq.write_table(npmrds_emissions, filepath+SELECT_STATE+'_Composite_Emissions.parquet')
+    
+    #npmrds_emissions = pa.Table.from_pandas(df_emissions)
+    df_emissions.to_parquet(filepath+SELECT_STATE+'_Composite_Emissions.parquet', index=False)
     now=lapTimer('  took: ',now)
     '''
     if SELECT_TMC != []:
