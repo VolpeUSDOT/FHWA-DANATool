@@ -143,13 +143,10 @@ def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE):
     
     # Calculate HPMS county VMT by urban-rural F-system classification
     HPMS_County_FClass_VMT = HPMS.groupby(['County_Code', 'Urban_rural','F_System'])['VMT'].sum().reset_index(drop=False)
-    HPMS_County_FClass_VMT = HPMS_County_FClass_VMT.loc[HPMS_County_FClass_VMT['F_System'].between(1, 5, inclusive=True)]
     HPMS_County_FClass_VMT.reset_index(inplace=True)
     
     # Calculate HPMS statewide VMT by urban-rural F-system classification
     HPMS_FClass_VMT = HPMS.groupby(['Urban_rural','F_System'])['VMT'].sum().reset_index(drop=False)
-    #HPMS_FClass_VMT = HPMS_FClass_VMT.loc[(HPMS_FClass_VMT['F_System'].between(1, 5, inclusive=True)) | 
-    #                                      ((HPMS_FClass_VMT['F_System']==6)&(HPMS_FClass_VMT['Urban_rural']=='U'))]
     HPMS_FClass_VMT.reset_index(inplace=True)
     
     # Merge those together with the template
@@ -166,9 +163,8 @@ def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE):
     print('Processing VMT for rural functional system 6 and urban and rural 7')
     State_County.rename(columns={'RMC_L_System_Length':'Miles'}, inplace=True)
     County_Summary_Miles = State_County.groupby(['County_Code', 'Urban_rural','F_System'])['Miles'].sum().reset_index(drop=False)
-    County_Summary_Miles = County_Summary_Miles.loc[((County_Summary_Miles['F_System']==6)&(County_Summary_Miles['Urban_rural']=='R'))|
-                                                    ((County_Summary_Miles['F_System']==7)&(County_Summary_Miles['Urban_rural'].isin(['R', 'U'])))]
     County_Summary_Miles.reset_index(inplace=True)
+    
     FClass_Summary_Miles = State_County.groupby(['Urban_rural','F_System'])['Miles'].sum().reset_index(drop=False)
     FClass_Summary_Miles.reset_index(inplace=True)
     
@@ -178,8 +174,7 @@ def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE):
     State_VMT_Temp.rename(columns={'Miles':'Class_Miles'}, inplace=True)
     
     State_VMT_Temp['Adjusted_VMT'] = State_VMT_Temp['Statewide_VMT']*State_VMT_Temp['County_Class_Miles']/State_VMT_Temp['Class_Miles']
-    State_VMT_Temp.loc[((State_VMT_Temp['F_System']==6)&(State_VMT_Temp['Urban_rural']=='R'))|
-                       ((State_VMT_Temp['F_System']==7)&(State_VMT_Temp['Urban_rural'].isin(['R', 'U']))), 'VMT'] = State_VMT_Temp['Adjusted_VMT']
+    State_VMT_Temp.loc[(State_VMT_Temp['VMT'].isna())|(State_VMT_Temp['VMT']==0), 'VMT'] = State_VMT_Temp['Adjusted_VMT']
     State_VMT_Temp = State_VMT_Temp[['County_Code', 'Urban_rural', 'F_System', 'VMT']]
     
     State_VMT_Temp.dropna(subset=['VMT'], inplace=True)
