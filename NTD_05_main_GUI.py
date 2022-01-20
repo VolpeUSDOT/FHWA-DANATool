@@ -1009,7 +1009,7 @@ if False:
     pl_npmrds_pass.config(text=fn_npmrds_pass.replace('/','\\'))
     fn_npmrds_truck = 'H:/TestData/FairfaxCity_VA/NPMRDS Data/VA_FairfaxCity_2021_TRUCKS.csv'
     pl_npmrds_truck.config(text=fn_npmrds_truck.replace('/','\\'))
-    fn_npmrds_tmc = 'H:/TestData/MiddlFairfaxCity_VAesex_MA/NPMRDS Data/TMC_Identification.csv'
+    fn_npmrds_tmc = 'H:/TestData/FairfaxCity_VA/NPMRDS Data/TMC_Identification.csv'
     pl_npmrds_tmc.config(text=fn_npmrds_tmc.replace('/','\\'))
     #fn_npmrds_shp = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/National TMC Shapefile/NationalMerge.shp'
     #pl_npmrds_shp.config(text=fn_npmrds_shp.replace('/','\\'))
