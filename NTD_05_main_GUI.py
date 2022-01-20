@@ -26,6 +26,7 @@ from tkinter import *
 from tkinter import Tk,ttk,StringVar,filedialog
 import re
 import multiprocessing as mp
+from tqdm.tk import tqdm
 
 from lib import NTD_00_TMAS
 from lib import NTD_01_NPMRDS
@@ -155,7 +156,7 @@ def f_npmrds_shp():
 def f_emission():
     global fn_emission
     fn_emission = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose Emission Rates File',
-        filetypes=[('csv file', '.csv')])
+        filetypes=[('parquet file', '.parquet')])
     pl_emission.config(text=fn_emission.replace('/','\\'))
 def f_tmas_class_clean():
     global fn_tmas_class_clean
@@ -198,8 +199,8 @@ def f_fips():
     pl_fips_2.config(text=fn_fips.replace('/','\\'))
 def f_nei():
     global fn_nei
-    fn_nei = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose National Emission Inventory File',
-        filetypes=[('xlsx file', '.xlsx')])
+    fn_nei = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose Representative Counties File',
+        filetypes=[('csv file', '.csv')])
     pl_nei_1.config(text=fn_nei.replace('/','\\'))
     pl_nei_2.config(text=fn_nei.replace('/','\\'))
 
@@ -264,6 +265,7 @@ def checkProgress():
             disable_buttons(runningThreads[i].name)
     for i in removeList:
         print("*** {} has finished running ***".format(runningThreads[i].name))
+        progBar.stop()
         enable_buttons()
         del runningThreads[i]
 
@@ -285,6 +287,7 @@ def ProcessData(procNum):
     global runningThreads
     #output_text.delete('1.0', END)
     tmc_chars = set('0123456789+-PN, ')
+    progBar.start()
     if StateValue.get() == '':
         PopUp_Selection("State")
     elif procNum == step0:
@@ -691,19 +694,37 @@ canvas.configure(yscrollcommand = main_scrollbar.set)
 mainframe = tk.Frame(canvas)
 canvas.create_window((0,0), window=mainframe, anchor='nw')
 
+## Progress Output Tab
+
 output_container = tk.Frame(notebook)
 output_container.grid(row=0, column=0, sticky="news")
 output_container.grid_rowconfigure(0, weight=1)
 output_container.grid_columnconfigure(0, weight=1)
 notebook.add(output_container, text='Progress Log')
 
-output_text = tk.Text(output_container, height=400, width=80,  wrap=WORD)
+output_textcontainer = tk.Frame(output_container)
+output_textcontainer.grid(row=0, column=0, sticky="news")
+output_textcontainer.grid_rowconfigure(0, weight=1)
+output_textcontainer.grid_columnconfigure(0, weight=1)
+
+output_text = tk.Text(output_textcontainer, height=400, width=80,  wrap=WORD)
 output_text.grid(row=0, column=0, sticky="news")
-output_scrollbar = tk.Scrollbar(output_container, orient="vertical", command=output_text.yview)
+output_scrollbar = tk.Scrollbar(output_textcontainer, orient="vertical", command=output_text.yview)
 output_scrollbar.grid(row=0, column=1, sticky='ns')
 output_text.configure(yscrollcommand = output_scrollbar.set)
 output_text.bind("<MouseWheel>", output_mouse_wheel)
 output_text.bind("<Key>", lambda e: ctrlEvent(e))
+
+progBarContainer = tk.Frame(output_container)
+progBarContainer.grid(row=1, column = 0, sticky  = "news")
+
+progBarContainer.grid_columnconfigure(0, weight=1)
+progBarContainer.grid_columnconfigure(1, weight=1)
+progBarContainer.grid_columnconfigure(2, weight=1)
+
+
+progBar = ttk.Progressbar(progBarContainer, mode='indeterminate')
+progBar.grid(row=0, column = 1, sticky  = "news")
 
 # TMC Select GUI
 
@@ -978,17 +999,17 @@ else:
        
 if False:
     w_state.current(20)
-    fn_tmas_station = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2017/TMAS_Station_2017.csv'
+    fn_tmas_station = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2018/TMAS_Station_2018.csv'
     pl_tmas_station_state_1.config(text=fn_tmas_station.replace('/','\\'))
-    fn_tmas_class_clean = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2017/TMAS_Class_Clean_2017.csv'
+    fn_tmas_class_clean = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2018/TMAS_Class_Clean_2018.csv'
     pl_tmas_class_clean_1.config(text=fn_tmas_class_clean.replace('/','\\'))
-    fn_npmrds_all = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/Middlesex_MA/NPMRDS Data/MA_MIDDLESEX_2018_ALL.csv'
+    fn_npmrds_all = 'H:/TestData/Middlesex_MA/NPMRDS Data/MA_MIDDLESEX_2018_ALL.csv'
     pl_npmrds_all.config(text=fn_npmrds_all.replace('/','\\'))
-    fn_npmrds_pass = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/Middlesex_MA/NPMRDS Data/MA_MIDDLESEX_2018_PASSENGER.csv'
+    fn_npmrds_pass = 'H:/TestData/Middlesex_MA/NPMRDS Data/MA_MIDDLESEX_2018_PASSENGER.csv'
     pl_npmrds_pass.config(text=fn_npmrds_pass.replace('/','\\'))
-    fn_npmrds_truck = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/Middlesex_MA/NPMRDS Data/MA_MIDDLESEX_2018_TRUCKS.csv'
+    fn_npmrds_truck = 'H:/TestData/Middlesex_MA/NPMRDS Data/MA_MIDDLESEX_2018_TRUCKS.csv'
     pl_npmrds_truck.config(text=fn_npmrds_truck.replace('/','\\'))
-    fn_npmrds_tmc = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/User Input Files/Middlesex_MA/NPMRDS Data/TMC_Identification.csv'
+    fn_npmrds_tmc = 'H:/TestData/Middlesex_MA/NPMRDS Data/TMC_Identification.csv'
     pl_npmrds_tmc.config(text=fn_npmrds_tmc.replace('/','\\'))
     #fn_npmrds_shp = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/National TMC Shapefile/NationalMerge.shp'
     #pl_npmrds_shp.config(text=fn_npmrds_shp.replace('/','\\'))

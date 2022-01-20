@@ -13,9 +13,9 @@ import os
 import sys
 
 # Basic Input Parameters
-step = 2
+step = 1
 
-testOption = 1
+testOption = 7
 
 
 if testOption == 1:
@@ -126,7 +126,7 @@ PATH_NPMRDS = pathPrefix3 + '/Process1_LinkLevelDataset/{}_Composite_Emissions.p
 
 if __name__ == '__main__':
     if step == 0:
-        NTD_00_TMAS.TMAS(SELECT_STATE, r'H:/DANATool/TMAS_station.csv', r'H:/DANATool/TMAS_Class_2020.dat', PATH_FIPS, PATH_NEI, PREREADSTATION = True)
+        NTD_00_TMAS.TMAS(SELECT_STATE, r'H:/TestData/MA_2012_TMAS_station.dat', r'H:/TestData/MA_2012_TMAS_class.dat', PATH_FIPS, PATH_NEI, PREREADSTATION = False)
     if step == 1:
         NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI)
     elif step == 2:
