@@ -998,10 +998,10 @@ else:
     pl_emission.config(text='')
        
 if False:
-    w_state.current(20)
-    fn_tmas_station = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2018/TMAS_Station_2018.csv'
+    w_state.current(45)
+    fn_tmas_station = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2019/TMAS_Station_2019.csv'
     pl_tmas_station_state_1.config(text=fn_tmas_station.replace('/','\\'))
-    fn_tmas_class_clean = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2018/TMAS_Class_Clean_2018.csv'
+    fn_tmas_class_clean = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2019/TMAS_Class_Clean_2019.csv'
     pl_tmas_class_clean_1.config(text=fn_tmas_class_clean.replace('/','\\'))
     fn_npmrds_all = 'H:/TestData/FairfaxCity_VA/NPMRDS Data/VA_FairfaxCity_2021_ALL.csv'
     pl_npmrds_all.config(text=fn_npmrds_all.replace('/','\\'))
