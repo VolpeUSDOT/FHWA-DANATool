@@ -1003,13 +1003,13 @@ if False:
     pl_tmas_station_state_1.config(text=fn_tmas_station.replace('/','\\'))
     fn_tmas_class_clean = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2018/TMAS_Class_Clean_2018.csv'
     pl_tmas_class_clean_1.config(text=fn_tmas_class_clean.replace('/','\\'))
-    fn_npmrds_all = 'H:/TestData/Middlesex_MA/NPMRDS Data/MA_MIDDLESEX_2018_ALL.csv'
+    fn_npmrds_all = 'H:/TestData/FairfaxCity_VA/NPMRDS Data/VA_FairfaxCity_2021_ALL.csv'
     pl_npmrds_all.config(text=fn_npmrds_all.replace('/','\\'))
-    fn_npmrds_pass = 'H:/TestData/Middlesex_MA/NPMRDS Data/MA_MIDDLESEX_2018_PASSENGER.csv'
+    fn_npmrds_pass = 'H:/TestData/FairfaxCity_VA/NPMRDS Data/VA_FairfaxCity_2021_PASSENGER.csv'
     pl_npmrds_pass.config(text=fn_npmrds_pass.replace('/','\\'))
-    fn_npmrds_truck = 'H:/TestData/Middlesex_MA/NPMRDS Data/MA_MIDDLESEX_2018_TRUCKS.csv'
+    fn_npmrds_truck = 'H:/TestData/FairfaxCity_VA/NPMRDS Data/VA_FairfaxCity_2021_TRUCKS.csv'
     pl_npmrds_truck.config(text=fn_npmrds_truck.replace('/','\\'))
-    fn_npmrds_tmc = 'H:/TestData/Middlesex_MA/NPMRDS Data/TMC_Identification.csv'
+    fn_npmrds_tmc = 'H:/TestData/MiddlFairfaxCity_VAesex_MA/NPMRDS Data/TMC_Identification.csv'
     pl_npmrds_tmc.config(text=fn_npmrds_tmc.replace('/','\\'))
     #fn_npmrds_shp = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/National TMC Shapefile/NationalMerge.shp'
     #pl_npmrds_shp.config(text=fn_npmrds_shp.replace('/','\\'))
