@@ -16,6 +16,7 @@ from shapely.geometry import Point
 import pathlib
 from .load_shapes import *
 import pkg_resources
+from tqdm.tk import tqdm
 
 PATH_tmc_shp = pkg_resources.resource_filename('lib', resource_name='ShapeFiles/')
 
@@ -659,13 +660,22 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
         
     #Sort by: MONTHID HOURID ROADTYPEID HPMSTYPEID POLLUTANTID AVGSPEEDBINID 
     emissions_state.sort_values(['repcty','monthid3','hourid','roadtypeid','hpmsvtypeid','pollutantid','avgspeedbinid'],inplace=True)
+    emissions_pass = emissions_state.loc[emissions_state['hpmsvtypeid'].isin(['10', '25'])]
+    emissions_truck = emissions_state.loc[emissions_state['hpmsvtypeid'].isin(['40', '50', '60'])]
     #b. Create grams per mile values for vehicletype/pollutant combinations. They will be in this order from the sort:
-    emissions2=emissions_state.pivot_table(index=['repcty','monthid3','hourid','roadtypeid','avgspeedbinid'], 
+    emissions_pass=emissions_pass.pivot_table(index=['repcty','monthid3','hourid','roadtypeid','avgspeedbinid'], 
                                      columns=['hpmsvtypeid','pollutantid'], values='grams_per_mile')
+    emissions_truck=emissions_truck.pivot_table(index=['repcty','monthid3','hourid','roadtypeid','avgspeedbinid'], 
+                                     columns=['hpmsvtypeid','pollutantid'], values='grams_per_mile')
+    
     del emissions_state
     #Reduce column levels
-    emissions2.columns = emissions2.columns.map('_'.join)
-    emissions2.reset_index(inplace=True)
+    emissions_pass.columns = emissions_pass.columns.map('_'.join)
+    emissions_pass.reset_index(inplace=True)
+    emissions_pass.rename(columns = {'avgspeedbinid': 'avgspeedbinid_pass'}, inplace=True)
+    emissions_truck.columns = emissions_truck.columns.map('_'.join)
+    emissions_truck.reset_index(inplace=True)
+    emissions_truck.rename(columns = {'avgspeedbinid': 'avgspeedbinid_truck'}, inplace=True)
     now=lapTimer('  took: ',now)
     
     #c. Read the Tier data
@@ -714,6 +724,42 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     df.loc[(df['speed_all']>=67.5)&(df['speed_all']<72.5), 'avgspeedbinid'] = 15
     df.loc[(df['speed_all']>=72.5), 'avgspeedbinid'] = 16
     
+    df['avgspeedbinid_pass']=np.nan
+    df.loc[df['speed_pass']<2.5, 'avgspeedbinid_pass'] = 1
+    df.loc[(df['speed_pass']>=2.5)&(df['speed_pass']<7.5), 'avgspeedbinid_pass'] = 2
+    df.loc[(df['speed_pass']>=7.5)&(df['speed_pass']<12.5), 'avgspeedbinid_pass'] = 3
+    df.loc[(df['speed_pass']>=12.5)&(df['speed_pass']<17.5), 'avgspeedbinid_pass'] = 4
+    df.loc[(df['speed_pass']>=17.5)&(df['speed_pass']<22.5), 'avgspeedbinid_pass'] = 5
+    df.loc[(df['speed_pass']>=22.5)&(df['speed_pass']<27.5), 'avgspeedbinid_pass'] = 6
+    df.loc[(df['speed_pass']>=27.5)&(df['speed_pass']<32.5), 'avgspeedbinid_pass'] = 7
+    df.loc[(df['speed_pass']>=32.5)&(df['speed_pass']<37.5), 'avgspeedbinid_pass'] = 8
+    df.loc[(df['speed_pass']>=37.5)&(df['speed_pass']<42.5), 'avgspeedbinid_pass'] = 9
+    df.loc[(df['speed_pass']>=42.5)&(df['speed_pass']<47.5), 'avgspeedbinid_pass'] = 10
+    df.loc[(df['speed_pass']>=47.5)&(df['speed_pass']<52.5), 'avgspeedbinid_pass'] = 11
+    df.loc[(df['speed_pass']>=52.5)&(df['speed_pass']<57.5), 'avgspeedbinid_pass'] = 12
+    df.loc[(df['speed_pass']>=57.5)&(df['speed_pass']<62.5), 'avgspeedbinid_pass'] = 13
+    df.loc[(df['speed_pass']>=62.5)&(df['speed_pass']<67.5), 'avgspeedbinid_pass'] = 14
+    df.loc[(df['speed_pass']>=67.5)&(df['speed_pass']<72.5), 'avgspeedbinid_pass'] = 15
+    df.loc[(df['speed_pass']>=72.5), 'avgspeedbinid_pass'] = 16
+    
+    df['avgspeedbinid_truck']=np.nan
+    df.loc[df['speed_truck']<2.5, 'avgspeedbinid_truck'] = 1
+    df.loc[(df['speed_truck']>=2.5)&(df['speed_truck']<7.5), 'avgspeedbinid_truck'] = 2
+    df.loc[(df['speed_truck']>=7.5)&(df['speed_truck']<12.5), 'avgspeedbinid_truck'] = 3
+    df.loc[(df['speed_truck']>=12.5)&(df['speed_truck']<17.5), 'avgspeedbinid_truck'] = 4
+    df.loc[(df['speed_truck']>=17.5)&(df['speed_truck']<22.5), 'avgspeedbinid_truck'] = 5
+    df.loc[(df['speed_truck']>=22.5)&(df['speed_truck']<27.5), 'avgspeedbinid_truck'] = 6
+    df.loc[(df['speed_truck']>=27.5)&(df['speed_truck']<32.5), 'avgspeedbinid_truck'] = 7
+    df.loc[(df['speed_truck']>=32.5)&(df['speed_truck']<37.5), 'avgspeedbinid_truck'] = 8
+    df.loc[(df['speed_truck']>=37.5)&(df['speed_truck']<42.5), 'avgspeedbinid_truck'] = 9
+    df.loc[(df['speed_truck']>=42.5)&(df['speed_truck']<47.5), 'avgspeedbinid_truck'] = 10
+    df.loc[(df['speed_truck']>=47.5)&(df['speed_truck']<52.5), 'avgspeedbinid_truck'] = 11
+    df.loc[(df['speed_truck']>=52.5)&(df['speed_truck']<57.5), 'avgspeedbinid_truck'] = 12
+    df.loc[(df['speed_truck']>=57.5)&(df['speed_truck']<62.5), 'avgspeedbinid_truck'] = 13
+    df.loc[(df['speed_truck']>=62.5)&(df['speed_truck']<67.5), 'avgspeedbinid_truck'] = 14
+    df.loc[(df['speed_truck']>=67.5)&(df['speed_truck']<72.5), 'avgspeedbinid_truck'] = 15
+    df.loc[(df['speed_truck']>=72.5), 'avgspeedbinid_truck'] = 16
+    
     df.loc[df['monthid']==1, 'monthid3'] = 120102
     df.loc[df['monthid']==2, 'monthid3'] = 120102
     df.loc[df['monthid']==3, 'monthid3'] = 30405
@@ -732,18 +778,25 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     df['VMT'] = (df['PCT_TYPE10']+df['PCT_TYPE25']+df['PCT_TYPE40']+df['PCT_TYPE50']+df['PCT_TYPE60'])*df['aadt']*df['tmc_length']
     now=lapTimer('  took: ',now)
     
+    df['avgspeedbinid_pass'].fillna(df['avgspeedbinid'], inplace=True)
+    df['avgspeedbinid_truck'].fillna(df['avgspeedbinid'], inplace=True)
+    
     #d. Merge the emission rates with the NPMRDS dataset
-    print('Merging Emission Rates to NPMRDS data')
-    df_emissions = df.merge(emissions2, how='left', on=['repcty','monthid3','hourid','roadtypeid','avgspeedbinid'])
+    print('Merging Passenger Emission Rates to NPMRDS data')
+    df_emissions = df.merge(emissions_pass, how='left', on=['repcty','monthid3','hourid','roadtypeid','avgspeedbinid_pass'])
+    df_emissions = df_emissions.merge(emissions_truck, how='left', on=['repcty','monthid3','hourid','roadtypeid','avgspeedbinid_truck'])
+
     now=lapTimer('  took: ',now)
     
-    del emissions2
+    del emissions_pass
+    del emissions_truck
     del df
     
     print('Exporting Final Dataset')
     #df_emissions.to_csv(outputpath+SELECT_STATE+'_Composite_Emission.csv', index=False)
-    df_emissions_sample = df_emissions[0:1000]
-    df_emissions_sample = df_emissions_sample.append(df_emissions[-1000:-1])
+    sample_df_nonulls = df_emissions.loc[df_emissions['travel_time_all'].notnull()].reset_index().copy()
+    df_emissions_sample = sample_df_nonulls[0:1000]
+    df_emissions_sample = df_emissions_sample.append(sample_df_nonulls[-1000:-1])
     df_emissions_sample.to_csv(filepath+SELECT_STATE+'_Composite_Emissions_SAMPLE.csv') 
     
     df_emissions_summary_cols = df_emissions[['tmc', 'road', 'tmc_length', 'speed_all', 'aadt']]
