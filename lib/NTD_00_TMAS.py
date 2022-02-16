@@ -20,6 +20,7 @@ import json
 import sys
 from tqdm.asyncio import tqdm
 from multiprocessing import Pool, TimeoutError
+from pandas.tseries.holiday import USFederalHolidayCalendar
 
 from arcgis.features import FeatureLayer
 from arcgis import geometry
@@ -296,13 +297,10 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
     
     # DOW for holidays
     print ('Other cleanup')
-    holidays = ['2015-01-01',	'2015-01-19', '2015-02-16', '2015-05-25', '2015-07-03', '2015-09-07', '2015-11-26', '2015-12-25',
-                '2016-01-01',	'2016-01-18', '2016-02-15', '2016-05-30', '2016-07-04', '2016-09-05', '2016-11-24', '2016-12-26',
-                '2017-01-01',	'2017-01-16', '2017-02-20', '2017-05-29', '2017-07-04', '2017-09-04', '2017-11-23', '2017-12-25',
-                '2018-01-01',	'2018-01-15', '2018-02-19', '2018-05-28', '2018-07-04', '2018-09-03', '2018-11-22', '2018-12-25',
-                '2019-01-01',	'2019-01-21', '2019-02-18', '2019-05-27', '2019-07-04', '2019-09-02', '2019-11-28', '2019-12-25',
-                '2020-01-01',	'2020-01-20', '2020-02-17', '2020-05-25', '2020-07-03', '2020-09-07', '2020-11-26', '2020-12-25',
-                '2021-01-01',	'2021-01-18', '2021-02-15', '2021-05-31', '2021-07-05', '2021-09-06', '2021-11-25', '2021-12-24']
+    
+    cal = USFederalHolidayCalendar()
+    holidaysIndex = cal.holidays()
+    holidays = [x.strftime('%Y-%m-%d') for x in holidaysIndex.to_series()]
 
     tmas_class.loc[tmas_class['DATE'].isin(holidays), 'DOW'] = 8
     tmas_class.loc[tmas_class['DOW']==8,'DAY_TYPE'] = 'WE'

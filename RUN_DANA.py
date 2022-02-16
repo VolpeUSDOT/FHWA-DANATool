@@ -15,7 +15,7 @@ import sys
 # Basic Input Parameters
 step = 1
 
-testOption = 7
+testOption = 14
 
 
 if testOption == 1:
@@ -80,6 +80,18 @@ elif testOption == 12:
     npmrds_year = 2019
     state = 'OK'
     county = 'Oklahoma'
+    
+elif testOption == 13:
+    tmas_year = 2020
+    npmrds_year = 2020
+    state = 'VA'
+    county = 'Richmond'
+    
+elif testOption == 14:
+    tmas_year = 2020
+    npmrds_year = 2020
+    state = 'NJ'
+    county = 'Morris'
 
 SELECT_TMC = ['129+04374', '129P09003']
 SELECT_STATE = state

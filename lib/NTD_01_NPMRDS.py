@@ -340,7 +340,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
         #c. Tier 1: space join
         #c1. Merging TMC Link and TMAS Station data using a 0.2-mile buffer
         print('Merging TMAS and TMC data')
-        geo_tmas['geometry'] = geo_tmas['geometry'].buffer(0.003)
+        geo_tmas['geometry'] = geo_tmas['geometry'].buffer(0.001)
         intersect = gpd.sjoin(geo_tmc, geo_tmas, op='intersects')
         #c2. Selecting only the data that matches on direction
         intersect_dir = intersect[intersect['dir_num']==intersect['DIR']]
