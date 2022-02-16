@@ -11,6 +11,7 @@ import pathlib
 import pyarrow as pa
 import pyarrow.parquet as pq
 import time
+import geopandas as gpd
 
 def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE): 
     #!!! INPUT Parameters
@@ -53,7 +54,14 @@ def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE):
     '''
     #Read HPMS VMT data
     print ('Reading in State HPMS')
-    HPMS = pd.read_csv(PATH_HPMS)
+    fileType = PATH_HPMS.split('.')[-1]
+    if fileType == 'csv':
+        HPMS = pd.read_csv(PATH_HPMS)
+    elif fileType == 'shp':
+        hpms_shape = gpd.read_file(PATH_HPMS)
+        HPMS = pd.DataFrame(hpms_shape)
+    else:
+        raise IOError('The HPMS filename provided does not indicate a supported file type (CSV or SHAPEFILE)')
     HPMS.columns=[x.lower() for x in HPMS.columns]
     HPMS.rename(columns={'f_system':'F_System', 'urban_code': 'Urban_Code', 'aadt': 'AADT', 
                          'begin_point': 'Begin_Point', 'begin_poin': 'Begin_Point', 'end_point': 'End_Point', 
