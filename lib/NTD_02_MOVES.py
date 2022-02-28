@@ -379,7 +379,7 @@ def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE):
     pathlib.Path(df3_filepath).mkdir(exist_ok=True) 
     regionVMTFraction.to_csv(outputpath+SELECT_STATE+'_REGIONAL_VMT.csv', index=False)
     for name, group in df3_county:
-        group.to_csv(df3_filepath+SELECT_STATE+'_REGIONAL_VMT'+'_'+str(name)+'.csv', index=False, columns=['county','HPMSVtypeID','yearID','HPMSBaseYearVMT','baseYearOffNetVMT'])
+        group.to_csv(df3_filepath+SELECT_STATE+'_REGIONAL_VMT'+'_'+str(name)+'.csv', index=False, columns=['HPMSVtypeID','yearID','HPMSBaseYearVMT'])
     now=lapTimer('  took: ',now)
     ####################################################################################################
     
@@ -415,14 +415,14 @@ def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE):
     
     roadtypeVMTFrac.sort_values(by=['county', 'roadtypeid', 'sourceTypeID'], inplace=True)
     
-    hourVMTFrac.rename(columns = {'roadtypeid':'roadTypeID'}, inplace=True)
+    roadtypeVMTFrac.rename(columns = {'roadtypeid':'roadTypeID'}, inplace=True)
     
     df3_county = roadtypeVMTFrac.groupby('county')
     df3_filepath = outputpath+SELECT_STATE+'_ROADTYPE_VMT/'
     pathlib.Path(df3_filepath).mkdir(exist_ok=True) 
     roadtypeVMTFrac.to_csv(outputpath+SELECT_STATE+'_ROADTYPE_VMT.csv', index=False)
     for name, group in df3_county:
-        group.to_csv(df3_filepath+SELECT_STATE+'_ROADTYPE_VMT'+'_'+str(name)+'.csv', index=False)
+        group.to_csv(df3_filepath+SELECT_STATE+'_ROADTYPE_VMT'+'_'+str(name)+'.csv', index=False, columns = ['sourceTypeID', 'roadTypeID', 'roadTypeVMTFraction'])
     now=lapTimer('  took: ',now)
     
     print('Outputs saved in Final Output\\')

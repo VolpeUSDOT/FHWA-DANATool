@@ -88,7 +88,7 @@ elif testOption == 13:
     county = 'Richmond'
     
 elif testOption == 14:
-    tmas_year = 2020
+    tmas_year = 2019
     npmrds_year = 2020
     state = 'NJ'
     county = 'Morris'
@@ -130,9 +130,9 @@ PATH_tmc_identification = pathPrefix2 + '/NPMRDS Data/TMC_Identification.csv'
 PATH_tmc_shp = 'lib/ShapeFiles/'
 PATH_emission = pathPrefix1 + '/NEI2017_RepresentativeEmissionsRates.parquet'
 
-PATH_HPMS  = pathPrefix2 + '/HPMS Data/{}_HPMS_{}.xslx'.format(state.upper(), npmrds_year) # Need to confirm - ALH
-PATH_VM2 = pathPrefix1 + '/Statewide Functional Class VMT/State_VMT_by_Class_{}.csv'.format(npmrds_year) # Need to confirm - ALH
-PATH_COUNTY_MILEAGE = pathPrefix1 + '/HPMS County Road Mileage/County_Road_Mileage_{}.csv'.format(npmrds_year) # Need to confirm - ALH
+PATH_HPMS  = pathPrefix2 + '/HPMS Data/{}_HPMS_{}.csv'.format(state.upper(), npmrds_year) # Need to confirm - ALH
+PATH_VM2 = pathPrefix1 + '/Statewide Functional Class VMT/State_VMT_by_Class_{}.csv'.format(tmas_year) # Need to confirm - ALH
+PATH_COUNTY_MILEAGE = pathPrefix1 + '/HPMS County Road Mileage/County_Road_Mileage_{}.csv'.format(tmas_year) # Need to confirm - ALH
 
 PATH_NPMRDS = pathPrefix3 + '/Process1_LinkLevelDataset/{}_Composite_Emissions.parquet'.format(state) # Need to confirm - ALH
 

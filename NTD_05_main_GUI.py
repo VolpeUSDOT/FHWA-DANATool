@@ -179,7 +179,7 @@ def f_tmas_station_state():
 def f_hpms():
     global fn_hpms
     fn_hpms = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose HPMS File',
-        filetypes=[('csv file', '.csv')])
+        filetypes=[('csv file', '.csv'), ('shape file', '.shp')])
     pl_hpms.config(text=fn_hpms.replace('/','\\'))
 def f_vm2():
     global fn_vm2
