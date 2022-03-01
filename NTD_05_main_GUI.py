@@ -777,25 +777,27 @@ for child in TMCSelection_frame.winfo_children(): child.grid_configure(padx=2, p
 ##################################################
 
 ##################################################
-
+#0. File location output
+ttk.Label(mainframe, text='Choose output file location').grid(row=0,column=0, columnspan=1, sticky="w")
+ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=2,column=0, columnspan=5, sticky="ew")
 #1. Header
 
-ttk.Label(mainframe, text='Select State:').grid(row=1,column=0, columnspan=1, sticky="w")
-ttk.Label(mainframe, text='Select inputs under the desired process and press the “Run Process” button.').grid(row=3,column=0, columnspan=3, sticky="w")
+ttk.Label(mainframe, text='Select State:').grid(row=3,column=0, columnspan=1, sticky="w")
+ttk.Label(mainframe, text='Select inputs under the desired process and press the “Run Process” button.').grid(row=4,column=0, columnspan=3, sticky="w")
 
-ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=5,column=0, columnspan=5, sticky="ew")
+ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=7,column=0, columnspan=5, sticky="ew")
 #ttk.Label(mainframe, text=step0).grid(row=6,column=1, columnspan=1, sticky="w")
-ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=11,column=0, columnspan=5, sticky="ew")
-ttk.Label(mainframe, text=step1).grid(row=12,column=0, columnspan=1, sticky="w")
-ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=23,column=0, columnspan=5, sticky="ew")
-ttk.Label(mainframe, text=step2).grid(row=24,column=0, columnspan=1, sticky="w")
-ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=29,column=0, columnspan=5, sticky="ew")
-ttk.Label(mainframe, text=step3).grid(row=30,column=0, columnspan=1, sticky="w")
-ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=32,column=0, columnspan=5, sticky="ew")
-ttk.Label(mainframe, text=step4).grid(row=33,column=0, columnspan=1, sticky="w")
+ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=13,column=0, columnspan=5, sticky="ew")
+ttk.Label(mainframe, text=step1).grid(row=14,column=0, columnspan=1, sticky="w")
+ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=25,column=0, columnspan=5, sticky="ew")
+ttk.Label(mainframe, text=step2).grid(row=26,column=0, columnspan=1, sticky="w")
+ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=31,column=0, columnspan=5, sticky="ew")
+ttk.Label(mainframe, text=step3).grid(row=32,column=0, columnspan=1, sticky="w")
+ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=34,column=0, columnspan=5, sticky="ew")
+ttk.Label(mainframe, text=step4).grid(row=35,column=0, columnspan=1, sticky="w")
 
-ttk.Label(mainframe, text=' Enter TMC Codes (separate by comma)').grid(row=36, column=0, columnspan=1, sticky="w")
-ttk.Label(mainframe, text='          ').grid(row=37,column=0, columnspan=1, sticky="w")
+ttk.Label(mainframe, text=' Enter TMC Codes (separate by comma)').grid(row=38, column=0, columnspan=1, sticky="w")
+ttk.Label(mainframe, text='          ').grid(row=39, column=0, columnspan=1, sticky="w")
 
 ##################################################
 
@@ -807,19 +809,23 @@ StateValue = StringVar()
 w_state = ttk.Combobox(mainframe, textvariable=StateValue, state='readonly', width=30)
 w_state['values'] = list_states
 w_state.current(0)
-w_state.grid(column=1, row=1, columnspan=1, sticky="w")
+w_state.grid(column=1, row=3, columnspan=1, sticky="w")
+
+# outputFile
+w_output_folder = ttk.Button(mainframe, text='Select Output Location', command=lambda: print('here'))
+w_output_folder.grid(column=0, row=1, columnspan=1, sticky="w")
 
 ### checkbox for process 0
 
 preprocess_checkvar = IntVar()
 preprocess_checkvar.set(False)
 preprocess_tmas_checkbox = ttk.Checkbutton(mainframe, text=step0, variable=preprocess_checkvar, command=enable_tmas_preprocess)
-preprocess_tmas_checkbox.grid(row=6,column=0, columnspan=1, sticky="w")
+preprocess_tmas_checkbox.grid(row=8,column=0, columnspan=1, sticky="w")
 
 ########
-## Start Buttons
+# script 0
 p0Canvas = tk.Canvas(mainframe)
-p0Canvas.grid(column=1, row=6, sticky='W')
+p0Canvas.grid(column=1, row=8, sticky='W')
 p0startButton = ttk.Button(p0Canvas, text="Run Process 0", command=lambda: ProcessData(step0))
 p0startButton.grid(column=0, row=0, columnspan=1 ,sticky="W", padx=(0, 5))
 p0cancelButton = ttk.Button(p0Canvas, text="Cancel Process 0", command=CancelProcess)
@@ -828,20 +834,18 @@ p0statusLabel = ttk.Label(p0Canvas, text="Process 0 Running", relief=SUNKEN)
 p0statusLabel.grid(column=2, row=0, columnspan=1, padx=(5, 0), sticky="W")
 p0statusLabel.grid_remove()
 
-# 3. File Browsing Buttons
-# script 0
 w_tmas_station = ttk.Button(mainframe, text='Select TMAS Station File', command=f_tmas_station)
-w_tmas_station.grid(column=0, row=7, columnspan=1, sticky="w")
+w_tmas_station.grid(column=0, row=9, columnspan=1, sticky="w")
 w_tmas_class = ttk.Button(mainframe, text='Select TMAS Class File', command=f_tmas_class)
-w_tmas_class.grid(column=0, row=8, columnspan=1, sticky="w")
+w_tmas_class.grid(column=0, row=10, columnspan=1, sticky="w")
 w_fips_1 = ttk.Button(mainframe, text='Select FIPS File', command=f_fips)
-w_fips_1.grid(column=0, row=9, columnspan=1, sticky="w")
+w_fips_1.grid(column=0, row=11, columnspan=1, sticky="w")
 w_nei_1 = ttk.Button(mainframe, text='Select NEI Representative Counties', command=f_nei)
-w_nei_1.grid(column=0, row=10, columnspan=1, sticky="w")
+w_nei_1.grid(column=0, row=12, columnspan=1, sticky="w")
 
 # script 1
 p1Canvas = tk.Canvas(mainframe)
-p1Canvas.grid(column=1, row=12, sticky='W')
+p1Canvas.grid(column=1, row=14, sticky='W')
 p1startButton = ttk.Button(p1Canvas, text="Run Process 1", command=lambda: ProcessData(step1))
 p1startButton.grid(column=0, row=0, columnspan=1 ,sticky="W", padx=(0, 5))
 p1cancelButton = ttk.Button(p1Canvas, text="Cancel Process 1", command=CancelProcess)
@@ -850,21 +854,21 @@ p1statusLabel = ttk.Label(p1Canvas, text="Process 1 Running", relief=SUNKEN)
 p1statusLabel.grid(column=2, row=0, columnspan=1, padx=(5, 0), sticky="W")
 p1statusLabel.grid_remove()
 
-w_tmas_station_state_1 = ttk.Button(mainframe, text='Select Processed TMAS Station', command=f_tmas_station_state).grid(column=0, row=13, columnspan=1, sticky="w")
-w_tmas_class_clean_1 = ttk.Button(mainframe, text='Select Processed TMAS Class', command=f_tmas_class_clean).grid(column=0, row=14, columnspan=1, sticky="w")
-w_npmrds_all = ttk.Button(mainframe, text='Select NPMRDS (All)', command=f_npmrds_all).grid(column=0, row=15, columnspan=1, sticky="w")
-w_npmrds_pass = ttk.Button(mainframe, text='Select NPMRDS (Passenger)', command=f_npmrds_pass).grid(column=0, row=16, columnspan=1, sticky="w")
-w_npmrds_truck = ttk.Button(mainframe, text='Select NPMRDS (Truck)', command=f_npmrds_truck).grid(column=0, row=17, columnspan=1, sticky="w")
-w_npmrds_tmc = ttk.Button(mainframe, text='Select TMC Configuration', command=f_npmrds_tmc).grid(column=0, row=18, columnspan=1, sticky="w")
-#w_npmrds_shp = ttk.Button(mainframe, text='Select TMC shapefile', command=f_npmrds_shp).grid(column=0, row=19, columnspan=1, sticky="w")
-w_emission = ttk.Button(mainframe, text='Select Emission Rates', command=f_emission).grid(column=0, row=20, columnspan=1, sticky="w")
-w_fips_2 = ttk.Button(mainframe, text='Select FIPS File', command=f_fips).grid(column=0, row=21, columnspan=1, sticky="w")
-w_nei_2 = ttk.Button(mainframe, text='Select NEI Representative Counties', command=f_nei).grid(column=0, row=22, columnspan=1, sticky="w")
+w_tmas_station_state_1 = ttk.Button(mainframe, text='Select Processed TMAS Station', command=f_tmas_station_state).grid(column=0, row=15, columnspan=1, sticky="w")
+w_tmas_class_clean_1 = ttk.Button(mainframe, text='Select Processed TMAS Class', command=f_tmas_class_clean).grid(column=0, row=16, columnspan=1, sticky="w")
+w_npmrds_all = ttk.Button(mainframe, text='Select NPMRDS (All)', command=f_npmrds_all).grid(column=0, row=17, columnspan=1, sticky="w")
+w_npmrds_pass = ttk.Button(mainframe, text='Select NPMRDS (Passenger)', command=f_npmrds_pass).grid(column=0, row=18, columnspan=1, sticky="w")
+w_npmrds_truck = ttk.Button(mainframe, text='Select NPMRDS (Truck)', command=f_npmrds_truck).grid(column=0, row=19, columnspan=1, sticky="w")
+w_npmrds_tmc = ttk.Button(mainframe, text='Select TMC Configuration', command=f_npmrds_tmc).grid(column=0, row=20, columnspan=1, sticky="w")
+#w_npmrds_shp = ttk.Button(mainframe, text='Select TMC shapefile', command=f_npmrds_shp).grid(column=0, row=21, columnspan=1, sticky="w")
+w_emission = ttk.Button(mainframe, text='Select Emission Rates', command=f_emission).grid(column=0, row=21, columnspan=1, sticky="w")
+w_fips_2 = ttk.Button(mainframe, text='Select FIPS File', command=f_fips).grid(column=0, row=22, columnspan=1, sticky="w")
+w_nei_2 = ttk.Button(mainframe, text='Select NEI Representative Counties', command=f_nei).grid(column=0, row=23, columnspan=1, sticky="w")
 
 # script 2
 #w_tmas_station_state_2 = ttk.Button(mainframe, text='Select Processed TMAS Station', command=f_tmas_station_state).grid(column=0, row=19, columnspan=1, sticky="w")
 p2Canvas = tk.Canvas(mainframe)
-p2Canvas.grid(column=1, row=24, sticky='W')
+p2Canvas.grid(column=1, row=26, sticky='W')
 p2startButton = ttk.Button(p2Canvas, text="Run Process 2", command=lambda: ProcessData(step2))
 p2startButton.grid(column=0, row=0, columnspan=1 ,sticky="W", padx=(0, 5))
 p2cancelButton = ttk.Button(p2Canvas, text="Cancel Process 2", command=CancelProcess)
@@ -873,14 +877,14 @@ p2statusLabel = ttk.Label(p2Canvas, text="Process 2 Running", relief=SUNKEN)
 p2statusLabel.grid(column=2, row=0, columnspan=1, padx=(5, 0), sticky="W")
 p2statusLabel.grid_remove()
 
-w_npmrds_clean_1 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=25, columnspan=1, sticky="w")
-w_hpms = ttk.Button(mainframe, text='Select HPMS', command=f_hpms).grid(column=0, row=26, columnspan=1, sticky="w")
-w_vm2 = ttk.Button(mainframe, text='Select Road Class Mileage', command=f_vm2).grid(column=0, row=27, columnspan=1, sticky="w")
-w_county_mileage = ttk.Button(mainframe, text='Select County Mileage file', command=f_county_mileage).grid(column=0, row=28, columnspan=1, sticky="w")
+w_npmrds_clean_1 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=27, columnspan=1, sticky="w")
+w_hpms = ttk.Button(mainframe, text='Select HPMS', command=f_hpms).grid(column=0, row=28, columnspan=1, sticky="w")
+w_vm2 = ttk.Button(mainframe, text='Select Road Class Mileage', command=f_vm2).grid(column=0, row=29, columnspan=1, sticky="w")
+w_county_mileage = ttk.Button(mainframe, text='Select County Mileage file', command=f_county_mileage).grid(column=0, row=30, columnspan=1, sticky="w")
 
 # script 3
 p3Canvas = tk.Canvas(mainframe)
-p3Canvas.grid(column=1, row=30, sticky='W')
+p3Canvas.grid(column=1, row=32, sticky='W')
 p3startButton = ttk.Button(p3Canvas, text="Run Process 3", command=lambda: ProcessData(step3))
 p3startButton.grid(column=0, row=0, columnspan=1 ,sticky="W", padx=(0, 5))
 p3cancelButton = ttk.Button(p3Canvas, text="Cancel Process 3", command=CancelProcess)
@@ -889,11 +893,11 @@ p3statusLabel = ttk.Label(p3Canvas, text="Process 3 Running", relief=SUNKEN)
 p3statusLabel.grid(column=2, row=0, columnspan=1, padx=(5, 0), sticky="W")
 p3statusLabel.grid_remove()
 
-w_npmrds_clean_2 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=31, columnspan=1, sticky="w")
+w_npmrds_clean_2 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=33, columnspan=1, sticky="w")
 
 # script 4
 p4Canvas = tk.Canvas(mainframe)
-p4Canvas.grid(column=1, row=33, sticky='W')
+p4Canvas.grid(column=1, row=35, sticky='W')
 p4startButton = ttk.Button(p4Canvas, text="Run Process 4", command=lambda: ProcessData(step4))
 p4startButton.grid(column=0, row=0, columnspan=1 ,sticky="W", padx=(0, 5))
 p4cancelButton = ttk.Button(p4Canvas, text="Cancel Process 4", command=CancelProcess)
@@ -902,61 +906,61 @@ p4statusLabel = ttk.Label(p4Canvas, text="Process 4 Running", relief=SUNKEN)
 p4statusLabel.grid(column=2, row=0, columnspan=1, padx=(5, 0), sticky="W")
 p4statusLabel.grid_remove()
 
-tmc_selection_button = ttk.Button(mainframe, text = 'TMC Selection Tool', command=lambda: notebook.select('.!notebook.!frame3')).grid(column=0, row=34, columnspan=1, sticky="w")
-w_npmrds_clean_3 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=35, columnspan=1, sticky="w")
+tmc_selection_button = ttk.Button(mainframe, text = 'TMC Selection Tool', command=lambda: notebook.select('.!notebook.!frame3')).grid(column=0, row=36, columnspan=1, sticky="w")
+w_npmrds_clean_3 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=37, columnspan=1, sticky="w")
 # Entry
 tmcEntry = StringVar()
-ttk.Entry(mainframe, textvariable=tmcEntry).grid(column=1, row=36, columnspan=1, sticky="ew")
+ttk.Entry(mainframe, textvariable=tmcEntry).grid(column=1, row=38, columnspan=1, sticky="ew")
 ##################################################
 
 # 4. Pathlabels
 # script 0
 pl_tmas_station = ttk.Label(mainframe)
-pl_tmas_station.grid(column=1, row=7, columnspan=1, sticky="w")
+pl_tmas_station.grid(column=1, row=9, columnspan=1, sticky="w")
 pl_tmas_class = ttk.Label(mainframe)
-pl_tmas_class.grid(column=1, row=8, columnspan=1, sticky="w")
+pl_tmas_class.grid(column=1, row=10, columnspan=1, sticky="w")
 pl_fips_1 = ttk.Label(mainframe)
-pl_fips_1.grid(column=1, row=9, columnspan=1, sticky="w")
+pl_fips_1.grid(column=1, row=11, columnspan=1, sticky="w")
 pl_nei_1 = ttk.Label(mainframe)
-pl_nei_1.grid(column=1, row=10, columnspan=1, sticky="w")
+pl_nei_1.grid(column=1, row=12, columnspan=1, sticky="w")
 # script 1
 pl_tmas_station_state_1 = ttk.Label(mainframe)
-pl_tmas_station_state_1.grid(column=1, row=13, columnspan=1, sticky="w")
+pl_tmas_station_state_1.grid(column=1, row=15, columnspan=1, sticky="w")
 pl_tmas_class_clean_1 = ttk.Label(mainframe)
-pl_tmas_class_clean_1.grid(column=1, row=14, columnspan=1, sticky="w")
+pl_tmas_class_clean_1.grid(column=1, row=16, columnspan=1, sticky="w")
 pl_npmrds_all = ttk.Label(mainframe)
-pl_npmrds_all.grid(column=1, row=15, columnspan=1, sticky="w")
+pl_npmrds_all.grid(column=1, row=17, columnspan=1, sticky="w")
 pl_npmrds_pass = ttk.Label(mainframe)
-pl_npmrds_pass.grid(column=1, row=16, columnspan=1, sticky="w")
+pl_npmrds_pass.grid(column=1, row=18, columnspan=1, sticky="w")
 pl_npmrds_truck = ttk.Label(mainframe)
-pl_npmrds_truck.grid(column=1, row=17, columnspan=1, sticky="w")
+pl_npmrds_truck.grid(column=1, row=19, columnspan=1, sticky="w")
 pl_npmrds_tmc = ttk.Label(mainframe)
-pl_npmrds_tmc.grid(column=1, row=18, columnspan=1, sticky="w")
+pl_npmrds_tmc.grid(column=1, row=20, columnspan=1, sticky="w")
 #pl_npmrds_shp = ttk.Label(mainframe)
 #pl_npmrds_shp.grid(column=1, row=19, columnspan=1, sticky="w")
 pl_emission = ttk.Label(mainframe)
-pl_emission.grid(column=1, row=20, columnspan=1, sticky="w")
+pl_emission.grid(column=1, row=21, columnspan=1, sticky="w")
 pl_fips_2 = ttk.Label(mainframe)
-pl_fips_2.grid(column=1, row=21, columnspan=1, sticky="w")
+pl_fips_2.grid(column=1, row=22, columnspan=1, sticky="w")
 pl_nei_2 = ttk.Label(mainframe)
-pl_nei_2.grid(column=1, row=22, columnspan=1, sticky="w")
+pl_nei_2.grid(column=1, row=23, columnspan=1, sticky="w")
 # script 2
 #pl_tmas_station_state_2 = ttk.Label(mainframe)
 #pl_tmas_station_state_2.grid(column=1, row=19, columnspan=1, sticky="w")
 pl_npmrds_clean_1 = ttk.Label(mainframe)
-pl_npmrds_clean_1.grid(column=1, row=25, columnspan=1, sticky="w")
+pl_npmrds_clean_1.grid(column=1, row=27, columnspan=1, sticky="w")
 pl_hpms = ttk.Label(mainframe)
-pl_hpms.grid(column=1, row=26, columnspan=1, sticky="w")
+pl_hpms.grid(column=1, row=28, columnspan=1, sticky="w")
 pl_vm2 = ttk.Label(mainframe)
-pl_vm2.grid(column=1, row=27, columnspan=1, sticky="w")
+pl_vm2.grid(column=1, row=29, columnspan=1, sticky="w")
 pl_county_mileage = ttk.Label(mainframe)
-pl_county_mileage.grid(column=1, row=28, columnspan=1, sticky="w")
+pl_county_mileage.grid(column=1, row=30, columnspan=1, sticky="w")
 # script 3
 pl_npmrds_clean_2 = ttk.Label(mainframe)
-pl_npmrds_clean_2.grid(column=1, row=31, columnspan=1, sticky="w")
+pl_npmrds_clean_2.grid(column=1, row=33, columnspan=1, sticky="w")
 # script 4
 pl_npmrds_clean_3 = ttk.Label(mainframe)
-pl_npmrds_clean_3.grid(column=1, row=35, columnspan=1, sticky="w")
+pl_npmrds_clean_3.grid(column=1, row=37, columnspan=1, sticky="w")
 ##################################################
 
 # 5. Check available pre-processed files
