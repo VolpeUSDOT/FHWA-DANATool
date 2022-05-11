@@ -20,12 +20,10 @@ from tqdm.tk import tqdm
 
 PATH_tmc_shp = pkg_resources.resource_filename('lib', resource_name='ShapeFiles/')
 
-def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass,PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI):
+def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass,PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, /,PATH_OUTPUT = 'Final Output'):
     #!!! INPUT Parameters
-    filepath = 'Final Output/Process1_LinkLevelDataset/'
+    filepath = PATH_OUTPUT + '/Process1_LinkLevelDataset/'
     pathlib.Path(filepath).mkdir(exist_ok=True) 
-    outputpath = 'Final Output/'
-    pathlib.Path(outputpath).mkdir(exist_ok=True) 
     
     '''
     #SELECT_STATE='CO'

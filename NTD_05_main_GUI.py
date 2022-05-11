@@ -71,7 +71,7 @@ def resource_path(relative_path):
 def PopUpCleanTMASSelection():
     popup = Tk()
     popup.wm_title("Warning")
-    label = ttk.Label(popup, text="Please run Step 1 to create processed TMAS File.")
+    label = ttk.Label(popup, text="Please chose a processed TMAS File.")
     label.pack(side="top", pady=5, padx=5)
     popup.mainloop    
 def PopUpCleanNPMRDSSelection():
@@ -94,6 +94,7 @@ def PopUpMsg(txt_input):
     popup.mainloop
 
 # Initialization
+fn_output = ''
 fn_tmas_station = ''
 fn_tmas_class = ''
 fn_npmrds_all = ''
@@ -117,6 +118,15 @@ step3 = '3. Produce Speed Distributions'
 step4 = '4. Produce Noise Inputs'
 
 # Func - File dialogs    
+def f_output():
+    global fn_output
+    fn_output = filedialog.askdirectory(parent=root, title='Choose Output Folder', initialdir='/')
+    pl_output_folder.config(text=fn_output.replace('/','\\'))
+    pathlib.Path(fn_output).mkdir(exist_ok=True)
+    with open(fn_output + '/progress_log.txt', 'a') as file:
+        file.write('\n\n*********** New DANA TOOL Log ************')
+        file.write('\n******** {} ********\n\n'.format(dt.datetime.now().strftime('%c')))
+    #print (f)
 def f_tmas_station():
     global fn_tmas_station
     fn_tmas_station = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose TMAS Station File',
@@ -243,7 +253,10 @@ def checkProgress():
     global thread_queue
     global fn_npmrds_clean
     while not thread_queue.empty():
-        output_text.insert(tk.END, thread_queue.get())
+        line = thread_queue.get()
+        output_text.insert(tk.END, line)
+        with open(fn_output + '/progress_log.txt', 'a') as file:
+            file.write(line)
         
     root.update_idletasks()
     canvasScrollRegion = (0, 0, 
@@ -268,9 +281,10 @@ def checkProgress():
         progBar.stop()
         enable_buttons()
         del runningThreads[i]
-
     
-    root.after(100, checkProgress)
+    global afterids
+    afterids = []
+    afterids.append(root.after(100, checkProgress))
         
 
 def process_handler(proc_target, thread_queue, args): 
@@ -287,10 +301,16 @@ def ProcessData(procNum):
     global runningThreads
     #output_text.delete('1.0', END)
     tmc_chars = set('0123456789+-PN, ')
-    progBar.start()
+    
     if StateValue.get() == '':
         PopUp_Selection("State")
-    elif procNum == step0:
+        return
+    if fn_output == '':
+        PopUp_Selection("Output Folder Location")
+        return
+    
+    progBar.start()
+    if procNum == step0:
         if fn_tmas_station == '':
             PopUp_Selection("TMAS Station file")
         elif fn_tmas_class == '':
@@ -305,7 +325,8 @@ def ProcessData(procNum):
             PATH_TMAS_CLASS = fn_tmas_class
             PATH_FIPS = fn_fips 
             PATH_NEI = fn_nei
-            TMAS_Proc = mp.Process(target=process_handler, name=step0, args=(NTD_00_TMAS.TMAS, thread_queue, (SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI)))
+            PATH_OUTPUT = fn_output
+            TMAS_Proc = mp.Process(target=process_handler, name=step0, args=(NTD_00_TMAS.TMAS, thread_queue, (SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, PATH_OUTPUT)))
             disable_buttons(step0)
             TMAS_Proc.start()
             runningThreads.append(TMAS_Proc)
@@ -342,7 +363,8 @@ def ProcessData(procNum):
             PATH_TMAS_CLASS_CLEAN = fn_tmas_class_clean
             PATH_FIPS = fn_fips 
             PATH_NEI = fn_nei
-            NPMRDS_Proc = mp.Process(target=process_handler, name=step1, args=(NTD_01_NPMRDS.NPMRDS, thread_queue, (SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI)))
+            PATH_OUTPUT = fn_output
+            NPMRDS_Proc = mp.Process(target=process_handler, name=step1, args=(NTD_01_NPMRDS.NPMRDS, thread_queue, (SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, PATH_OUTPUT)))
             disable_buttons(step1)
             NPMRDS_Proc.start()
             runningThreads.append(NPMRDS_Proc)
@@ -357,7 +379,8 @@ def ProcessData(procNum):
             PATH_HPMS = fn_hpms
             PATH_VM2 = fn_vm2
             PATH_COUNTY_MILEAGE = fn_county_mileage
-            MOVES_Proc = mp.Process(target=process_handler, name=step2, args=(NTD_02_MOVES.MOVES, thread_queue, (SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)))
+            PATH_OUTPUT = fn_output
+            MOVES_Proc = mp.Process(target=process_handler, name=step2, args=(NTD_02_MOVES.MOVES, thread_queue, (SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE, PATH_OUTPUT)))
             disable_buttons(step2)
             MOVES_Proc.start()
             runningThreads.append(MOVES_Proc)
@@ -369,7 +392,8 @@ def ProcessData(procNum):
             PopUpCleanNPMRDSSelection()
         else:
             PATH_NPMRDS = fn_npmrds_clean
-            SPEED_Proc = mp.Process(target=process_handler, name=step3, args=(NTD_03_SPEED.SPEED, thread_queue, (SELECT_STATE, PATH_NPMRDS)))
+            PATH_OUTPUT = fn_output
+            SPEED_Proc = mp.Process(target=process_handler, name=step3, args=(NTD_03_SPEED.SPEED, thread_queue, (SELECT_STATE, PATH_NPMRDS, PATH_OUTPUT)))
             disable_buttons(step3)
             SPEED_Proc.start()
             runningThreads.append(SPEED_Proc)
@@ -386,7 +410,8 @@ def ProcessData(procNum):
             SELECT_TMC = re.split(',\s+',tmcEntry.get())
             #PrintTMCinput(SELECT_TMC)
             PATH_NPMRDS = fn_npmrds_clean
-            NOISE_Proc = mp.Process(target=process_handler, name=step4, args=(NTD_04_NOISE.NOISE, thread_queue, (SELECT_STATE, SELECT_TMC, PATH_NPMRDS)))
+            PATH_OUTPUT = fn_output
+            NOISE_Proc = mp.Process(target=process_handler, name=step4, args=(NTD_04_NOISE.NOISE, thread_queue, (SELECT_STATE, SELECT_TMC, PATH_NPMRDS, PATH_OUTPUT)))
             disable_buttons(step4)
             NOISE_Proc.start()
             runningThreads.append(NOISE_Proc)
@@ -394,6 +419,7 @@ def ProcessData(procNum):
             
     else:
         PopUp_Selection("Step")
+    
     #root.destroy()
 
 def disable_buttons(step):
@@ -532,7 +558,7 @@ def ReadPolygon():
     return Poly
 
 def PrintResults(tmc_list, county, road, direction):
-    outputpath = 'Final Output/TMC_Selection/'
+    outputpath = fn_output + '/TMC_Selection/'
     pathlib.Path(outputpath).mkdir(exist_ok=True)
     filename = 'TMCs_{}_{}_{}.txt'.format(county, road, direction)
     text = open(outputpath+filename, 'w')
@@ -812,7 +838,7 @@ w_state.current(0)
 w_state.grid(column=1, row=3, columnspan=1, sticky="w")
 
 # outputFile
-w_output_folder = ttk.Button(mainframe, text='Select Output Location', command=lambda: print('here'))
+w_output_folder = ttk.Button(mainframe, text='Select Output Location', command=f_output)
 w_output_folder.grid(column=0, row=1, columnspan=1, sticky="w")
 
 ### checkbox for process 0
@@ -914,6 +940,9 @@ ttk.Entry(mainframe, textvariable=tmcEntry).grid(column=1, row=38, columnspan=1,
 ##################################################
 
 # 4. Pathlabels
+# output folder
+pl_output_folder = ttk.Label(mainframe)
+pl_output_folder.grid(column=1, row=1, columnspan=1, sticky="w")
 # script 0
 pl_tmas_station = ttk.Label(mainframe)
 pl_tmas_station.grid(column=1, row=9, columnspan=1, sticky="w")
@@ -973,7 +1002,7 @@ pl_tmas_class_clean_1.config(text='')
 
 defaultpath = 'Default Input Files/'
 pathlib.Path(defaultpath).mkdir(exist_ok=True) 
-outputpath = 'Final Output/'
+outputpath = fn_output
 pathlib.Path(outputpath).mkdir(exist_ok=True) 
 
 # FIPS
@@ -1015,6 +1044,9 @@ if False:
     pl_npmrds_truck.config(text=fn_npmrds_truck.replace('/','\\'))
     fn_npmrds_tmc = 'H:/TestData/FairfaxCity_VA/NPMRDS Data/TMC_Identification.csv'
     pl_npmrds_tmc.config(text=fn_npmrds_tmc.replace('/','\\'))
+    fn_output = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/RunOutputs/TestingRun1_20220302'
+    pl_output_folder.config(text=fn_output.replace('/','\\'))
+
     #fn_npmrds_shp = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/National TMC Shapefile/NationalMerge.shp'
     #pl_npmrds_shp.config(text=fn_npmrds_shp.replace('/','\\'))
 
@@ -1052,3 +1084,5 @@ if __name__ == "__main__":
     checkProgress()
     root.mainloop()
     sys.stdout = old_stdout
+    for afterid in afterids:
+        root.after_cancel(afterid)

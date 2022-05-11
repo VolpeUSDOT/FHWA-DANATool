@@ -12,10 +12,10 @@ import pyarrow.parquet as pq
 import time
 import pathlib
 
-def NOISE(SELECT_STATE, SELECT_TMC, PATH_NPMRDS):
+def NOISE(SELECT_STATE, SELECT_TMC, PATH_NPMRDS, /, PATH_OUTPUT = 'Final Output'):
     #!!! INPUT Parameters
     #pathlib.Path(filepath).mkdir(exist_ok=True) 
-    outputpath = 'Final Output/Process4_TNM_AIDE_Inputs/'
+    outputpath = PATH_OUTPUT + '/Process4_TNM_AIDE_Inputs/'
     pathlib.Path(outputpath).mkdir(exist_ok=True) 
     
     #SELECT_STATE='CO'

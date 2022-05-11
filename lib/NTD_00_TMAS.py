@@ -132,9 +132,9 @@ def f(tmas_station):
     
     return tmas_station
 
-def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, PREREADSTATION = False):
+def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, /, PATH_OUTPUT = 'Final Output', PREREADSTATION = False):
     
-    filepath = 'TMAS_Intermediate_Output/'
+    filepath = PATH_OUTPUT + '/TMAS_Intermediate_Output/'
     pathlib.Path(filepath).mkdir(exist_ok=True) 
     
     def lapTimer(text,now):

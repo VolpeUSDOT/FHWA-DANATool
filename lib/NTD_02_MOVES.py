@@ -13,12 +13,10 @@ import pyarrow.parquet as pq
 import time
 import geopandas as gpd
 
-def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE): 
+def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE, /, PATH_OUTPUT='Final Output'): 
     #!!! INPUT Parameters
     
-    filepath = '/'
-    #pathlib.Path(filepath).mkdir(exist_ok=True) 
-    outputpath = 'Final Output/Process2_MOVES_VMT_Distributions/'
+    outputpath = PATH_OUTPUT + '/Process2_MOVES_VMT_Distributions/'
     pathlib.Path(outputpath).mkdir(exist_ok=True)
     
     def lapTimer(text,now):
@@ -425,6 +423,6 @@ def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE):
         group.to_csv(df3_filepath+SELECT_STATE+'_ROADTYPE_VMT'+'_'+str(name)+'.csv', index=False, columns = ['sourceTypeID', 'roadTypeID', 'roadTypeVMTFraction'])
     now=lapTimer('  took: ',now)
     
-    print('Outputs saved in Final Output\\')
+    print('Outputs saved in {}'.format(outputpath))
     print('**********Process Completed**********')
     print('')
