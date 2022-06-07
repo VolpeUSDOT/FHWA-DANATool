@@ -13,11 +13,12 @@ t1 = datetime.datetime.now()
 
 filePath = 'D:/Project/DANA/Data/TNMAide Input Samples/'
 fileName = 'Sample Data - Required Inputs - Non-Leap Year.csv'
-#fileName = 'Sample Data - Required Inputs - Leap Year.csv'
+fileName = 'Sample Data - Required Inputs - Leap Year.csv'
+fileName = 'Sample Data - Required Inputs - One Month Two Links.csv'
 
 df = pd.read_csv(filePath + fileName)
 
-linkResults = TNMAide(df, 2, 0.0, 0.0)
+linkResults = TNMAide(df, 6, 50.0, 0.0)
 
 
 print("SUMMARY TABLES")

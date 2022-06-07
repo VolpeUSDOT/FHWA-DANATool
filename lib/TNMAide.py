@@ -245,8 +245,8 @@ class TNMAide:
             return
         self.computed_futures = False
         self.roadway = df.loc[0,'ROAD']
-        self.direction_near_lanes = df.loc[0,'DIRECTION']
-        self.direction_far_lanes = df.loc[17519,'DIRECTION']
+        self.direction_near_lanes = df.loc[0,'DIRECTION']       
+        self.direction_far_lanes = df.loc[df.shape[0]-1,'DIRECTION']
         self.county = df.loc[0,'COUNTY']
         self.state = df.loc[0,'STATE']
         
@@ -439,6 +439,7 @@ class TNMAide:
         idx_hour_WORST_HOUR = df_all_days.AD.idxmax()
         date_WORST_DAY = df_all_days.C[idx_hour_WORST_HOUR]
         
+        # Requires full day for each link for WORST DAY
         first_link_idx_hour_0 = df_all_days.C[df_all_days.C == date_WORST_DAY].index[0]
         second_link_idx_hour_0 = df_all_days.C[df_all_days.C == date_WORST_DAY].index[24]
                
@@ -577,9 +578,11 @@ class TNMAide:
         
         return 0
     
+    
     def Compute_24_Hour_LAeq(self, df_summary_day):
         LAeq_24hrs = 10*np.log10(sum(10**(df_summary_day.Total_SPL/10))) - 10*np.log10(24)
         return LAeq_24hrs
+    
     
     def Compute_LDN(self, df_summary_day):
         # Adjustments by Hour
@@ -604,6 +607,7 @@ class TNMAide:
         
         return 0
  
+    
     def Compute_LDEN(self, df_summary_day):
         # Adjustments by Hour
         # LDEN	LDN	HOUR
