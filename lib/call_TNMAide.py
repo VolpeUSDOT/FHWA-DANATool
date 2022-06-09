@@ -8,12 +8,13 @@ Created By: Volpe National Transportation Systems Center
 from TNMAide import TNMAide
 import pandas as pd
 import datetime
+import copy
 
 t1 = datetime.datetime.now()
 
 filePath = 'D:/Project/DANA/Data/TNMAide Input Samples/'
-fileName = 'Sample Data - Required Inputs - Non-Leap Year.csv'
 fileName = 'Sample Data - Required Inputs - Leap Year.csv'
+fileName = 'Sample Data - Required Inputs - Non-Leap Year.csv'
 fileName = 'Sample Data - Required Inputs - One Month Two Links.csv'
 
 df = pd.read_csv(filePath + fileName)
@@ -71,4 +72,11 @@ t2 = datetime.datetime.now()
 tdiff = t2-t1
 print("Time Elapsed: " + str(round(tdiff.total_seconds(),2)) + " seconds")   
 
-
+linkResults.Compute_Future_Metrics_Current_Distribution()
+df1 =  copy.deepcopy(linkResults)
+linkResults.Compute_Future_Metrics_Current_Distribution(Auto_Fractions = [0.50, 0.05, 0.10], \
+                                                    MT_Fractions = [0.05, 0.02, 0.03], \
+                                                    HT_Fractions = [0.10, 0.05, 0.10], \
+                                                    BUS_Fractions = [0.0, 0.0, 0.0], \
+                                                    MC_Fractions = [0.0, 0.0, 0.0])
+df2 = copy.deepcopy(linkResults)
