@@ -15,11 +15,11 @@ t1 = datetime.datetime.now()
 filePath = 'D:/Project/DANA/Data/TNMAide Input Samples/'
 fileName = 'Sample Data - Required Inputs - Leap Year.csv'
 fileName = 'Sample Data - Required Inputs - Non-Leap Year.csv'
-fileName = 'Sample Data - Required Inputs - One Month Two Links.csv'
+#fileName = 'Sample Data - Required Inputs - One Month Two Links.csv'
 
 df = pd.read_csv(filePath + fileName)
 
-linkResults = TNMAide(df, 6, 50.0, 0.0)
+linkResults = TNMAide(df, 6, 50000.0, 0.0, do_two_lanes = True)
 
 
 print("SUMMARY TABLES")
@@ -36,14 +36,15 @@ print(" ")
 print("TRAFFIC VOLUMES")
 print("-------------------------------------")
 print("AADT = " + str(linkResults.AADT))
-print("Auto_Fraction = " + str(round(linkResults.Auto_Fraction,3)))
-print("MT_Fraction = " + str(round(linkResults.MT_Fraction,3)))
-print("HT_Fraction = " + str(round(linkResults.HT_Fraction,3)))
-print("BUS_Fraction = " + str(round(linkResults.BUS_Fraction,3)))
-print("MC_Fraction = " + str(round(linkResults.MC_Fraction,3)))
-Total_Fraction = linkResults.Auto_Fraction + linkResults.MT_Fraction + \
-    linkResults.HT_Fraction + linkResults.BUS_Fraction + linkResults.MC_Fraction
-print("Total Fractions = " + str(round(Total_Fraction,3)))
+print("Auto_Overall_Fraction = " + str(round(linkResults.Auto_Overall_Fraction,3)))
+print("MT_Overall_Fraction = " + str(round(linkResults.MT_Overall_Fraction,3)))
+print("HT_Overall_Fraction = " + str(round(linkResults.HT_Overall_Fraction,3)))
+print("BUS_Overall_Fraction = " + str(round(linkResults.BUS_Overall_Fraction,3)))
+print("MC_Overall_Fraction = " + str(round(linkResults.MC_Overall_Fraction,3)))
+Total_Fraction = linkResults.Auto_Overall_Fraction + linkResults.MT_Overall_Fraction + \
+    linkResults.HT_Overall_Fraction + linkResults.BUS_Overall_Fraction + \
+    linkResults.MC_Overall_Fraction
+print("Total of Overall Fractions = " + str(round(Total_Fraction,3)))
 print(" ")
 
 
@@ -72,11 +73,19 @@ t2 = datetime.datetime.now()
 tdiff = t2-t1
 print("Time Elapsed: " + str(round(tdiff.total_seconds(),2)) + " seconds")   
 
-linkResults.Compute_Future_Metrics_Current_Distribution()
-df1 =  copy.deepcopy(linkResults)
+# linkResults.Compute_Future_Metrics_Current_Distribution()
+# df1 =  copy.deepcopy(linkResults)
+
+linkResults.Compute_Future_Metrics_Current_Distribution(Auto_Fractions = [0.50, 0.15], \
+                                                    MT_Fractions = [0.25, 0.10], \
+                                                    HT_Fractions = [0.00, 0.00], \
+                                                    BUS_Fractions = [0.0, 0.0], \
+                                                    MC_Fractions = [0.0, 0.0])
+df2 = copy.deepcopy(linkResults)
+
 linkResults.Compute_Future_Metrics_Current_Distribution(Auto_Fractions = [0.50, 0.05, 0.10], \
                                                     MT_Fractions = [0.05, 0.02, 0.03], \
                                                     HT_Fractions = [0.10, 0.05, 0.10], \
                                                     BUS_Fractions = [0.0, 0.0, 0.0], \
                                                     MC_Fractions = [0.0, 0.0, 0.0])
-df2 = copy.deepcopy(linkResults)
+# df3 = copy.deepcopy(linkResults)

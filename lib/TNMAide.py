@@ -2,18 +2,28 @@
 """
 Created By: Volpe National Transportation Systems Center
 Based On: TNMAide.xlsm created by Cambridge Systematics 
-Created on Tue May 17 07:36:17 2022
+Created on Tue May 17, 07:36:17, 2022
+Last Revision on June 9, 2022
 
 @author: Aaron.Hastings
 """
 
 import pandas as pd
 import numpy as np
+import math
 
 class TNMAide:  
     # SCOPE:
     #--------------------------------------------------------------------------
-    # TBD
+    # This script implements all the functionality of the TNMAide Spreadsheet
+    # The current version only outputs numeric data (no graphs)
+    # Future versions may include graphs
+    # Because this is intneded to fit within the DANA ecosystem, the
+    #    implementation is constrained to a single script, with relevant
+    #    limitations (e.g. three classes, one for methods, one for present and
+    #                      one for future conditions could have been better.)
+    #    This follows python convention of one module one file; however, in 
+    #        the future this may be restucutred, TBD.
     
     # NOTES:
     # WORST_HOUR_DATE   refers to the date that has the highest 1-hr SPL  
@@ -26,6 +36,10 @@ class TNMAide:
     #                  hour for the entire calendar year*
     # WORST_HOUR_AVG   refers to the worst hour within an AVG DAY
     # * assuming a full year has been provided
+    # NOTE - future levels are predicted based on Day, Evening, Night percents
+    # and existing traffic volumes. However, the DEN percents do not indicate
+    # how traffic changes between links. Therefore delta is assumed to apply
+    # equally to both links.
     
 
     # TESTS:
@@ -126,9 +140,20 @@ class TNMAide:
     #        Python script includes all traffic types for consistency with 
     #        present results.
     #        NOT FIXED in 2022-06 Final TNMAide
-    
-
-
+    #     Ldn and Lden calculations in spreadsheet compute future levels, by
+    #        subtracting 10*LOG(New Vol(Hr)/Original Worst Hour Date Vol(Hr))
+    #        from the total SPL(Hr). This does not account for a different
+    #        traffic ratio in the far links. See e.g. Column AX and AS of tab
+    #        Leq Worst Hour Calculations
+    #        Python implementation uses combined traffic volumes for both links
+    #        NOT FIXED in 2022-06 Final TNMAide    
+    #     Ldn and Lden calculations are oversimplified in the spreadsheet. 
+    #        These produce higher LAeq and Lden values when using the exact
+    #        same traffic distributions for the future case
+    #        NOT FIXED in 2022-06 Final TNMAide     
+    #     Ldn spreadsheet calculations have a typo for somem data in 
+    #        Calculations (3) tab
+    #        NOT FIXED in 2022-06 Final TNMAide     
     
     # INPUTS: 
     #--------------------------------------------------------------------------
@@ -188,11 +213,11 @@ class TNMAide:
     #--------------------------------------------------------------------------
     # AADT                    = (float) Average Annual Daily Traffic for 
     #                           present condition [df.aadt]
-    # Auto_Fraction           = Auto Fraction of AADT (note Daily, not Hourly)
-    # MT_Fraction             = MT Fraction of AADT (note Daily, not Hourly)
-    # HT_Fraction             = HT Fraction of AADT (note Daily, not Hourly)
-    # BUS_Fraction            = BUS Fraction of AADT (note Daily, not Hourly)
-    # MC_Fraction             = MC Fraction of AADT (note Daily, not Hourly)
+    # Auto_Overall_Fraction   = Auto Fraction of AADT (note Daily, not Hourly)
+    # MT_Overall_Fraction     = MT Fraction of AADT (note Daily, not Hourly)
+    # HT_Overall_Fraction     = HT Fraction of AADT (note Daily, not Hourly)
+    # BUS_Overall_Fraction    = BUS Fraction of AADT (note Daily, not Hourly)
+    # MC_Overall_Fraction     = MC Fraction of AADT (note Daily, not Hourly)
     # WORST_HOUR_AVG          = (int) the hour of the day that, on average, 
     #                           produces the highest estimated LAeq,1-Hr.
     # WORST_HOUR              = (int) the single hour of the entire year that 
@@ -213,7 +238,7 @@ class TNMAide:
     # Lden_AVG_DAY            = (float) AVG Annual LDEN for present condition
     # LAeq_24hrs_WORST_HOUR_DATE  = (float) The 24-hour LAeq for the   
     #                           WORST_HOUR_DATE. Similar to Ldn and Lden,    
-    #                           except no penalties for time of day
+    #                           except no penalties fo time of day
     # Ldn_WORST_HOUR_DATE     = (float) LDN for WORST_HOUR_DATE for
     #                           present condition
     # Lden_WORST_HOUR_DATE    = (float) LDEN for WORST_HOUR_DATE for 
@@ -232,7 +257,7 @@ class TNMAide:
     # Methods
     #--------------------------------------------------------------------------
 
-    def __init__(self, df, number_of_lanes = 2, median_width = 10.0, near_lane_roadway_grade = 0.0):
+    def __init__(self, df, number_of_lanes = 2, median_width = 10.0, near_lane_roadway_grade = 0.0, do_two_lanes = True):
         # Evaluate inputs
         df_rows_columns = df.shape
         if df_rows_columns[0] < 17520:
@@ -247,6 +272,8 @@ class TNMAide:
                   + 'Standard input consists of 29 columns in the data table.')
             print(" ")
                 
+        # This is a flag
+        self.do_two_lanes = do_two_lanes
         
         # These Replicate the User Inputs
         self.df_input = df.replace(999999.0, np.nan)
@@ -353,216 +380,231 @@ class TNMAide:
         # e.g. should be able to handle non-standard date ranges
         all_dates = self.df_Leq_Worst_Hour_Calculations.C.unique()
         hours = list(range(0,24))
-        for this_date in all_dates:
-            for this_hour in hours:
-                mask = (self.df_Leq_Worst_Hour_Calculations.C == this_date) & (self.df_Leq_Worst_Hour_Calculations.B == this_hour)
-                two_links_same_time = self.df_Leq_Worst_Hour_Calculations.AC[mask]
-                idx_near_lane = two_links_same_time.index[0]
-                two_spls = list(two_links_same_time)
-                energy_1 = 10**(two_spls[0]/10)
-                energy_2 = 10**( (two_spls[1] + far_lane_distance_correction) / 10)
-                SPL = 10 * np.log10(energy_1 + energy_2)
-                self.df_Leq_Worst_Hour_Calculations.loc[idx_near_lane, 'AD'] = SPL
+        if (self.do_two_lanes):
+            for this_date in all_dates:
+                for this_hour in hours:
+                    mask = (self.df_Leq_Worst_Hour_Calculations.C == this_date) & (self.df_Leq_Worst_Hour_Calculations.B == this_hour)
+                    two_links_same_time = self.df_Leq_Worst_Hour_Calculations.AC[mask]
+                    idx_near_lane = two_links_same_time.index[0]
+                    two_spls = list(two_links_same_time)
+                    energy_1 = 10**(two_spls[0]/10)
+                    energy_2 = 10**( (two_spls[1] + far_lane_distance_correction) / 10)
+                    SPL = 10 * np.log10(energy_1 + energy_2)
+                    
+                    self.df_Leq_Worst_Hour_Calculations.loc[idx_near_lane, 'AD'] = SPL
+        else:
+            last_row = int(math.floor(self.df_Leq_Worst_Hour_Calculations.shape[0]/2))
+            self.df_Leq_Worst_Hour_Calculations.loc[0:last_row, 'AD'] = self.df_Leq_Worst_Hour_Calculations.AC[0:last_row].copy()
                         
         return 0
     
     
     def Compute_Future_Metrics_Current_Distribution(self, future_aadt = np.nan, \
-                                                    Auto_Fractions = [np.nan, np.nan, np.nan], \
-                                                    MT_Fractions = [np.nan, np.nan, np.nan], \
-                                                    HT_Fractions = [np.nan, np.nan, np.nan], \
-                                                    BUS_Fractions = [np.nan, np.nan, np.nan], \
-                                                    MC_Fractions = [np.nan, np.nan, np.nan]):     
+                                                    Auto_Fractions = [np.nan, np.nan], \
+                                                    MT_Fractions = [np.nan, np.nan], \
+                                                    HT_Fractions = [np.nan, np.nan], \
+                                                    BUS_Fractions = [np.nan, np.nan], \
+                                                    MC_Fractions = [np.nan, np.nan]):     
         # If future_aadt is left as default, then present AADT will be used
         if np.isnan(future_aadt):
             self.future_aadt = self.AADT
         else:
             self.future_aadt = future_aadt
-
-
-        Day_or_Night_are_NAN = np.isnan([ Auto_Fractions[::2], MT_Fractions[::2], \
-                                          HT_Fractions[::2], BUS_Fractions[::2], \
-                                          MC_Fractions[::2]])  
+            
+        # Make sure all Vehicle fractions have same length
+        if (not(len(Auto_Fractions) == len(MT_Fractions) and \
+                len(MT_Fractions) == len(HT_Fractions) and \
+                len(HT_Fractions) == len(BUS_Fractions) and \
+                len(BUS_Fractions) == len(MC_Fractions))):
+            print(" ")
+            print("Error user input traffic data are not the same length.")
+            print(" ")
+            return
+            
+        # Determine if Ldn or Lden should be computed. This is determined based
+        # on the length of the volume fractions
+        if (len(Auto_Fractions) == 2):
+            Bool_Compute_LDN = True
+        elif (len(Auto_Fractions) == 3):
+            Bool_Compute_LDN = False
+        else:
+            print(" ")
+            print("Error user input traffic data are not of length 2 or 3.")
+            print(" ")
+            return
+            
+        # In order to do volume fraction corrections. Present day Day, Evening and
+        #    Night fractions are needed
         
+        # Present Day DEN Fractions Worst Date
+        self.Present_AUTO_DEN_Fractions_Worst_Day = \
+            self.Compute_Day_Eve_Night_Fractions(self.df_day_WORST_HOUR_DATE, 'Auto', Bool_Compute_LDN)
+            
+        self.Present_MT_DEN_Fractions_Worst_Day = \
+            self.Compute_Day_Eve_Night_Fractions(self.df_day_WORST_HOUR_DATE, 'MT' ,Bool_Compute_LDN)    
+            
+        self.Present_HT_DEN_Fractions_Worst_Day = \
+            self.Compute_Day_Eve_Night_Fractions(self.df_day_WORST_HOUR_DATE, 'HT', Bool_Compute_LDN)    
+
+        self.Present_BUS_DEN_Fractions_Worst_Day = \
+            self.Compute_Day_Eve_Night_Fractions(self.df_day_WORST_HOUR_DATE, 'BUS', Bool_Compute_LDN)    
+
+        self.Present_MC_DEN_Fractions_Worst_Day = \
+            self.Compute_Day_Eve_Night_Fractions(self.df_day_WORST_HOUR_DATE, 'MC', Bool_Compute_LDN)    
+
+        sum_perc = sum(self.Present_AUTO_DEN_Fractions_Worst_Day) \
+            + sum(self.Present_MT_DEN_Fractions_Worst_Day) \
+            + sum(self.Present_HT_DEN_Fractions_Worst_Day) \
+            + sum(self.Present_BUS_DEN_Fractions_Worst_Day) \
+            + sum(self.Present_MC_DEN_Fractions_Worst_Day)
+        if (round(sum_perc,1) != 1.0):
+            print(" ")
+            print("Warning sum present vehicle fractions for worst hour/day = " + str(round(sum_perc,1)) + ", not 1.0")
+            print(" ")
+            
+        # Present Day DEN Fractions Average Day
+        self.Present_AUTO_DEN_Fractions_AVG_Day = \
+            self.Compute_Day_Eve_Night_Fractions(self.df_day_AVG_DAY, 'Auto', Bool_Compute_LDN)
+            
+        self.Present_MT_DEN_Fractions_AVG_Day = \
+            self.Compute_Day_Eve_Night_Fractions(self.df_day_AVG_DAY, 'MT', Bool_Compute_LDN)    
+            
+        self.Present_HT_DEN_Fractions_AVG_Day = \
+            self.Compute_Day_Eve_Night_Fractions(self.df_day_AVG_DAY, 'HT', Bool_Compute_LDN)    
+
+        self.Present_BUS_DEN_Fractions_AVG_Day = \
+            self.Compute_Day_Eve_Night_Fractions(self.df_day_AVG_DAY, 'BUS', Bool_Compute_LDN)    
+
+        self.Present_MC_DEN_Fractions_AVG_Day = \
+            self.Compute_Day_Eve_Night_Fractions(self.df_day_AVG_DAY, 'MC', Bool_Compute_LDN)    
+
+        sum_perc = sum(self.Present_AUTO_DEN_Fractions_AVG_Day) \
+            + sum(self.Present_MT_DEN_Fractions_AVG_Day) \
+            + sum(self.Present_HT_DEN_Fractions_AVG_Day) \
+            + sum(self.Present_BUS_DEN_Fractions_AVG_Day) \
+            + sum(self.Present_MC_DEN_Fractions_AVG_Day)
+        if (round(sum_perc,1) != 1.0):
+            print(" ")
+            print("Warning sum present vehicle fractions for avg hour/day = " + str(round(sum_perc,1)) + ", not 1.0")
+            print(" ")
+
+
+        # Determine if we have enough user input for DN / DEN, otherwise will fall back to present fractions
+        Day_or_Night_are_NAN = np.isnan([ Auto_Fractions, MT_Fractions, HT_Fractions, \
+                                          BUS_Fractions, MC_Fractions])                                           
+        
+        # SET FLAG TO KEEP TRACK OF WHERE DEN DATA COME FROM
+        Using_User_Data = False
         if (Day_or_Night_are_NAN.any()):
-            # If any vehicle day or night % is left as default (nan), then will use 
+            # If any vehicle data are left as default (nan), then will use 
             # present % for all vehicles, otherwise no good way to guess the nans
             
             # For Worst Date
-            Auto_Fractions = self.Compute_Day_Eve_Night_Fractions(self.df_day_WORST_HOUR_DATE, 'Auto')
-            self.future_daytime_fraction_autos_worst = Auto_Fractions[0]
-            self.future_evening_fraction_autos_worst = Auto_Fractions[1]
-            self.future_nighttime_fraction_autos_worst = Auto_Fractions[2]
+            self.Future_AUTO_DEN_Fractions_Worst_Day = self.Present_AUTO_DEN_Fractions_Worst_Day
+            self.Future_MT_DEN_Fractions_Worst_Day = self.Present_MT_DEN_Fractions_Worst_Day
+            self.Future_HT_DEN_Fractions_Worst_Day = self.Present_HT_DEN_Fractions_Worst_Day
+            self.Future_BUS_DEN_Fractions_Worst_Day = self.Present_BUS_DEN_Fractions_Worst_Day
+            self.Future_MC_DEN_Fractions_Worst_Day = self.Present_MC_DEN_Fractions_Worst_Day
+    
+            sum_perc = sum(self.Future_AUTO_DEN_Fractions_Worst_Day) \
+                + sum(self.Future_MT_DEN_Fractions_Worst_Day) \
+                + sum(self.Future_HT_DEN_Fractions_Worst_Day) \
+                + sum(self.Future_BUS_DEN_Fractions_Worst_Day) \
+                + sum(self.Future_MC_DEN_Fractions_Worst_Day)
 
-            MT_Fractions = self.Compute_Day_Eve_Night_Fractions(self.df_day_WORST_HOUR_DATE, 'MT')
-            self.future_daytime_fraction_mts_worst = MT_Fractions[0]
-            self.future_evening_fraction_mts_worst = MT_Fractions[1]
-            self.future_nighttime_fraction_mts_worst = MT_Fractions[2]
-
-            HT_Fractions = self.Compute_Day_Eve_Night_Fractions(self.df_day_WORST_HOUR_DATE, 'HT')
-            self.future_daytime_fraction_hts_worst = HT_Fractions[0]
-            self.future_evening_fraction_hts_worst = HT_Fractions[1]
-            self.future_nighttime_fraction_hts_worst = HT_Fractions[2]
-
-            BUS_Fractions = self.Compute_Day_Eve_Night_Fractions(self.df_day_WORST_HOUR_DATE, 'BUS')
-            self.future_daytime_fraction_buses_worst = BUS_Fractions[0]
-            self.future_evening_fraction_buses_worst = BUS_Fractions[1]
-            self.future_nighttime_fraction_buses_worst = BUS_Fractions[2]
-
-            MC_Fractions = self.Compute_Day_Eve_Night_Fractions(self.df_day_WORST_HOUR_DATE, 'MC')
-            self.future_daytime_fraction_mcs_worst = MC_Fractions[0]
-            self.future_evening_fraction_mcs_worst = MC_Fractions[1]
-            self.future_nighttime_fraction_mcs_worst = MC_Fractions[2] 
-            sum_perc = sum(Auto_Fractions) + sum(MT_Fractions) \
-                + sum(HT_Fractions) + sum(BUS_Fractions) + sum(MC_Fractions)
             if (round(sum_perc,1) != 1.0):
                 print(" ")
-                print("Warning sum future vehicle percents for worst hour/day = " + str(round(sum_perc,1)) + ", not 1.0")
+                print("Warning sum future vehicle fractions for worst hour/day = " + str(round(sum_perc,1)) + ", not 1.0")
                 print(" ")
             
             # For Average
-            Auto_Fractions = self.Compute_Day_Eve_Night_Fractions(self.df_day_AVG_DAY, 'Auto')
-            self.future_daytime_fraction_autos_avg = Auto_Fractions[0]
-            self.future_evening_fraction_autos_avg = Auto_Fractions[1]
-            self.future_nighttime_fraction_autos_avg = Auto_Fractions[2]
+            self.Future_AUTO_DEN_Fractions_AVG_Day = self.Present_AUTO_DEN_Fractions_AVG_Day
+            self.Future_MT_DEN_Fractions_AVG_Day = self.Present_MT_DEN_Fractions_AVG_Day
+            self.Future_HT_DEN_Fractions_AVG_Day = self.Present_HT_DEN_Fractions_AVG_Day
+            self.Future_BUS_DEN_Fractions_AVG_Day = self.Present_BUS_DEN_Fractions_AVG_Day
+            self.Future_MC_DEN_Fractions_AVG_Day = self.Present_MC_DEN_Fractions_AVG_Day
+    
+            sum_perc = sum(self.Future_AUTO_DEN_Fractions_AVG_Day) \
+                + sum(self.Future_MT_DEN_Fractions_AVG_Day) \
+                + sum(self.Future_HT_DEN_Fractions_AVG_Day) \
+                + sum(self.Future_BUS_DEN_Fractions_AVG_Day) \
+                + sum(self.Future_MC_DEN_Fractions_AVG_Day)
 
-            MT_Fractions = self.Compute_Day_Eve_Night_Fractions(self.df_day_AVG_DAY, 'MT')
-            self.future_daytime_fraction_mts_avg = MT_Fractions[0]
-            self.future_evening_fraction_mts_avg = MT_Fractions[1]
-            self.future_nighttime_fraction_mts_avg = MT_Fractions[2]
-
-            HT_Fractions = self.Compute_Day_Eve_Night_Fractions(self.df_day_AVG_DAY, 'HT')
-            self.future_daytime_fraction_hts_avg = HT_Fractions[0]
-            self.future_evening_fraction_hts_avg = HT_Fractions[1]
-            self.future_nighttime_fraction_hts_avg = HT_Fractions[2]
-
-            BUS_Fractions = self.Compute_Day_Eve_Night_Fractions(self.df_day_AVG_DAY, 'BUS')
-            self.future_daytime_fraction_buses_avg = BUS_Fractions[0]
-            self.future_evening_fraction_buses_avg = BUS_Fractions[1]
-            self.future_nighttime_fraction_buses_avg = BUS_Fractions[2]
-
-            MC_Fractions = self.Compute_Day_Eve_Night_Fractions(self.df_day_AVG_DAY, 'MC')
-            self.future_daytime_fraction_mcs_avg = MC_Fractions[0]
-            self.future_evening_fraction_mcs_avg = MC_Fractions[1]
-            self.future_nighttime_fraction_mcs_avg = MC_Fractions[2]  
-            sum_perc = sum(Auto_Fractions) + sum(MT_Fractions) \
-                + sum(HT_Fractions) + sum(BUS_Fractions) + sum(MC_Fractions)
             if (round(sum_perc,1) != 1.0):
                 print(" ")
-                print("Warning sum future vehicle fractions for avg day = " + str(round(sum_perc,1)) + ", not 1.0")
+                print("Warning sum future vehicle fractions for worst hour/day = " + str(round(sum_perc,1)) + ", not 1.0")
                 print(" ")
                 
-            # Invalidate User Percentages
-            self.future_daytime_fraction_autos_user_input = np.nan
-            self.future_evening_fraction_autos_user_input = np.nan
-            self.future_nighttime_fraction_autos_user_input = np.nan
-    
-            self.future_daytime_fraction_mts_user_input = np.nan
-            self.future_evening_fraction_mts_user_input = np.nan
-            self.future_nighttime_fraction_mts_user_input = np.nan
- 
-            self.future_daytime_fraction_hts_user_input = np.nan
-            self.future_evening_fraction_hts_user_input = np.nan
-            self.future_nighttime_fraction_hts_user_input = np.nan
- 
-            self.future_daytime_fraction_buses_user_input = np.nan
-            self.future_evening_fraction_buses_user_input = np.nan
-            self.future_nighttime_fraction_buses_user_input = np.nan
-
-            self.future_daytime_fraction_mcs_user_input = np.nan
-            self.future_evening_fraction_mcs_user_input = np.nan
-            self.future_nighttime_fraction_mcs_user_input = np.nan
+            # Invalideate User Data
+            self.Future_AUTO_DEN_Fractions_User_Data = np.nan
+            self.Future_MT_DEN_Fractions_User_Data = np.nan
+            self.Future_HT_DEN_Fractions_User_Data = np.nan
+            self.Future_BUS_DEN_Fractions_User_Data = np.nan
+            self.Future_MC_DEN_Fractions_User_Data = np.nan
                 
         else:
             # User has provided sufficient future percentages to at least compute Ldn
+            Using_User_Data= True
             
-            # For Worst Date
-            self.future_daytime_fraction_autos_user_input = Auto_Fractions[0]
-            self.future_evening_fraction_autos_user_input = Auto_Fractions[1]
-            self.future_nighttime_fraction_autos_user_input = Auto_Fractions[2]
-
-            self.future_daytime_fraction_mts_user_input = MT_Fractions[0]
-            self.future_evening_fraction_mts_user_input = MT_Fractions[1]
-            self.future_nighttime_fraction_mts_user_input = MT_Fractions[2]
-
-            self.future_daytime_fraction_hts_user_input = HT_Fractions[0]
-            self.future_evening_fraction_hts_user_input = HT_Fractions[1]
-            self.future_nighttime_fraction_hts_user_input = HT_Fractions[2]
-
-            self.future_daytime_fraction_buses_user_input = BUS_Fractions[0]
-            self.future_evening_fraction_buses_user_input = BUS_Fractions[1]
-            self.future_nighttime_fraction_buses_user_input = BUS_Fractions[2]
-
-            self.future_daytime_fraction_mcs_user_input = MC_Fractions[0]
-            self.future_evening_fraction_mcs_user_input = MC_Fractions[1]
-            self.future_nighttime_fraction_mcs_user_input = MC_Fractions[2]
-            sum_perc = sum(Auto_Fractions) + sum(MT_Fractions) \
-                + sum(HT_Fractions) + sum(BUS_Fractions) + sum(MC_Fractions)
+            # For User DEN Data
+            self.Future_AUTO_DEN_Fractions_User_Data = Auto_Fractions
+            self.Future_MT_DEN_Fractions_User_Data = MT_Fractions
+            self.Future_HT_DEN_Fractions_User_Data = HT_Fractions
+            self.Future_BUS_DEN_Fractions_User_Data = BUS_Fractions
+            self.Future_MC_DEN_Fractions_User_Data = MC_Fractions
+            
+            sum_perc = sum(self.Future_AUTO_DEN_Fractions_User_Data) \
+                + sum(self.Future_MT_DEN_Fractions_User_Data) \
+                + sum(self.Future_HT_DEN_Fractions_User_Data) \
+                + sum(self.Future_BUS_DEN_Fractions_User_Data) \
+                + sum(self.Future_MC_DEN_Fractions_User_Data)
+                
             if (round(sum_perc,1) != 1.0):
                 print(" ")
                 print("Warning sum future vehicle fractions for user input = " + str(round(sum_perc,1)) + ", not 1.0")
                 print(" ")
                 
-            # Invalidate Present Day Based Percents
-            # For Worst Date
-            self.future_daytime_fraction_autos_worst = np.nan
-            self.future_evening_fraction_autos_worst = np.nan
-            self.future_nighttime_fraction_autos_worst = np.nan
-
-            self.future_daytime_fraction_mts_worst = np.nan
-            self.future_evening_fraction_mts_worst = np.nan
-            self.future_nighttime_fraction_mts_worst = np.nan
-
-            self.future_daytime_fraction_hts_worst = np.nan
-            self.future_evening_fraction_hts_worst = np.nan
-            self.future_nighttime_fraction_hts_worst = np.nan
-
-            self.future_daytime_fraction_buses_worst = np.nan
-            self.future_evening_fraction_buses_worst = np.nan
-            self.future_nighttime_fraction_buses_worst = np.nan
-
-            self.future_daytime_fraction_mcs_worst = np.nan
-            self.future_evening_fraction_mcs_worst = np.nan
-            self.future_nighttime_fraction_mcs_worst = np.nan
+            # Invalidate Worst and AVG DEN Data
+            self.Future_AUTO_DEN_Fractions_Worst_Day = np.nan
+            self.Future_MT_DEN_Fractions_Worst_Day = np.nan
+            self.Future_HT_DEN_Fractions_Worst_Day = np.nan
+            self.Future_HT_DEN_Fractions_Worst_Day = np.nan
+            self.Future_MC_DEN_Fractions_Worst_Day = np.nan
             
-            # For Average
-            self.future_daytime_fraction_autos_avg = np.nan
-            self.future_evening_fraction_autos_avg = np.nan
-            self.future_nighttime_fraction_autos_avg = np.nan
+            self.Future_AUTO_DEN_Fractions_AVG_Day = np.nan
+            self.Future_MT_DEN_Fractions_AVG_Day = np.nan
+            self.Future_HT_DEN_Fractions_AVG_Day = np.nan
+            self.Future_HT_DEN_Fractions_AVG_Day = np.nan
+            self.Future_MC_DEN_Fractions_AVG_Day = np.nan
 
-            self.future_daytime_fraction_mts_avg = np.nan
-            self.future_evening_fraction_mts_avg = np.nan
-            self.future_nighttime_fraction_mts_avg = np.nan
+        # if (Bool_Compute_LDN):
+        #     #------------------------------------------------------------------
+        #     # Compute Ldn for WORST DAY
+        #     # Computing future case by  adjusting present case vehicle level 
+        #     #    by difference in total (both links) vehicle traffic volume. 
+        #     #    This assumes that both links change by the same proportion, 
+        #     #    which is better than assuming far link has no affect on
+        #     #    future case
+        #     df = self.df_day_WORST_HOUR_DATE.copy()
+
+        #     # Auto
+        #     if (Using_User_Data):
+        #         future_day = self.Future_AUTO_DEN_Fractions_User_Data[0]
+        #         future_night = self.Future_AUTO_DEN_Fractions_User_Data[1]
+        #     else:
+        #         future_day = self.Future_AUTO_DEN_Fractions_Worst_Day[0]
+        #         future_night = self.Future_AUTO_DEN_Fractions_Worst_Day[1]
             
-            self.future_daytime_fraction_hts_avg = np.nan
-            self.future_evening_fraction_hts_avg = np.nan
-            self.future_nighttime_fraction_hts_avg = np.nan
-
-            self.future_daytime_fraction_buses_avg = np.nan
-            self.future_evening_fraction_buses_avg = np.nan
-            self.future_nighttime_fraction_buses_avg = np.nan
-
-            self.future_daytime_fraction_mcs_avg = np.nan
-            self.future_evening_fraction_mcs_avg = np.nan
-            self.future_nighttime_fraction_mcs_avg = np.nan
+        #     # Day
+        #     present_day = self.Present_AUTO_DEN_Fractions_Worst_Day[0]
+        #     df.loc[7:21, 'Total_SPL'] = df.loc[7:21, 'Total_SPL'] + 10*np.log10(future_day/present_day)
             
-        # Need to also determine present day hourly fractions in order to compute
-        # present to future hourly adjustments
-
-        # If any evening percents are NAN, then will only compute Ldn
+        #     # Night
+        #     present_night = self.Present_AUTO_DEN_Fractions_Worst_Day[1]
+        #     df.loc[0:6, 'Total_SPL'] = df.loc[0:6, 'Total_SPL'] + 10*np.log10(future_night/present_night)
+        #     df.loc[22:23, 'Total_SPL'] = df.loc[22:23, 'Total_SPL'] + 10*np.log10(future_night/present_night)
         
-        # Compute Ldn
-        # Apply present to future adjustments
-        # Apply hourly ldn adjustments
-        # Sum
-        
-        # Compute Lden
-
-
-       
-
-        
-        return 0
+        return
     
     
     def Compute_REMELs_Energy(self, vehicle_type):
@@ -615,6 +657,7 @@ class TNMAide:
 
     
     def Compute_Summary_Data_Worst_Hour(self):
+        # COMBINE RESULTS FOR BOTH LINKS
         # Create dataframe for DAY WORST OF 365 HOURS, based on single worst hour of any day, 
         # based on total levels of both near and far lanes.
         # df includes total volumes, average speeds, and total hourly levels
@@ -689,6 +732,106 @@ class TNMAide:
         self.LAeq_24hrs_WORST_HOUR_DATE = self.Compute_24_Hour_LAeq(self.df_day_WORST_HOUR_DATE)
         self.Ldn_WORST_HOUR_DATE = self.Compute_LDN(self.df_day_WORST_HOUR_DATE)
         self.Lden_WORST_HOUR_DATE = self.Compute_LDEN(self.df_day_WORST_HOUR_DATE)
+        
+        
+        
+        
+        
+        
+        # COMBINE RESULTS FOR SEPARATE LINKS - USED FOR FUTURE TRAFFIC
+        # Create dataframe for DAY WORST OF 365 HOURS, based on single worst hour of any day, 
+        # based on total levels of both near and far lanes.
+        # df includes total volumes, average speeds, and total hourly levels
+        # Traffic_Hour      Auto_Vol      MT_Vol     ...  Auto_LAeq    ...
+        # 0                 2471.973755   52.401358  ...  63.579188    ...
+        # 1                 1509.602227   44.419772  ...  65.044710    ...
+        # 2                 1198.049828   46.968836  ...  64.057102    ...
+        # 3                 1358.733293   63.569662  ...  58.730976    ...
+
+        # Directly Accessable Properties
+        self.WORST_HOUR = self.df_Leq_Worst_Hour_Calculations.B[self.df_Leq_Worst_Hour_Calculations.AD.idxmax()]
+        self.WORST_HOUR_DATE = self.df_Leq_Worst_Hour_Calculations.C[self.df_Leq_Worst_Hour_Calculations.AD.idxmax()]
+        self.LAeq_WORST_HOUR = self.df_Leq_Worst_Hour_Calculations.AD.max()
+        
+        # Intermediate values
+        df_all_days = self.df_Leq_Worst_Hour_Calculations.copy()
+        idx_hour_WORST_HOUR = df_all_days.AD.idxmax()
+        date_WORST_DAY = df_all_days.C[idx_hour_WORST_HOUR]
+        
+        # Requires full day for each link for WORST DAY
+        first_link_idx_hour_0 = df_all_days.C[df_all_days.C == date_WORST_DAY].index[0]
+        second_link_idx_hour_0 = df_all_days.C[df_all_days.C == date_WORST_DAY].index[24]
+               
+        # Inputs to this dataframe
+        Traffic_Hour = df_all_days.B[first_link_idx_hour_0:first_link_idx_hour_0+24].copy()
+        
+        # Total Volumes by Hour for DAY WORST OF 365 HOURS
+        # Note, confirmed .to_numpy() does return reference, which carries 
+        # through even to creation of the new df, so want to include .copy()
+        
+        # Volumes - Append Links (Near and Far Lanes) for 0-23 then 0-23
+        Auto_Link_Vol = np.append(df_all_days.D[first_link_idx_hour_0:first_link_idx_hour_0+24].copy().to_numpy(), \
+                                   df_all_days.D[second_link_idx_hour_0:second_link_idx_hour_0+24].copy().to_numpy())
+        
+        MT_Link_Vol = np.append(df_all_days.E[first_link_idx_hour_0:first_link_idx_hour_0+24].copy().to_numpy(), \
+                                 df_all_days.E[second_link_idx_hour_0:second_link_idx_hour_0+24].copy().to_numpy())
+        
+        HT_Link_Vol = np.append(df_all_days.F[first_link_idx_hour_0:first_link_idx_hour_0+24].copy().to_numpy(), \
+                                 df_all_days.F[second_link_idx_hour_0:second_link_idx_hour_0+24].copy().to_numpy())
+        
+        BUS_Link_Vol = np.append(df_all_days.G[first_link_idx_hour_0:first_link_idx_hour_0+24].copy().to_numpy(), \
+                                  df_all_days.G[second_link_idx_hour_0:second_link_idx_hour_0+24].copy().to_numpy())
+        
+        MC_Link_Vol = np.append(df_all_days.H[first_link_idx_hour_0:first_link_idx_hour_0+24].copy().to_numpy(), \
+                                 df_all_days.H[second_link_idx_hour_0:second_link_idx_hour_0+24].copy().to_numpy())
+        
+        # LAeq,1-Hr by Vehicle Class
+        Auto_Link_LAeq1H = np.append(df_all_days.X[first_link_idx_hour_0:first_link_idx_hour_0+24].copy().to_numpy(), \
+                                 df_all_days.X[second_link_idx_hour_0:second_link_idx_hour_0+24].copy().to_numpy())
+        
+        MT_Link_LAeq1H = np.append(df_all_days.Y[first_link_idx_hour_0:first_link_idx_hour_0+24].copy().to_numpy(), \
+                                 df_all_days.Y[second_link_idx_hour_0:second_link_idx_hour_0+24].copy().to_numpy())
+
+        HT_Link_LAeq1H = np.append(df_all_days.Z[first_link_idx_hour_0:first_link_idx_hour_0+24].copy().to_numpy(), \
+                         df_all_days.Z[second_link_idx_hour_0:second_link_idx_hour_0+24].copy().to_numpy())
+                    
+        BUS_Link_LAeq1H = np.append(df_all_days.AA[first_link_idx_hour_0:first_link_idx_hour_0+24].copy().to_numpy(), \
+             df_all_days.AA[second_link_idx_hour_0:second_link_idx_hour_0+24].copy().to_numpy())
+                                
+        MC_Link_LAeq1H = np.append(df_all_days.AB[first_link_idx_hour_0:first_link_idx_hour_0+24].copy().to_numpy(), \
+                                 df_all_days.AB[second_link_idx_hour_0:second_link_idx_hour_0+24].copy().to_numpy())
+
+# # Multi-Index
+# arrays = [
+# list(np.append(np.ones(24), 2*np.ones(24))),
+# list(np.append(list(range(24)), list(range(24)))),
+# ]
+# tuples = list(zip(*arrays))
+
+# index = pd.MultiIndex.from_tuples(tuples, names=["Link", "Hour"])
+
+# s = pd.Series(np.random.randn(48), index=index)
+
+#         d = { 'Traffic_Hour' : Traffic_Hour, 'Auto_Total_Vol' : Auto_Total_Vol,
+#               'MT_Total_Vol' : MT_Total_Vol, 'HT_Total_Vol' : HT_Total_Vol, 
+#               'BUS_Total_Vol' : BUS_Total_Vol, 'MC_Total_Vol' : MC_Total_Vol,
+#               'Auto_Speed' : Auto_Speed, 'Truck_Speed' : Truck_Speed, 
+#               'MC_Speed' : MC_Speed, 'Total_SPL' : Total_SPL }
+              
+#         self.df_day_WORST_HOUR_DATE = pd.DataFrame(data=d).reset_index(drop=True)
+        
+#         # More Directly Accessable Properties
+#         self.LAeq_24hrs_WORST_HOUR_DATE = self.Compute_24_Hour_LAeq(self.df_day_WORST_HOUR_DATE)
+#         self.Ldn_WORST_HOUR_DATE = self.Compute_LDN(self.df_day_WORST_HOUR_DATE)
+#         self.Lden_WORST_HOUR_DATE = self.Compute_LDEN(self.df_day_WORST_HOUR_DATE)
+        
+        
+        
+        
+        
+        
+        
+        
         
         return 0
         
@@ -773,11 +916,11 @@ class TNMAide:
         summed_cols = self.df_day_AVG_DAY.loc[:,cols_to_sum].sum()
         total_actual_sum = summed_cols.sum()
 
-        self.Auto_Fraction = 100 * summed_cols['Auto_Total_Vol'] / total_actual_sum
-        self.MT_Fraction = 100 * summed_cols['MT_Total_Vol'] / total_actual_sum
-        self.HT_Fraction = 100 * summed_cols['HT_Total_Vol'] / total_actual_sum
-        self.BUS_Fraction = 100 * summed_cols['BUS_Total_Vol'] / total_actual_sum
-        self.MC_Fraction = 100 * summed_cols['MC_Total_Vol'] / total_actual_sum
+        self.Auto_Overall_Fraction = 100 * summed_cols['Auto_Total_Vol'] / total_actual_sum
+        self.MT_Overall_Fraction = 100 * summed_cols['MT_Total_Vol'] / total_actual_sum
+        self.HT_Overall_Fraction = 100 * summed_cols['HT_Total_Vol'] / total_actual_sum
+        self.BUS_Overall_Fraction = 100 * summed_cols['BUS_Total_Vol'] / total_actual_sum
+        self.MC_Overall_Fraction = 100 * summed_cols['MC_Total_Vol'] / total_actual_sum
         
         return 0
     
@@ -833,21 +976,31 @@ class TNMAide:
         Lden = 10*np.log10(sum(10**(df.Total_SPL/10))) - 10*np.log10(24)
         return Lden
     
-    def Compute_Day_Eve_Night_Fractions(self, df, Vehicle_Type):
+    
+    def Compute_Day_Eve_Night_Fractions(self, df, Vehicle_Type, bool_compute_ldn):
         # Compute Day, Evening and Night Percents for Each Vehicle Type
         # Based on a 24-Hour Dataframe
         # NOTE, Day for Ldn = Sum of THIS Day and Evening, i.e.
         # Day = Day + Evening for Ldn
-        Percents = [0, 0 , 0]
+
+        if (bool_compute_ldn):
+            Fractions = [0, 0]
+        else:
+            Fractions = [0, 0, 0]
         
         Total_Vol = df.Auto_Total_Vol.sum() + df.MT_Total_Vol.sum() \
             + df.HT_Total_Vol.sum() + df.BUS_Total_Vol.sum() \
             + df.MC_Total_Vol.sum()
         
         col = Vehicle_Type + "_Total_Vol"
-        Percents[0] = df.loc[7:18,col].sum() / Total_Vol # Day (excluding Evening)
-        Percents[1] = df.loc[19:21,col].sum() / Total_Vol # Evening
-        Percents[2] = ( df.loc[0:6,col].sum() + df.loc[22:23,col].sum())/ Total_Vol # Night
         
-        return Percents
+        if (bool_compute_ldn):
+            Fractions[0] = df.loc[7:21,col].sum() / Total_Vol # Day (including Evening)
+            Fractions[1] = ( df.loc[0:6,col].sum() + df.loc[22:23,col].sum())/ Total_Vol # Night
+        else:
+            Fractions[0] = df.loc[7:18,col].sum() / Total_Vol # Day (excluding Evening)
+            Fractions[1] = df.loc[19:21,col].sum() / Total_Vol # Evening
+            Fractions[2] = ( df.loc[0:6,col].sum() + df.loc[22:23,col].sum())/ Total_Vol # Night
+        
+        return Fractions
         
