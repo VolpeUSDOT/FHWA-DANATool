@@ -668,6 +668,18 @@ class TNMAide:
         # 3                 1358.733293   63.569662  ...  58.730976    59.466569    80.460046
 
         # Directly Accessable Properties
+        if len(self.df_Leq_Worst_Hour_Calculations.loc[np.isnan(self.df_Leq_Worst_Hour_Calculations.AD)]) == len(self.df_Leq_Worst_Hour_Calculations.AD):
+            self.df_day_WORST_HOUR_DATE = np.nan
+            
+            # More Directly Accessable Properties
+            self.LAeq_24hrs_WORST_HOUR_DATE = np.nan
+            self.Ldn_WORST_HOUR_DATE = np.nan
+            self.Lden_WORST_HOUR_DATE = np.nan
+            self.WORST_HOUR = np.nan
+            self.WORST_HOUR_DATE = np.nan
+            self.LAeq_WORST_HOUR = np.nan
+            
+            return    
         self.WORST_HOUR = self.df_Leq_Worst_Hour_Calculations.B[self.df_Leq_Worst_Hour_Calculations.AD.idxmax()]
         self.WORST_HOUR_DATE = self.df_Leq_Worst_Hour_Calculations.C[self.df_Leq_Worst_Hour_Calculations.AD.idxmax()]
         self.LAeq_WORST_HOUR = self.df_Leq_Worst_Hour_Calculations.AD.max()
