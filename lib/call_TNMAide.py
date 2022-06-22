@@ -13,13 +13,16 @@ import copy
 t1 = datetime.datetime.now()
 
 filePath = 'D:/Project/DANA/Data/TNMAide Input Samples/'
-fileName = 'Sample Data - Required Inputs - Leap Year.csv'
-fileName = 'Sample Data - Required Inputs - Non-Leap Year.csv'
+#fileName = 'Sample Data - Required Inputs - Leap Year.csv'
+#fileName = 'Sample Data - Required Inputs - Non-Leap Year.csv'
 #fileName = 'Sample Data - Required Inputs - One Month Two Links.csv'
+#fileName = 'Sample Data - Required Inputs - Missing Speeds - 1 month.csv'
+#fileName = 'Sample Data - Required Inputs - Missing Volumes - 1 month.csv'
+fileName = 'Sample Data - 101+05209 No average worst hour.csv'
 
 df = pd.read_csv(filePath + fileName)
 
-linkResults = TNMAide(df, 6, 50000.0, 0.0, do_two_lanes = True)
+linkResults = TNMAide(df, 6, 50.0, 0.0, do_two_lanes = False, robust_speeds = False)
 
 
 print("SUMMARY TABLES")
@@ -67,6 +70,14 @@ print("LAeq_24hrs_AVG_DAY = " + str(round(linkResults.LAeq_24hrs_AVG_DAY,2)))
 print("Ldn_AVG_DAY = " + str(round(linkResults.Ldn_AVG_DAY,2)))
 print("Lden_AVG_DAY = " + str(round(linkResults.Lden_AVG_DAY,2)))
 print(" ")
+
+print("PERCENT MISSING SPEED DATA")
+print("-------------------------------------")
+print("AUTOS: " + str(linkResults.percent_missing_auto_speeds) + " %")
+print("MTS: " + str(linkResults.percent_missing_mt_speeds) + " %")
+print("HTS: " + str(linkResults.percent_missing_ht_speeds) + " %")
+print("BUSES: " + str(linkResults.percent_missing_bus_speeds) + " %")
+print("MCS: " + str(linkResults.percent_missing_mc_speeds) + " %")
 
 
 t2 = datetime.datetime.now()    

@@ -257,7 +257,9 @@ class TNMAide:
     # Methods
     #--------------------------------------------------------------------------
 
-    def __init__(self, df, number_of_lanes = 2, median_width = 10.0, near_lane_roadway_grade = 0.0, do_two_lanes = True):
+    def __init__(self, df, number_of_lanes = 2, median_width = 10.0, 
+                 near_lane_roadway_grade = 0.0, do_two_lanes = True, 
+                 robust_speeds = False):
         # Evaluate inputs
         df_rows_columns = df.shape
         if df_rows_columns[0] < 17520:
@@ -272,8 +274,9 @@ class TNMAide:
                   + 'Standard input consists of 29 columns in the data table.')
             print(" ")
                 
-        # This is a flag
+        # These are flags
         self.do_two_lanes = do_two_lanes
+        self.robust_speeds = robust_speeds
         
         # These Replicate the User Inputs
         self.df_input = df.replace(999999.0, np.nan)
@@ -395,7 +398,18 @@ class TNMAide:
         else:
             last_row = int(math.floor(self.df_Leq_Worst_Hour_Calculations.shape[0]/2))
             self.df_Leq_Worst_Hour_Calculations.loc[0:last_row, 'AD'] = self.df_Leq_Worst_Hour_Calculations.AC[0:last_row].copy()
-                        
+            
+        # Determine Percent Missing Speed Data
+        speed_auto = self.df_input.loc[:,'SPEED_PASS']
+        speed_truck = self.df_input.loc[:,'SPEED_TRUCK']
+        speed_all = self.df_input.loc[:,'SPEED_ALL_vehs']
+        
+        self.percent_missing_auto_speeds = round(100*(1-len(speed_auto[~np.isnan(speed_auto)])/len(speed_auto)),1)
+        self.percent_missing_mt_speeds = round(100*(1-len(speed_truck[~np.isnan(speed_truck)])/len(speed_truck)),1)
+        self.percent_missing_ht_speeds = round(100*(1-len(speed_truck[~np.isnan(speed_truck)])/len(speed_truck)),1)
+        self.percent_missing_bus_speeds = round(100*(1-len(speed_truck[~np.isnan(speed_truck)])/len(speed_truck)),1)
+        self.percent_missing_mc_speeds = round(100*(1-len(speed_all[~np.isnan(speed_all)])/len(speed_all)),1)
+                 
         return 0
     
     
@@ -576,33 +590,6 @@ class TNMAide:
             self.Future_HT_DEN_Fractions_AVG_Day = np.nan
             self.Future_HT_DEN_Fractions_AVG_Day = np.nan
             self.Future_MC_DEN_Fractions_AVG_Day = np.nan
-
-        # if (Bool_Compute_LDN):
-        #     #------------------------------------------------------------------
-        #     # Compute Ldn for WORST DAY
-        #     # Computing future case by  adjusting present case vehicle level 
-        #     #    by difference in total (both links) vehicle traffic volume. 
-        #     #    This assumes that both links change by the same proportion, 
-        #     #    which is better than assuming far link has no affect on
-        #     #    future case
-        #     df = self.df_day_WORST_HOUR_DATE.copy()
-
-        #     # Auto
-        #     if (Using_User_Data):
-        #         future_day = self.Future_AUTO_DEN_Fractions_User_Data[0]
-        #         future_night = self.Future_AUTO_DEN_Fractions_User_Data[1]
-        #     else:
-        #         future_day = self.Future_AUTO_DEN_Fractions_Worst_Day[0]
-        #         future_night = self.Future_AUTO_DEN_Fractions_Worst_Day[1]
-            
-        #     # Day
-        #     present_day = self.Present_AUTO_DEN_Fractions_Worst_Day[0]
-        #     df.loc[7:21, 'Total_SPL'] = df.loc[7:21, 'Total_SPL'] + 10*np.log10(future_day/present_day)
-            
-        #     # Night
-        #     present_night = self.Present_AUTO_DEN_Fractions_Worst_Day[1]
-        #     df.loc[0:6, 'Total_SPL'] = df.loc[0:6, 'Total_SPL'] + 10*np.log10(future_night/present_night)
-        #     df.loc[22:23, 'Total_SPL'] = df.loc[22:23, 'Total_SPL'] + 10*np.log10(future_night/present_night)
         
         return
     
@@ -634,6 +621,10 @@ class TNMAide:
             b = 10.013879
             c = 56.086099 # CONSISTENCY CHECK: Spreadsheet version uses 56.
             speed_mph = self.df_input.loc[:,'SPEED_ALL_vehs']
+            
+        if self.robust_speeds:
+            ersatz_speed = self.df_input.loc[:,'SPEED_ALL_vehs']
+            speed_mph[np.isnan(speed_mph)] = ersatz_speed[np.isnan(speed_mph)]
                       
         energy = (speed_mph**(a/10)) * (10**(b/10)) + 10**(c/10)
         
@@ -668,7 +659,11 @@ class TNMAide:
         # 3                 1358.733293   63.569662  ...  58.730976    59.466569    80.460046
 
         # Directly Accessable Properties
-        if len(self.df_Leq_Worst_Hour_Calculations.loc[np.isnan(self.df_Leq_Worst_Hour_Calculations.AD)]) == len(self.df_Leq_Worst_Hour_Calculations.AD):
+        number_of_total_spl_rows = math.floor(self.df_Leq_Worst_Hour_Calculations.shape[0]/2)
+        idx_last_total_spl_row = number_of_total_spl_rows - 1
+        number_of_nans_in_total_spl = np.isnan(self.df_Leq_Worst_Hour_Calculations.loc[0:idx_last_total_spl_row, 'AD']).sum()
+        
+        if number_of_nans_in_total_spl >= number_of_total_spl_rows:
             self.df_day_WORST_HOUR_DATE = np.nan
             
             # More Directly Accessable Properties
@@ -744,107 +739,7 @@ class TNMAide:
         self.LAeq_24hrs_WORST_HOUR_DATE = self.Compute_24_Hour_LAeq(self.df_day_WORST_HOUR_DATE)
         self.Ldn_WORST_HOUR_DATE = self.Compute_LDN(self.df_day_WORST_HOUR_DATE)
         self.Lden_WORST_HOUR_DATE = self.Compute_LDEN(self.df_day_WORST_HOUR_DATE)
-        
-        
-        
-        
-        
-        
-        # COMBINE RESULTS FOR SEPARATE LINKS - USED FOR FUTURE TRAFFIC
-        # Create dataframe for DAY WORST OF 365 HOURS, based on single worst hour of any day, 
-        # based on total levels of both near and far lanes.
-        # df includes total volumes, average speeds, and total hourly levels
-        # Traffic_Hour      Auto_Vol      MT_Vol     ...  Auto_LAeq    ...
-        # 0                 2471.973755   52.401358  ...  63.579188    ...
-        # 1                 1509.602227   44.419772  ...  65.044710    ...
-        # 2                 1198.049828   46.968836  ...  64.057102    ...
-        # 3                 1358.733293   63.569662  ...  58.730976    ...
 
-        # Directly Accessable Properties
-        self.WORST_HOUR = self.df_Leq_Worst_Hour_Calculations.B[self.df_Leq_Worst_Hour_Calculations.AD.idxmax()]
-        self.WORST_HOUR_DATE = self.df_Leq_Worst_Hour_Calculations.C[self.df_Leq_Worst_Hour_Calculations.AD.idxmax()]
-        self.LAeq_WORST_HOUR = self.df_Leq_Worst_Hour_Calculations.AD.max()
-        
-        # Intermediate values
-        df_all_days = self.df_Leq_Worst_Hour_Calculations.copy()
-        idx_hour_WORST_HOUR = df_all_days.AD.idxmax()
-        date_WORST_DAY = df_all_days.C[idx_hour_WORST_HOUR]
-        
-        # Requires full day for each link for WORST DAY
-        first_link_idx_hour_0 = df_all_days.C[df_all_days.C == date_WORST_DAY].index[0]
-        second_link_idx_hour_0 = df_all_days.C[df_all_days.C == date_WORST_DAY].index[24]
-               
-        # Inputs to this dataframe
-        Traffic_Hour = df_all_days.B[first_link_idx_hour_0:first_link_idx_hour_0+24].copy()
-        
-        # Total Volumes by Hour for DAY WORST OF 365 HOURS
-        # Note, confirmed .to_numpy() does return reference, which carries 
-        # through even to creation of the new df, so want to include .copy()
-        
-        # Volumes - Append Links (Near and Far Lanes) for 0-23 then 0-23
-        Auto_Link_Vol = np.append(df_all_days.D[first_link_idx_hour_0:first_link_idx_hour_0+24].copy().to_numpy(), \
-                                   df_all_days.D[second_link_idx_hour_0:second_link_idx_hour_0+24].copy().to_numpy())
-        
-        MT_Link_Vol = np.append(df_all_days.E[first_link_idx_hour_0:first_link_idx_hour_0+24].copy().to_numpy(), \
-                                 df_all_days.E[second_link_idx_hour_0:second_link_idx_hour_0+24].copy().to_numpy())
-        
-        HT_Link_Vol = np.append(df_all_days.F[first_link_idx_hour_0:first_link_idx_hour_0+24].copy().to_numpy(), \
-                                 df_all_days.F[second_link_idx_hour_0:second_link_idx_hour_0+24].copy().to_numpy())
-        
-        BUS_Link_Vol = np.append(df_all_days.G[first_link_idx_hour_0:first_link_idx_hour_0+24].copy().to_numpy(), \
-                                  df_all_days.G[second_link_idx_hour_0:second_link_idx_hour_0+24].copy().to_numpy())
-        
-        MC_Link_Vol = np.append(df_all_days.H[first_link_idx_hour_0:first_link_idx_hour_0+24].copy().to_numpy(), \
-                                 df_all_days.H[second_link_idx_hour_0:second_link_idx_hour_0+24].copy().to_numpy())
-        
-        # LAeq,1-Hr by Vehicle Class
-        Auto_Link_LAeq1H = np.append(df_all_days.X[first_link_idx_hour_0:first_link_idx_hour_0+24].copy().to_numpy(), \
-                                 df_all_days.X[second_link_idx_hour_0:second_link_idx_hour_0+24].copy().to_numpy())
-        
-        MT_Link_LAeq1H = np.append(df_all_days.Y[first_link_idx_hour_0:first_link_idx_hour_0+24].copy().to_numpy(), \
-                                 df_all_days.Y[second_link_idx_hour_0:second_link_idx_hour_0+24].copy().to_numpy())
-
-        HT_Link_LAeq1H = np.append(df_all_days.Z[first_link_idx_hour_0:first_link_idx_hour_0+24].copy().to_numpy(), \
-                         df_all_days.Z[second_link_idx_hour_0:second_link_idx_hour_0+24].copy().to_numpy())
-                    
-        BUS_Link_LAeq1H = np.append(df_all_days.AA[first_link_idx_hour_0:first_link_idx_hour_0+24].copy().to_numpy(), \
-             df_all_days.AA[second_link_idx_hour_0:second_link_idx_hour_0+24].copy().to_numpy())
-                                
-        MC_Link_LAeq1H = np.append(df_all_days.AB[first_link_idx_hour_0:first_link_idx_hour_0+24].copy().to_numpy(), \
-                                 df_all_days.AB[second_link_idx_hour_0:second_link_idx_hour_0+24].copy().to_numpy())
-
-# # Multi-Index
-# arrays = [
-# list(np.append(np.ones(24), 2*np.ones(24))),
-# list(np.append(list(range(24)), list(range(24)))),
-# ]
-# tuples = list(zip(*arrays))
-
-# index = pd.MultiIndex.from_tuples(tuples, names=["Link", "Hour"])
-
-# s = pd.Series(np.random.randn(48), index=index)
-
-#         d = { 'Traffic_Hour' : Traffic_Hour, 'Auto_Total_Vol' : Auto_Total_Vol,
-#               'MT_Total_Vol' : MT_Total_Vol, 'HT_Total_Vol' : HT_Total_Vol, 
-#               'BUS_Total_Vol' : BUS_Total_Vol, 'MC_Total_Vol' : MC_Total_Vol,
-#               'Auto_Speed' : Auto_Speed, 'Truck_Speed' : Truck_Speed, 
-#               'MC_Speed' : MC_Speed, 'Total_SPL' : Total_SPL }
-              
-#         self.df_day_WORST_HOUR_DATE = pd.DataFrame(data=d).reset_index(drop=True)
-        
-#         # More Directly Accessable Properties
-#         self.LAeq_24hrs_WORST_HOUR_DATE = self.Compute_24_Hour_LAeq(self.df_day_WORST_HOUR_DATE)
-#         self.Ldn_WORST_HOUR_DATE = self.Compute_LDN(self.df_day_WORST_HOUR_DATE)
-#         self.Lden_WORST_HOUR_DATE = self.Compute_LDEN(self.df_day_WORST_HOUR_DATE)
-        
-        
-        
-        
-        
-        
-        
-        
-        
         return 0
         
     
@@ -904,9 +799,9 @@ class TNMAide:
               'MC_Speed' : MC_Speed, 'Total_SPL' : Total_SPL }
         
         self.df_day_AVG_DAY = pd.DataFrame(data=d)
-
-        self.WORST_HOUR_AVG = Total_SPL.argmax()
-        self.LAeq_WORST_HOUR_AVG = Total_SPL.max()
+        
+        self.LAeq_WORST_HOUR_AVG = Total_SPL[~np.isnan(Total_SPL)].max()
+        self.WORST_HOUR_AVG = np.where(Total_SPL == self.LAeq_WORST_HOUR_AVG)[0][0]
         self.LAeq_24hrs_AVG_DAY = self.Compute_24_Hour_LAeq(self.df_day_AVG_DAY)
         self.Ldn_AVG_DAY = self.Compute_LDN(self.df_day_AVG_DAY)
         self.Lden_AVG_DAY = self.Compute_LDEN(self.df_day_AVG_DAY)
@@ -921,7 +816,7 @@ class TNMAide:
         # (and the Sum of those actual data)
         # The sum of the actual data and the AADT will not be an exact match
         # due to sporadic missing hourly data. But fractions should be good 
-        # estimated.
+        # estimates.
         self.AADT = self.df_input.aadt.unique().sum()
         
         cols_to_sum = ('Auto_Total_Vol','MT_Total_Vol','HT_Total_Vol','BUS_Total_Vol','MC_Total_Vol')
@@ -962,8 +857,6 @@ class TNMAide:
         df.loc[22:, 'Total_SPL'] = df.loc[22:, 'Total_SPL'] + 10
         Ldn = 10*np.log10(sum(10**(df.Total_SPL/10))) - 10*np.log10(24)
         return Ldn
-        
-        return 0
  
     
     def Compute_LDEN(self, df_summary_day):
