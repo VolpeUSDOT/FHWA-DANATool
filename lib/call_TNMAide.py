@@ -14,15 +14,17 @@ t1 = datetime.datetime.now()
 
 filePath = 'D:/Project/DANA/Data/TNMAide Input Samples/'
 #fileName = 'Sample Data - Required Inputs - Leap Year.csv'
-#fileName = 'Sample Data - Required Inputs - Non-Leap Year.csv'
+fileName = 'Sample Data - Required Inputs - Non-Leap Year.csv'
 #fileName = 'Sample Data - Required Inputs - One Month Two Links.csv'
 #fileName = 'Sample Data - Required Inputs - Missing Speeds - 1 month.csv'
 #fileName = 'Sample Data - Required Inputs - Missing Volumes - 1 month.csv'
-fileName = 'Sample Data - 101+05209 No average worst hour.csv'
+#fileName = 'Sample Data - 101+05209 No average worst hour.csv'
+#fileName = 'test_csv_20220623.csv'
+#fileName = 'Sample Data - Required Inputs - Missing Speeds.csv'
 
 df = pd.read_csv(filePath + fileName)
 
-linkResults = TNMAide(df, 6, 50.0, 0.0, do_two_lanes = False, robust_speeds = False)
+linkResults = TNMAide(df, 6, 50.0, 0.0, do_two_lanes = False, robust_speeds = True)
 
 
 print("SUMMARY TABLES")
@@ -53,7 +55,7 @@ print(" ")
 
 print("WORST HOUR")
 print("-------------------------------------")
-print("WORST_HOUR_DATE = " + linkResults.WORST_HOUR_DATE)
+print("WORST_HOUR_DATE = " + str(linkResults.WORST_HOUR_DATE))
 print("WORST_HOUR = " + str(round(linkResults.WORST_HOUR,2)))
 print("LAeq_WORST_HOUR = " + str(round(linkResults.LAeq_WORST_HOUR,2)))
 print("LAeq_24hrs_WORST_HOUR_DATE = " + str(round(linkResults.LAeq_24hrs_WORST_HOUR_DATE,2)))
@@ -84,19 +86,19 @@ t2 = datetime.datetime.now()
 tdiff = t2-t1
 print("Time Elapsed: " + str(round(tdiff.total_seconds(),2)) + " seconds")   
 
-# linkResults.Compute_Future_Metrics_Current_Distribution()
+# linkResults.Compute_Future_Metrics()
 # df1 =  copy.deepcopy(linkResults)
 
-linkResults.Compute_Future_Metrics_Current_Distribution(Auto_Fractions = [0.50, 0.15], \
-                                                    MT_Fractions = [0.25, 0.10], \
-                                                    HT_Fractions = [0.00, 0.00], \
-                                                    BUS_Fractions = [0.0, 0.0], \
-                                                    MC_Fractions = [0.0, 0.0])
-df2 = copy.deepcopy(linkResults)
+# linkResults.Compute_Future_Metrics(Auto_Fractions = [0.50, 0.15], \
+#                                                     MT_Fractions = [0.25, 0.10], \
+#                                                     HT_Fractions = [0.00, 0.00], \
+#                                                     BUS_Fractions = [0.0, 0.0], \
+#                                                     MC_Fractions = [0.0, 0.0])
+# df2 = copy.deepcopy(linkResults)
 
-linkResults.Compute_Future_Metrics_Current_Distribution(Auto_Fractions = [0.50, 0.05, 0.10], \
-                                                    MT_Fractions = [0.05, 0.02, 0.03], \
-                                                    HT_Fractions = [0.10, 0.05, 0.10], \
-                                                    BUS_Fractions = [0.0, 0.0, 0.0], \
-                                                    MC_Fractions = [0.0, 0.0, 0.0])
+# linkResults.Compute_Future_Metrics(Auto_Fractions = [0.50, 0.05, 0.10], \
+#                                                     MT_Fractions = [0.05, 0.02, 0.03], \
+#                                                     HT_Fractions = [0.10, 0.05, 0.10], \
+#                                                     BUS_Fractions = [0.0, 0.0, 0.0], \
+#                                                     MC_Fractions = [0.0, 0.0, 0.0])
 # df3 = copy.deepcopy(linkResults)

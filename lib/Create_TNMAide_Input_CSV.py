@@ -1,30 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jun  9 11:53:37 2022
-
-@author: william.chupp
-"""
-
-# -*- coding: utf-8 -*-
-"""
 Created on Wed Jun  8 11:11:45 2022
 
 @author: william.chupp
+@mod: aaron.hastings 6-22-22
 """
 
-# -*- coding: utf-8 -*-
-"""
-Created By: Volpe National Transportation Systems Center
-
-"""
 import pandas as pd
 import pyarrow.parquet as pq
-
-Summary_df = pd.DataFrame()
     
-Summary_df = pd.read_csv(r'D:\Project\DANA\Data\TNMAide Input Samples\GA_Composite_Emissions_SUMMARY_NOISE_2019.csv')
-    
-link_file = pq.ParquetFile(r'D:\Project\DANA\Data\TNMAide Input Samples\GA_Composite_Emissions.parquet')
+link_file = pq.ParquetFile(r'D:\Project\DANA\Data\TNMAide Input Samples\GA_Composite_Emissions-2019.parquet')
 
 linkLevel_df = pd.DataFrame()
 
@@ -42,6 +27,8 @@ del f
 
 tmc = '101+07005' # No noise data - including worst hour
 tmc = '101+05209' # No average worst hour
+tmc = '101N05208' # Random No average worst hour
+tmc = '101N11044' # Also missing more than just speed data
 group = linkLevel_df[linkLevel_df.tmc==tmc]
 group['tmc'] = group['tmc'].astype(str)
 group.reset_index(inplace=True)
