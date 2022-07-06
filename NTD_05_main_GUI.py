@@ -11,6 +11,8 @@ Author: Cambridge Systematics
 Modified By: Volpe National Transportation Systems Center
 """
 
+versionNum = "2.0"
+
 import pandas as pd
 import numpy as np
 import geopandas as gpd
@@ -27,6 +29,7 @@ from tkinter import Tk,ttk,StringVar,filedialog
 import re
 import multiprocessing as mp
 from tqdm.tk import tqdm
+from tkcalendar import Calendar, DateEntry
 
 from lib import NTD_00_TMAS
 from lib import NTD_01_NPMRDS
@@ -240,6 +243,15 @@ def enable_tmas_preprocess():
         pl_tmas_class.grid()
         pl_fips_1.grid()
         pl_nei_1.grid()
+
+def autoDetectClick():
+    if autoDetectDatesVar.get() == 1:
+        calStart.configure(state='disabled')
+        calEnd.configure(state='disabled')
+    if autoDetectDatesVar.get() == 2:
+        calStart.configure(state='normal')
+        calEnd.configure(state='normal')
+
         
 # Func - Print TMC Input
 def PrintTMCinput(tmc_list):
@@ -364,7 +376,12 @@ def ProcessData(procNum):
             PATH_FIPS = fn_fips 
             PATH_NEI = fn_nei
             PATH_OUTPUT = fn_output
-            NPMRDS_Proc = mp.Process(target=process_handler, name=step1, args=(NTD_01_NPMRDS.NPMRDS, thread_queue, (SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, PATH_OUTPUT)))
+            AUTO_DETECT_DATES = autoDetectDatesVar.get()==1
+            DATE_START = calStart.get_date()
+            DATE_END = calEnd.get_date()
+            NPMRDS_Proc = mp.Process(target=process_handler, name=step1, args=(NTD_01_NPMRDS.NPMRDS, thread_queue, 
+                                    (SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, 
+                                     PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, PATH_OUTPUT, AUTO_DETECT_DATES, DATE_START, DATE_END)))
             disable_buttons(step1)
             NPMRDS_Proc.start()
             runningThreads.append(NPMRDS_Proc)
@@ -380,7 +397,12 @@ def ProcessData(procNum):
             PATH_VM2 = fn_vm2
             PATH_COUNTY_MILEAGE = fn_county_mileage
             PATH_OUTPUT = fn_output
-            MOVES_Proc = mp.Process(target=process_handler, name=step2, args=(NTD_02_MOVES.MOVES, thread_queue, (SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE, PATH_OUTPUT)))
+            AUTO_DETECT_DATES = autoDetectDatesVar.get()==1
+            DATE_START = calStart.get_date()
+            DATE_END = calEnd.get_date()
+            MOVES_Proc = mp.Process(target=process_handler, name=step2, args=(NTD_02_MOVES.MOVES, thread_queue, 
+                                                                              (SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE, PATH_OUTPUT,
+                                                                               AUTO_DETECT_DATES, DATE_START, DATE_END)))
             disable_buttons(step2)
             MOVES_Proc.start()
             runningThreads.append(MOVES_Proc)
@@ -393,7 +415,12 @@ def ProcessData(procNum):
         else:
             PATH_NPMRDS = fn_npmrds_clean
             PATH_OUTPUT = fn_output
-            SPEED_Proc = mp.Process(target=process_handler, name=step3, args=(NTD_03_SPEED.SPEED, thread_queue, (SELECT_STATE, PATH_NPMRDS, PATH_OUTPUT)))
+            AUTO_DETECT_DATES = autoDetectDatesVar.get()==1
+            DATE_START = calStart.get_date()
+            DATE_END = calEnd.get_date()
+            SPEED_Proc = mp.Process(target=process_handler, name=step3, args=(NTD_03_SPEED.SPEED, thread_queue, 
+                                                                              (SELECT_STATE, PATH_NPMRDS, PATH_OUTPUT,
+                                                                               AUTO_DETECT_DATES, DATE_START, DATE_END)))
             disable_buttons(step3)
             SPEED_Proc.start()
             runningThreads.append(SPEED_Proc)
@@ -411,7 +438,12 @@ def ProcessData(procNum):
             #PrintTMCinput(SELECT_TMC)
             PATH_NPMRDS = fn_npmrds_clean
             PATH_OUTPUT = fn_output
-            NOISE_Proc = mp.Process(target=process_handler, name=step4, args=(NTD_04_NOISE.NOISE, thread_queue, (SELECT_STATE, SELECT_TMC, PATH_NPMRDS, PATH_OUTPUT)))
+            AUTO_DETECT_DATES = autoDetectDatesVar.get()==1
+            DATE_START = calStart.get_date()
+            DATE_END = calEnd.get_date()
+            NOISE_Proc = mp.Process(target=process_handler, name=step4, args=(NTD_04_NOISE.NOISE, thread_queue, 
+                                                                              (SELECT_STATE, SELECT_TMC, PATH_NPMRDS, PATH_OUTPUT,
+                                                                               AUTO_DETECT_DATES, DATE_START, DATE_END)))
             disable_buttons(step4)
             NOISE_Proc.start()
             runningThreads.append(NOISE_Proc)
@@ -691,7 +723,7 @@ def ctrlEvent(event):
 ################################################################################
 
 root = Tk()
-root.title("FHWA DANA Tool")
+root.title("FHWA DANA Tool - v{}".format(versionNum))
 root.grid_rowconfigure(0, weight=0)
 root.grid_rowconfigure(1, weight=1)
 root.grid_columnconfigure(0, weight=1)
@@ -804,12 +836,35 @@ for child in TMCSelection_frame.winfo_children(): child.grid_configure(padx=2, p
 
 ##################################################
 #0. File location output
-ttk.Label(mainframe, text='Choose output file location').grid(row=0,column=0, columnspan=1, sticky="w")
-ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=2,column=0, columnspan=5, sticky="ew")
+#ttk.Label(mainframe, text='Choose output file location').grid(row=0,column=0, columnspan=1, sticky="w")
+ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=1,column=0, columnspan=5, sticky="ew")
 #1. Header
 
-ttk.Label(mainframe, text='Select State:').grid(row=3,column=0, columnspan=1, sticky="w")
-ttk.Label(mainframe, text='Select inputs under the desired process and press the “Run Process” button.').grid(row=4,column=0, columnspan=3, sticky="w")
+ttk.Label(mainframe, text='Select State:').grid(row=2,column=0, columnspan=1, sticky="w")
+
+ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=3,column=0, columnspan=5, sticky="ew")
+
+autoDetectDatesVar = IntVar()
+autoDetectDatesVar.set(1)
+autoDetectDatesBox = ttk.Radiobutton(mainframe, text='Auto-detect date range from NPMRDS data or processed NPMRDS file.', value = 1, variable=autoDetectDatesVar, command=autoDetectClick)
+autoDetectDatesBox.grid(row=4,column=0, columnspan=1, sticky="w")
+
+# Date Range Selection
+SelectRangeBox = ttk.Radiobutton(mainframe, text='Or, select a date range to process (must be within the maximum and minimum dates in the NPMRDS data input in Process 1 below).', value = 2, variable=autoDetectDatesVar, command=autoDetectClick)
+SelectRangeBox.grid(row=5,column=0, columnspan=3, sticky="w")
+drCanvas = tk.Canvas(mainframe)
+drCanvas.grid(column=0, row=6, sticky='W', columnspan=2)
+ttk.Label(drCanvas, text='    ').grid(row=0, column = 0)
+ttk.Label(drCanvas, text='Start Date:').grid(row=0, column = 1)
+calStart = DateEntry(drCanvas, width= 16, background= "blue", foreground= "white", bd=2)
+calStart.grid(row=0, column=2, padx=8)
+calStart.configure(state='disabled')
+ttk.Label(drCanvas, text='End Date:').grid(row=0, column = 3)
+calEnd = DateEntry(drCanvas, width= 16, background= "blue", foreground= "white", bd=2)
+calEnd.grid(row=0, column=4, padx=8)
+calEnd.configure(state='disabled')
+
+#ttk.Label(mainframe, text='Select inputs under the desired process and press the “Run Process” button.').grid(row=6,column=0, columnspan=3, sticky="w")
 
 ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=7,column=0, columnspan=5, sticky="ew")
 #ttk.Label(mainframe, text=step0).grid(row=6,column=1, columnspan=1, sticky="w")
@@ -835,11 +890,11 @@ StateValue = StringVar()
 w_state = ttk.Combobox(mainframe, textvariable=StateValue, state='readonly', width=30)
 w_state['values'] = list_states
 w_state.current(0)
-w_state.grid(column=1, row=3, columnspan=1, sticky="w")
+w_state.grid(column=1, row=2, columnspan=1, sticky="w")
 
 # outputFile
-w_output_folder = ttk.Button(mainframe, text='Select Output Location', command=f_output)
-w_output_folder.grid(column=0, row=1, columnspan=1, sticky="w")
+w_output_folder = ttk.Button(mainframe, text='Select Output Folder Location', command=f_output)
+w_output_folder.grid(column=0, row=0, columnspan=1, sticky="w")
 
 ### checkbox for process 0
 
@@ -942,7 +997,7 @@ ttk.Entry(mainframe, textvariable=tmcEntry).grid(column=1, row=38, columnspan=1,
 # 4. Pathlabels
 # output folder
 pl_output_folder = ttk.Label(mainframe)
-pl_output_folder.grid(column=1, row=1, columnspan=1, sticky="w")
+pl_output_folder.grid(column=1, row=0, columnspan=1, sticky="w")
 # script 0
 pl_tmas_station = ttk.Label(mainframe)
 pl_tmas_station.grid(column=1, row=9, columnspan=1, sticky="w")
@@ -1030,7 +1085,7 @@ if ('NEI2017_RepresentativeEmissionsRates.parquet' in os.listdir('Default Input 
 else:
     pl_emission.config(text='')
        
-if False:
+if True:
     w_state.current(45)
     fn_tmas_station = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2019/TMAS_Station_2019.csv'
     pl_tmas_station_state_1.config(text=fn_tmas_station.replace('/','\\'))

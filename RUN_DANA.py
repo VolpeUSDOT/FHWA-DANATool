@@ -11,11 +11,12 @@ from lib import NTD_03_SPEED
 from lib import NTD_04_NOISE
 import os
 import sys
+import datetime as dt
 
 # Basic Input Parameters
 step = 2
 
-testOption = 14
+testOption = 15
 
 
 if testOption == 1:
@@ -92,6 +93,13 @@ elif testOption == 14:
     npmrds_year = 2020
     state = 'NJ'
     county = 'Morris'
+elif testOption == 15:
+    tmas_year = 2020
+    npmrds_year = 2020
+    state = 'MA'
+    county = '1TMC'
+    dateStart = dt.date(2020, 3, 20)
+    dateEnd = dt.date(2020, 3, 22)
 
 SELECT_TMC = ['129+04374', '129P09003']
 SELECT_STATE = state
@@ -130,7 +138,7 @@ PATH_tmc_identification = pathPrefix2 + '/NPMRDS Data/TMC_Identification.csv'
 PATH_tmc_shp = 'lib/ShapeFiles/'
 PATH_emission = pathPrefix1 + '/NEI2017_RepresentativeEmissionsRates.parquet'
 
-PATH_HPMS  = pathPrefix2 + '/HPMS Data/{}_HPMS_{}.csv'.format(state.upper(), npmrds_year) # Need to confirm - ALH
+PATH_HPMS  = pathPrefix2 + '/HPMS Data/{}_HPMS_{}.csv'.format(state.upper(), npmrds_year-2) # Need to confirm - ALH
 PATH_VM2 = pathPrefix1 + '/Statewide Functional Class VMT/State_VMT_by_Class_{}.csv'.format(tmas_year) # Need to confirm - ALH
 PATH_COUNTY_MILEAGE = pathPrefix1 + '/HPMS County Road Mileage/County_Road_Mileage_{}.csv'.format(tmas_year) # Need to confirm - ALH
 
@@ -140,9 +148,9 @@ if __name__ == '__main__':
     if step == 0:
         NTD_00_TMAS.TMAS(SELECT_STATE, r'H:/TestData/MA_2012_TMAS_station.dat', r'H:/TestData/MA_2012_TMAS_class.dat', PATH_FIPS, PATH_NEI, PREREADSTATION = False)
     if step == 1:
-        NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI)
+        NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, AUTO_DETECT_DATES=False, DATE_START=dateStart, DATE_END=dateEnd)
     elif step == 2:
-        NTD_02_MOVES.MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)
+        NTD_02_MOVES.MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE, AUTO_DETECT_DATES=False, DATE_START=dateStart, DATE_END=dateEnd)
     elif step == 3:
         NTD_03_SPEED.SPEED(SELECT_STATE, PATH_NPMRDS)  
     elif step == 4:

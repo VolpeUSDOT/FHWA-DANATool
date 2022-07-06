@@ -20,7 +20,9 @@ from tqdm.tk import tqdm
 
 PATH_tmc_shp = pkg_resources.resource_filename('lib', resource_name='ShapeFiles/')
 
-def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass,PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, /,PATH_OUTPUT = 'Final Output'):
+def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass,PATH_npmrds_raw_truck, 
+           PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, /, 
+           PATH_OUTPUT = 'Final Output', AUTO_DETECT_DATES=True, DATE_START=None, DATE_END=None):
     #!!! INPUT Parameters
     filepath = PATH_OUTPUT + '/Process1_LinkLevelDataset/'
     pathlib.Path(filepath).mkdir(exist_ok=True) 
@@ -159,9 +161,25 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     #b. Create a template for all hours and all links
     print ('Creating NPMRDS Dataset Template')
     npmrds_raw = pd.read_csv(PATH_npmrds_raw_all, parse_dates=['measurement_tstamp'], usecols=['measurement_tstamp', 'tmc_code', 'speed', 'travel_time_seconds'], dtype={'tmc_code':str, 'speed':np.float, 'travel_time_seconds':np.float})
-    input_year = npmrds_raw['measurement_tstamp'].dt.year.iat[0]
     
-    date_template = pd.date_range(start='1/1/'+str(input_year), end='1/1/'+str(int(input_year)+1), freq='H', closed='left')
+    print ('  Autodetect date range: {}'.format(AUTO_DETECT_DATES))
+    if AUTO_DETECT_DATES:
+        startDate = npmrds_raw['measurement_tstamp'].min().date()
+        endDate= npmrds_raw['measurement_tstamp'].max().date()+pd.Timedelta(days = 1)
+    else:
+        if DATE_START > DATE_END:
+            raise ValueError("Start of date range is after end of date range.")
+        if DATE_START < npmrds_raw['measurement_tstamp'].min() or \
+           DATE_END > npmrds_raw['measurement_tstamp'].max():
+            raise ValueError("Date range is outside minimum or maximum of raw NPMRDS input data.")
+        
+        startDate = DATE_START
+        endDate= DATE_END+pd.Timedelta(days = 1)
+
+    if startDate.year() != endDate.year():
+        raise ValueError("This tool can only process data in one year. The start and end dates currently span multiple years.")
+        
+    date_template = pd.date_range(start=startDate, end=endDate, freq='H', closed='left')
     tmc_unique = tmc['tmc'].unique()
     d = [{'tmc_code':i, 'measurement_tstamp': datetime} for i in tmc_unique for datetime in date_template]
     npmrds_template = pd.DataFrame(d)
@@ -252,9 +270,15 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     npmrds.loc[npmrds['weekday']>5, 'dow']='WE'
     npmrds.loc[npmrds['weekday']<=5, 'dow']='WD'
     #c5 Determine peaking based on average annual speeds of all vehicles for hours 8 and 17
-    npmrds_peakAM = npmrds.loc[(npmrds['dow']=='WD') & (npmrds['hour'].isin([7,8]))].groupby(['tmc_code'], as_index=False)['speed_all'].mean()
+    
+    if 'WD' in npmrds['dow'].unique():
+        npmrds_peakAM = npmrds.loc[(npmrds['dow']=='WD') & (npmrds['hour'].isin([7,8]))].groupby(['tmc_code'], as_index=False)['speed_all'].mean()
+        npmrds_peakPM = npmrds.loc[(npmrds['dow']=='WD') & (npmrds['hour'].isin([16,17]))].groupby(['tmc_code'], as_index=False)['speed_all'].mean()
+    else:
+        npmrds_peakAM = npmrds.loc[(npmrds['hour'].isin([7,8]))].groupby(['tmc_code'], as_index=False)['speed_all'].mean()
+        npmrds_peakPM = npmrds.loc[(npmrds['hour'].isin([16,17]))].groupby(['tmc_code'], as_index=False)['speed_all'].mean()
+    
     npmrds_peakAM.rename(columns={'speed_all': 'speed_all_AM'}, inplace=True)
-    npmrds_peakPM = npmrds.loc[(npmrds['dow']=='WD') & (npmrds['hour'].isin([16,17]))].groupby(['tmc_code'], as_index=False)['speed_all'].mean()
     npmrds_peakPM.rename(columns={'speed_all': 'speed_all_PM'}, inplace=True)
     npmrds_peak=pd.merge(npmrds_peakAM, npmrds_peakPM, on=['tmc_code'], how='outer')
     npmrds_peak.loc[npmrds_peak['speed_all_AM']>npmrds_peak['speed_all_PM'],'peaking']='AM'
