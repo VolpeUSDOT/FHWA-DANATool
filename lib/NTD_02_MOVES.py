@@ -13,8 +13,7 @@ import pyarrow.parquet as pq
 import time
 import geopandas as gpd
 
-def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE, /, PATH_OUTPUT='Final Output', 
-          AUTO_DETECT_DATES=True, DATE_START=None, DATE_END=None): 
+def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE, /, PATH_OUTPUT='Final Output'): 
     #!!! INPUT Parameters
     
     outputpath = PATH_OUTPUT + '/Process2_MOVES_VMT_Distributions/'
