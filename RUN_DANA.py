@@ -14,7 +14,7 @@ import sys
 import datetime as dt
 
 # Basic Input Parameters
-step = 2
+step = 1
 
 testOption = 15
 
@@ -148,7 +148,7 @@ if __name__ == '__main__':
     if step == 0:
         NTD_00_TMAS.TMAS(SELECT_STATE, r'H:/TestData/MA_2012_TMAS_station.dat', r'H:/TestData/MA_2012_TMAS_class.dat', PATH_FIPS, PATH_NEI, PREREADSTATION = False)
     if step == 1:
-        NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, AUTO_DETECT_DATES=False, DATE_START=dateStart, DATE_END=dateEnd)
+        NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, AUTO_DETECT_DATES=True, DATE_START=dateStart, DATE_END=dateEnd)
     elif step == 2:
         NTD_02_MOVES.MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)
     elif step == 3:

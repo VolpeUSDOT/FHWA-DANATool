@@ -128,6 +128,7 @@ def f_output():
     pathlib.Path(fn_output).mkdir(exist_ok=True)
     with open(fn_output + '/progress_log.txt', 'a') as file:
         file.write('\n\n*********** New DANA TOOL Log ************')
+        file.write('\n******** Version Number: {} ********'.format(versionNum))
         file.write('\n******** {} ********\n\n'.format(dt.datetime.now().strftime('%c')))
     #print (f)
 def f_tmas_station():
@@ -401,8 +402,7 @@ def ProcessData(procNum):
             DATE_START = calStart.get_date()
             DATE_END = calEnd.get_date()
             MOVES_Proc = mp.Process(target=process_handler, name=step2, args=(NTD_02_MOVES.MOVES, thread_queue, 
-                                                                              (SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE, PATH_OUTPUT,
-                                                                               AUTO_DETECT_DATES, DATE_START, DATE_END)))
+                                                                              (SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE, PATH_OUTPUT)))
             disable_buttons(step2)
             MOVES_Proc.start()
             runningThreads.append(MOVES_Proc)
@@ -419,8 +419,7 @@ def ProcessData(procNum):
             DATE_START = calStart.get_date()
             DATE_END = calEnd.get_date()
             SPEED_Proc = mp.Process(target=process_handler, name=step3, args=(NTD_03_SPEED.SPEED, thread_queue, 
-                                                                              (SELECT_STATE, PATH_NPMRDS, PATH_OUTPUT,
-                                                                               AUTO_DETECT_DATES, DATE_START, DATE_END)))
+                                                                              (SELECT_STATE, PATH_NPMRDS, PATH_OUTPUT)))
             disable_buttons(step3)
             SPEED_Proc.start()
             runningThreads.append(SPEED_Proc)
@@ -442,8 +441,7 @@ def ProcessData(procNum):
             DATE_START = calStart.get_date()
             DATE_END = calEnd.get_date()
             NOISE_Proc = mp.Process(target=process_handler, name=step4, args=(NTD_04_NOISE.NOISE, thread_queue, 
-                                                                              (SELECT_STATE, SELECT_TMC, PATH_NPMRDS, PATH_OUTPUT,
-                                                                               AUTO_DETECT_DATES, DATE_START, DATE_END)))
+                                                                              (SELECT_STATE, SELECT_TMC, PATH_NPMRDS, PATH_OUTPUT)))
             disable_buttons(step4)
             NOISE_Proc.start()
             runningThreads.append(NOISE_Proc)

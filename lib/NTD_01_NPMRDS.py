@@ -165,7 +165,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     print ('  Autodetect date range: {}'.format(AUTO_DETECT_DATES))
     if AUTO_DETECT_DATES:
         startDate = npmrds_raw['measurement_tstamp'].min().date()
-        endDate= npmrds_raw['measurement_tstamp'].max().date()+pd.Timedelta(days = 1)
+        endDate = npmrds_raw['measurement_tstamp'].max().date()+pd.Timedelta(days = 1)
     else:
         if DATE_START > DATE_END:
             raise ValueError("Start of date range is after end of date range.")
@@ -176,7 +176,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
         startDate = DATE_START
         endDate= DATE_END+pd.Timedelta(days = 1)
 
-    if startDate.year() != endDate.year():
+    if startDate.year != (endDate-pd.Timedelta(days=1)).year:
         raise ValueError("This tool can only process data in one year. The start and end dates currently span multiple years.")
         
     date_template = pd.date_range(start=startDate, end=endDate, freq='H', closed='left')
