@@ -198,8 +198,6 @@ def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE, /
     print('Reading Composite Dataset')
     composite_df = pq.read_table(PATH_NPMRDS)
     composite_df = composite_df.to_pandas()
-    if not AUTO_DETECT_DATES:
-        composite_df = composite_df.loc[composite_df['measurement_tstamp'].dt.date.between(DATE_START, DATE_END)]
     now=lapTimer('  took: ',now)
     
     # Developing monthly vmt fractions
