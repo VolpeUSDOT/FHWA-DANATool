@@ -6,9 +6,10 @@ from PyInstaller.utils.hooks import collect_dynamic_libs
 # pyinstaller --distpath . NTD_05_main_GUI.spec
 
 a = Analysis(['NTD_05_main_GUI.py'],
-             pathex=['C:\\Users\\William.Chupp\\OneDrive - DOT OST\\Documents\\DANAToolTesting\\FHWA-DANATool'],
-             binaries=collect_dynamic_libs("rtree"),
-             datas=[('lib\dot.png', 'lib'), ('lib\ShapeFiles', 'lib\ShapeFiles')],
+             pathex=['C:\\Users\\William.Chupp\\OneDrive - DOT OST\\Documents\\DANAToolTesting\\FHWA-DANATool',
+                     'C:\\Users\\William.Chupp\\Anaconda3\\envs\\geo_env\\Lib\\site-packages'],
+             binaries=collect_dynamic_libs("zmq") + collect_dynamic_libs("rtree"),
+             datas=[('lib\dot.png', 'lib'), ('lib\ShapeFiles', 'lib\ShapeFiles'), ('lib\pyzmq.libs', 'pyzmq.libs')],
              hiddenimports=['fiona._shim', 'fiona.schema', 'babel.numbers'],
              hookspath=[],
              runtime_hooks=[],

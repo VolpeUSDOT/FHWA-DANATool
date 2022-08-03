@@ -879,7 +879,7 @@ w_output_folder.grid(column=0, row=0, columnspan=1, sticky="w")
 ### checkbox for process 0
 
 preprocess_checkvar = IntVar()
-preprocess_checkvar.set(True)
+preprocess_checkvar.set(False)
 preprocess_tmas_checkbox = ttk.Checkbutton(mainframe, text=step0, variable=preprocess_checkvar, command=enable_tmas_preprocess)
 preprocess_tmas_checkbox.grid(row=4,column=0, columnspan=1, sticky="w")
 
@@ -915,14 +915,14 @@ p1statusLabel = ttk.Label(p1Canvas, text="Process 1 Running", relief=SUNKEN)
 p1statusLabel.grid(column=2, row=0, columnspan=1, padx=(5, 0), sticky="W")
 p1statusLabel.grid_remove()
 
-# Auto detect
+    # Auto detect
 autoDetectDatesVar = IntVar()
 autoDetectDatesVar.set(1)
-autoDetectDatesBox = ttk.Radiobutton(mainframe, text='Auto-detect date range from NPMRDS data or processed NPMRDS file.', value = 1, variable=autoDetectDatesVar, command=autoDetectClick)
+autoDetectDatesBox = ttk.Radiobutton(mainframe, text='Auto-detect date range from NPMRDS data.', value = 1, variable=autoDetectDatesVar, command=autoDetectClick)
 autoDetectDatesBox.grid(row=11,column=0, columnspan=1, sticky="w")
 
-# Date Range Selection
-SelectRangeBox = ttk.Radiobutton(mainframe, text='Or, select a date range to process (must be within the maximum and minimum dates in the NPMRDS data input in Process 1 below).', value = 2, variable=autoDetectDatesVar, command=autoDetectClick)
+    # Date Range Selection
+SelectRangeBox = ttk.Radiobutton(mainframe, text='Or, select a date range to process (must be within the minimum and maximum dates in the NPMRDS data).', value = 2, variable=autoDetectDatesVar, command=autoDetectClick)
 SelectRangeBox.grid(row=12,column=0, columnspan=3, sticky="w")
 drCanvas = tk.Canvas(mainframe)
 drCanvas.grid(column=0, row=13, sticky='W', columnspan=2)
@@ -935,6 +935,8 @@ ttk.Label(drCanvas, text='End Date:').grid(row=0, column = 3)
 calEnd = DateEntry(drCanvas, width= 16, background= "blue", foreground= "white", bd=2)
 calEnd.grid(row=0, column=4, padx=8)
 calEnd.configure(state='disabled')
+
+    # file buttons 
 
 w_tmas_station_state_1 = ttk.Button(mainframe, text='Select Processed TMAS Station', command=f_tmas_station_state).grid(column=0, row=15, columnspan=1, sticky="w")
 w_tmas_class_clean_1 = ttk.Button(mainframe, text='Select Processed TMAS Class', command=f_tmas_class_clean).grid(column=0, row=16, columnspan=1, sticky="w")
