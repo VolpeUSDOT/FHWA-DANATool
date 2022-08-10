@@ -14,14 +14,14 @@ import sys
 import datetime as dt
 
 # Basic Input Parameters
-step = 2
+step = 0
 
-testOption = 15
+testOption = 1
 
 
 if testOption == 1:
-    tmas_year = 2018
-    npmrds_year = 2018
+    tmas_year = 2021
+    npmrds_year = 2019
     state  = 'MA'
     county = 'Middlesex'
 elif testOption == 2:
@@ -146,7 +146,8 @@ PATH_NPMRDS = pathPrefix3 + '/Process1_LinkLevelDataset/{}_Composite_Emissions.p
 
 if __name__ == '__main__':
     if step == 0:
-        NTD_00_TMAS.TMAS(SELECT_STATE, r'H:/TestData/MA_2012_TMAS_station.dat', r'H:/TestData/MA_2012_TMAS_class.dat', PATH_FIPS, PATH_NEI, PREREADSTATION = False)
+        NTD_00_TMAS.TMAS(SELECT_STATE, r'C:\Users\William.Chupp\OneDrive - DOT OST\Documents\DANAToolTesting\FHWA-DANATool\Default Input Files\TMAS Data\TMAS 2021\tmas_station_2021.csv', 
+                         r'H:\DANATool\TMAS 2021\AL_JAN_2021 (TMAS).CLS', PATH_FIPS, PATH_NEI, PREREADSTATION = True)
     if step == 1:
         NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, AUTO_DETECT_DATES=True, DATE_START=dateStart, DATE_END=dateEnd)
     elif step == 2:
