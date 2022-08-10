@@ -303,7 +303,6 @@ def checkProgress():
         
 
 def process_handler(proc_target, thread_queue, args):
-    #root.destroy()
     redir = RedirectText(thread_queue)
     sys.stdout = redir
     #sys.stderr = sys.stdout
@@ -456,6 +455,13 @@ def ProcessData(procNum):
     #root.destroy()
 
 def disable_buttons(step):
+    w_output_folder['state'] = DISABLED
+    
+    autoDetectDatesBox['state'] = DISABLED
+    SelectRangeBox['state'] = DISABLED
+    
+    w_state['state'] = DISABLED
+    
     p0startButton['state'] = DISABLED
     p1startButton['state'] = DISABLED
     p2startButton['state'] = DISABLED
@@ -485,6 +491,14 @@ def disable_buttons(step):
         p4statusLabel.grid()
 
 def enable_buttons():
+    
+    w_output_folder['state'] = NORMAL
+    
+    autoDetectDatesBox['state'] = NORMAL
+    SelectRangeBox['state'] = NORMAL
+    
+    w_state['state'] = NORMAL
+    
     p0startButton['state'] = NORMAL
     p1startButton['state'] = NORMAL
     p2startButton['state'] = NORMAL

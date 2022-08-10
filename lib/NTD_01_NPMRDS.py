@@ -629,10 +629,14 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     
     del npmrds_tmc
     del npmrds_template
-    del npmrds_tier4
-    del npmrds_tier3
-    del npmrds_tier2
-    del npmrds_tier1
+    if 'npmrds_tier4' in locals():
+        del npmrds_tier4
+    if 'npmrds_tier3' in locals():
+        del npmrds_tier3
+    if 'npmrds_tier2' in locals():
+        del npmrds_tier2
+    if 'npmrds_tier1' in locals():
+        del npmrds_tier1
     del d
     
     # QC
@@ -641,11 +645,11 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     tier2_tmc = df.loc[df['tier']==2,'tmc'].nunique()
     tier3_tmc = df.loc[df['tier']==3,'tmc'].nunique()
     tier4_tmc = df.loc[df['tier']==4,'tmc'].nunique()
-    print('Total TMCs: %i:' %total_tmc)
-    print('Tier 1 TMCs %i:' %tier1_tmc)
-    print('Tier 2 TMCs %i:' %tier2_tmc)
-    print('Tier 3 TMCs %i:' %tier3_tmc)
-    print('Tier 4 TMCs %i:' %tier4_tmc)
+    print('Total TMCs: %i' %total_tmc)
+    print('Tier 1 TMCs: %i' %tier1_tmc)
+    print('Tier 2 TMCs: %i' %tier2_tmc)
+    print('Tier 3 TMCs: %i' %tier3_tmc)
+    print('Tier 4 TMCs: %i' %tier4_tmc)
     
     '''
     #d. Exporting NPMRDS and classification data
