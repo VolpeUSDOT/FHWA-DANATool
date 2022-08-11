@@ -737,6 +737,8 @@ def ctrlEvent(event):
 
 ################################################################################
 if __name__ == "__main__":
+    mp.freeze_support()  
+    
     root = Tk()
     root.title("FHWA DANA Tool - v{}".format(versionNum))
     root.grid_rowconfigure(0, weight=0)
@@ -1137,7 +1139,6 @@ if __name__ == "__main__":
     
     enable_tmas_preprocess()
 
-    mp.freeze_support()  
     old_stdout = sys.stdout
     old_stderr = sys.stderr
     redir = RedirectText(thread_queue)

@@ -33,7 +33,7 @@ def f2(chunk):
 
 def f(tmas_station):
     
-    #tmas_station = tmas_station[1]
+    tmas_station = tmas_station[1]
     
     states = {
     'AL':['Alabama',1],'AZ':['Arizona',4],'AR':['Arkansas',5],'CA':['California',6],'CO':['Colorado',8],
@@ -88,6 +88,7 @@ def f(tmas_station):
     gjson_string = result.to_geojson
     gjson_dict = json.loads(gjson_string)
     links = GeoDataFrame.from_features(gjson_dict['features'])
+    links.columns = links.columns.str.lower()
     if len(links) == 1:
         link = links.loc[0, :]
         tmas_station.loc['FIPS_COUNTY'] = link.loc['county_code']
@@ -99,9 +100,9 @@ def f(tmas_station):
         pass
     elif len(links) > 1:
         if 'route_name' in links.columns:
-            links = links.loc[links['route_name'].str.isspace()==False].reset_index()
-            if (len(links['route_name'].unique())) == 1:
-                link = links.loc[0, :]
+            links_test = links.loc[links['route_name'].str.isspace()==False].reset_index()
+            if (len(links_test['route_name'].unique())) == 1:
+                link = links_test.loc[0, :]
                 tmas_station.loc['FIPS_COUNTY'] = link.loc['county_code']
                 tmas_station.loc['URBAN_CODE'] = link.loc['urban_code']
                 tmas_station.loc['F_SYSTEM'] = link.loc['f_system']
@@ -172,6 +173,7 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
         n = len(tmas_station_locs)
         with Pool(5) as p:
             tmas_station = pd.DataFrame()
+            print("    starting processing")
             for sta in tqdm(p.imap(f, tmas_station_locs.iterrows(), chunksize=30), total=n):
                 tmas_station = tmas_station.append(sta)   
         
