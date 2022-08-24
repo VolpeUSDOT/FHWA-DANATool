@@ -146,8 +146,8 @@ PATH_NPMRDS = pathPrefix3 + '/Process1_LinkLevelDataset/{}_Composite_Emissions.p
 
 if __name__ == '__main__':
     if step == 0:
-        NTD_00_TMAS.TMAS(SELECT_STATE, r'H:\DANATool\TMAS 2021\TMAS_Station_2021_1.dat', 
-                         r'H:\DANATool\TMAS 2021\TMAS_Class_2021_1.dat', PATH_FIPS, PATH_NEI, PREREADSTATION = False)
+        NTD_00_TMAS.TMAS(SELECT_STATE, PATH_TMAS_STATION, 
+                         r'H:\DANATool\TMAS 2021\TMAS_Class_2021_1.dat', PATH_FIPS, PATH_NEI, PREREADSTATION = True)
     if step == 1:
         NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, AUTO_DETECT_DATES=True, DATE_START=dateStart, DATE_END=dateEnd)
     elif step == 2:

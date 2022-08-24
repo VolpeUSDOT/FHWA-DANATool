@@ -268,6 +268,7 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
     tmas_day = tmas_class_sum.groupby(['STATE','STATION_ID','YEAR','MONTH','DAY','DIR'])
     clean_tmas = tmas_day.filter(lambda x: x['VOL'].sum()>0)    ## aggregate hourly volumes to daily volumes
     tmas_class_sum = tmas_class_sum.loc[clean_tmas.index]       ## maintain the original index
+    tmas_class_sum.reset_index(inplace=True)
     now=lapTimer('  took: ',now)
     
     #b3. Join file with TMAS station data
