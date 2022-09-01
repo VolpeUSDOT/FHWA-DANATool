@@ -1109,9 +1109,9 @@ if __name__ == "__main__":
            
     if False:
         w_state.current(45)
-        fn_tmas_station = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2019/TMAS_Station_2019.csv'
+        fn_tmas_station = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2021/TMAS_Station_2021.csv'
         pl_tmas_station_state_1.config(text=fn_tmas_station.replace('/','\\'))
-        fn_tmas_class_clean = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2019/TMAS_Class_Clean_2019.csv'
+        fn_tmas_class_clean = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2021/TMAS_Class_Clean_2021.csv'
         pl_tmas_class_clean_1.config(text=fn_tmas_class_clean.replace('/','\\'))
         fn_npmrds_all = 'H:/TestData/FairfaxCity_VA/NPMRDS Data/VA_FairfaxCity_2021_ALL.csv'
         pl_npmrds_all.config(text=fn_npmrds_all.replace('/','\\'))
@@ -1121,7 +1121,7 @@ if __name__ == "__main__":
         pl_npmrds_truck.config(text=fn_npmrds_truck.replace('/','\\'))
         fn_npmrds_tmc = 'H:/TestData/FairfaxCity_VA/NPMRDS Data/TMC_Identification.csv'
         pl_npmrds_tmc.config(text=fn_npmrds_tmc.replace('/','\\'))
-        fn_output = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/RunOutputs/TestingRun1_20220302'
+        fn_output = 'H:/DANATool/Outputs/TestMA_20220829'
         pl_output_folder.config(text=fn_output.replace('/','\\'))
     
         #fn_npmrds_shp = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/National TMC Shapefile/NationalMerge.shp'
