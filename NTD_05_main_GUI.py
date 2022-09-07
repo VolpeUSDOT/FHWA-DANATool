@@ -881,6 +881,10 @@ if __name__ == "__main__":
     
     ##################################################
     
+    # outputFile
+    w_output_folder = ttk.Button(mainframe, text='Select Output Folder Location', command=f_output)
+    w_output_folder.grid(column=0, row=0, columnspan=1, sticky="w")
+    
     # 2. Combobox
     # List of States Combobox
     list_states = ['','AL','AZ','AR','CA','CO','CT','DE','DC','FL','GA','ID','IL','IN','IA','KS','KY','LA',
@@ -890,10 +894,6 @@ if __name__ == "__main__":
     w_state['values'] = list_states
     w_state.current(0)
     w_state.grid(column=1, row=2, columnspan=1, sticky="w")
-    
-    # outputFile
-    w_output_folder = ttk.Button(mainframe, text='Select Output Folder Location', command=f_output)
-    w_output_folder.grid(column=0, row=0, columnspan=1, sticky="w")
     
     ### checkbox for process 0
     
@@ -1107,7 +1107,7 @@ if __name__ == "__main__":
     else:
         pl_emission.config(text='')
            
-    if False:
+    if True:
         w_state.current(45)
         fn_tmas_station = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2021/TMAS_Station_2021.csv'
         pl_tmas_station_state_1.config(text=fn_tmas_station.replace('/','\\'))
