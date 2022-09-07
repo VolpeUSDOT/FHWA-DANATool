@@ -18,7 +18,7 @@ from .load_shapes import *
 import pkg_resources
 from tqdm.tk import tqdm
 
-PATH_tmc_shp = pkg_resources.resource_filename('lib', resource_name='ShapeFiles/')
+PATH_tmc_shp = pkg_resources.resource_filename('lib', 'ShapeFiles/')
 
 def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass,PATH_npmrds_raw_truck, 
            PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, /, 
