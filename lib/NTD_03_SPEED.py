@@ -11,7 +11,7 @@ import time
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-def SPEED(SELECT_STATE, PATH_NPMRDS):
+def SPEED(SELECT_STATE, PATH_NPMRDS, /, PATH_OUTPUT='Final Output'):
     
     def lapTimer(text,now):
         print('%s%.3f' %(text,time.time()-now))
@@ -19,7 +19,7 @@ def SPEED(SELECT_STATE, PATH_NPMRDS):
     
     now=time.time()
     
-    outputpath = 'Final Output/Process3_MOVES_Speed_Distributions/'
+    outputpath = PATH_OUTPUT + '/Process3_MOVES_Speed_Distributions/'
     pathlib.Path(outputpath).mkdir(exist_ok=True)
     
     print ('')
@@ -160,6 +160,6 @@ def SPEED(SELECT_STATE, PATH_NPMRDS):
     for name, group in df3_county:
         group.to_csv(df3_filepath+SELECT_STATE+'_SPEED_DISTRIBUTION'+'_'+str(name)+'.csv', index=False, columns=['sourceTypeID','roadtypeid','hourdayID','avgSpeedBinID','avgSpeedFraction'])
     now=lapTimer('  took: ', now)
-    print('Outputs saved in Final Output\\')
+    print('Outputs saved in {}'.format(outputpath))
     print('**********Process Completed**********')
     print('')

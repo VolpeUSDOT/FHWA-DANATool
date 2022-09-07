@@ -18,6 +18,9 @@ import pkg_resources
 import requests
 import json
 import sys
+import dask.dataframe as dd
+from dask.diagnostics import ProgressBar
+ProgressBar().register()
 from tqdm.asyncio import tqdm
 from multiprocessing import Pool, TimeoutError
 from pandas.tseries.holiday import USFederalHolidayCalendar
@@ -51,7 +54,7 @@ def f(tmas_station):
     state = ''
     for key, value in states.items():
         if value[1] == state_code:
-            if key == 'TX': state = value[0]
+            if key == 'SD': state = 'SDak'
             else: state = key
     if state == '':
         return tmas_station
@@ -59,7 +62,7 @@ def f(tmas_station):
     long = tmas_station['LONG']
     lat = tmas_station['LAT']
 
-    url = "https://geo.dot.gov/server/rest/services/Hosted/HPMS_Full_{}_2019/FeatureServer/0".format(state)
+    url = "https://geo.dot.gov/server/rest/services/Hosted/HPMS_Full_{}_2020/FeatureServer/0".format(state)
     result = 0
     for i in range(5):
         try:
@@ -85,6 +88,7 @@ def f(tmas_station):
     gjson_string = result.to_geojson
     gjson_dict = json.loads(gjson_string)
     links = GeoDataFrame.from_features(gjson_dict['features'])
+    links.columns = links.columns.str.lower()
     if len(links) == 1:
         link = links.loc[0, :]
         tmas_station.loc['FIPS_COUNTY'] = link.loc['county_code']
@@ -96,9 +100,9 @@ def f(tmas_station):
         pass
     elif len(links) > 1:
         if 'route_name' in links.columns:
-            links = links.loc[links['route_name'].str.isspace()==False].reset_index()
-            if (len(links['route_name'].unique())) == 1:
-                link = links.loc[0, :]
+            links_test = links.loc[links['route_name'].str.isspace()==False].reset_index()
+            if (len(links_test['route_name'].unique())) == 1:
+                link = links_test.loc[0, :]
                 tmas_station.loc['FIPS_COUNTY'] = link.loc['county_code']
                 tmas_station.loc['URBAN_CODE'] = link.loc['urban_code']
                 tmas_station.loc['F_SYSTEM'] = link.loc['f_system']
@@ -169,6 +173,7 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
         n = len(tmas_station_locs)
         with Pool(5) as p:
             tmas_station = pd.DataFrame()
+            print("    starting processing")
             for sta in tqdm(p.imap(f, tmas_station_locs.iterrows(), chunksize=30), total=n):
                 tmas_station = tmas_station.append(sta)   
         
@@ -208,7 +213,7 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
 
     print ('Reading TMAS Classification data')
     class_width = [1,2,6,1,1,2,2,2,2,5,5,5,5,5,5,5,5,5,5,5,5,5,5]
-    class_header = ['TYPE','FIPS','STATION_ID','DIR','LANE','YEAR','MONTH','DAY','HOUR',
+    class_header = ['TYPE','STATE','STATION_ID','DIR','LANE','YEAR','MONTH','DAY','HOUR',
                     'VOL','CLASS_1','CLASS_2','CLASS_3','CLASS_4','CLASS_5','CLASS_6','CLASS_7',
                     'CLASS_8','CLASS_9','CLASS_10','CLASS_11','CLASS_12','CLASS_13']
     tmas_types = {
@@ -236,24 +241,26 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
         'CLASS_12':'float16',
         'CLASS_13':'float16',
         }
-    tmas_class_raw_test = pd.read_fwf(PATH_TMAS_CLASS,widths=class_width,header=None,names=class_header,
-                                      dtype=tmas_types, chunksize=100000)
+    tmas_class_raw = dd.read_fwf(PATH_TMAS_CLASS,widths=class_width,header=None,names=class_header,
+                                      dtype=tmas_types)# chunksize=100000)
     
-    tmas_class_raw = pd.DataFrame()
-    for chunk in tqdm(tmas_class_raw_test):
-        tmas_class_raw = tmas_class_raw.append(chunk, ignore_index=True)
-    #tmas_class_raw.to_csv(filepath+'TMAS_Class.csv', index=False)
-    now=lapTimer('  took: ',now)
+    # tmas_class_raw = pd.DataFrame()
+    # i = 0
+    # for chunk in tqdm(tmas_class_raw_test):
+    #     tmas_class_raw = tmas_class_raw.append(chunk, ignore_index=True)
+    # #tmas_class_raw.to_csv(filepath+'TMAS_Class.csv', index=False)
+    # now=lapTimer('  took: ',now)
     
     #b. Cleanup
     #b1. Aggregate lanes: Sum vehicle counts by state, station, date, hour, and direction
     #(b1a. to account for missing lane scenarios)
     print('Aggregating Classification data to link level')
-    tmas_class_raw.rename(columns={'FIPS': 'STATE'}, inplace=True)
+    #tmas_class_raw.rename(columns={'FIPS': 'STATE'}, inplace=True)
     tmas_class_sum = tmas_class_raw.groupby(['STATE','STATION_ID','YEAR','MONTH','DAY','HOUR','DIR'])['VOL',
                                        'CLASS_1','CLASS_2','CLASS_3','CLASS_4','CLASS_5','CLASS_6','CLASS_7',
                                        'CLASS_8','CLASS_9','CLASS_10','CLASS_11','CLASS_12','CLASS_13'].sum()
-    tmas_class_sum.reset_index(inplace=True)
+    tmas_class_sum.reset_index(drop=True)
+    tmas_class_sum = tmas_class_sum.compute()
     now=lapTimer('  took: ',now)
     
     #b2. Clean data from days where stations recorded a total volume of 0.
@@ -261,6 +268,7 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
     tmas_day = tmas_class_sum.groupby(['STATE','STATION_ID','YEAR','MONTH','DAY','DIR'])
     clean_tmas = tmas_day.filter(lambda x: x['VOL'].sum()>0)    ## aggregate hourly volumes to daily volumes
     tmas_class_sum = tmas_class_sum.loc[clean_tmas.index]       ## maintain the original index
+    tmas_class_sum.reset_index(inplace=True)
     now=lapTimer('  took: ',now)
     
     #b3. Join file with TMAS station data

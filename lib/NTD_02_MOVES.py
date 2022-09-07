@@ -245,6 +245,7 @@ def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE, /
     print('Developing daily VMT Fractions dataset')
     df_dayVMT = composite_df.groupby(['county', 'monthid', 'f_system', 'urban_rural', 'dayid']).agg({'PCT_TYPE10':'sum','PCT_TYPE25':'sum','PCT_TYPE40':'sum','PCT_TYPE50':'sum','PCT_TYPE60':'sum'})
     df_dayVMT.reset_index(inplace=True)
+    df_dayVMT.dayid.unique()
     
     df_dayVMT['11'] = df_dayVMT['PCT_TYPE10']
     df_dayVMT['21'] = df_dayVMT['PCT_TYPE25']
@@ -385,7 +386,6 @@ def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE, /
     print('Developing RoadType VMT summaries')
     State_VMT['state']=states.get(SELECT_STATE)[1]
     State_VMT.rename(columns={'County_Cod': 'county'}, inplace=True)
-    State_VMT_2 = State_VMT
     
     #h1. Aggregating all volume by County
     df_roadtypeVMT = composite_df.groupby(['county','roadtypeid']).agg({'PCT_TYPE10':'sum','PCT_TYPE25':'sum','PCT_TYPE40':'sum','PCT_TYPE50':'sum','PCT_TYPE60':'sum'})
