@@ -1107,7 +1107,7 @@ if __name__ == "__main__":
     else:
         pl_emission.config(text='')
            
-    if True:
+    if False:
         w_state.current(45)
         fn_tmas_station = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2021/TMAS_Station_2021.csv'
         pl_tmas_station_state_1.config(text=fn_tmas_station.replace('/','\\'))
