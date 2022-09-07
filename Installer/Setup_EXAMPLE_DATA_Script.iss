@@ -17,14 +17,14 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
-DefaultDirName={localappdata}\FHWA DANA Tool
+DefaultDirName={localappdata}\FHWA DANA Tool\Example Data
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 ; Remove the following line to run in administrative install mode (install for all users.)
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=C:\Users\William.Chupp\OneDrive - DOT OST\Documents\DANAToolTesting\InstallerOutput
-OutputBaseFilename=DANA_TMAS2021_Installer
+OutputBaseFilename=DANA_EXAMPLE_DATA_Installer
 SetupIconFile=C:\Users\William.Chupp\OneDrive - DOT OST\Documents\DANAToolTesting\dot.ico
 Compression=lzma
 SolidCompression=yes
@@ -35,7 +35,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
 
-Source: "C:\Users\William.Chupp\OneDrive - DOT OST\Documents\DANAToolTesting\FHWA-DANATool\Default Input Files\TMAS Data\TMAS 2021\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "C:\Users\William.Chupp\OneDrive - DOT OST\Documents\DANAToolTesting\FHWA-DANATool\User Input Files\Middlesex_MA\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 

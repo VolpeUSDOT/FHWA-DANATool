@@ -24,7 +24,7 @@ DisableProgramGroupPage=yes
 ; Remove the following line to run in administrative install mode (install for all users.)
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
-OutputDir=C:\Users\William.Chupp\OneDrive - DOT OST\Documents\DANAToolTesting
+OutputDir=C:\Users\William.Chupp\OneDrive - DOT OST\Documents\DANAToolTesting\InstallerOutput
 OutputBaseFilename=DANA_Installer
 SetupIconFile=C:\Users\William.Chupp\OneDrive - DOT OST\Documents\DANAToolTesting\dot.ico
 Compression=lzma
