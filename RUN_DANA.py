@@ -20,8 +20,8 @@ testOption = 1
 
 
 if testOption == 1:
-    tmas_year = 2021
-    npmrds_year = 2019
+    tmas_year = 2015
+    npmrds_year = 2018
     state  = 'MA'
     county = 'Middlesex'
 elif testOption == 2:
@@ -71,7 +71,7 @@ elif testOption == 10:
     county = 'State'
     
 elif testOption == 11:
-    tmas_year = 2019
+    tmas_year = 2021
     npmrds_year = 2019
     state = 'RI'
     county = 'Providence'
@@ -149,9 +149,10 @@ if __name__ == '__main__':
         NTD_00_TMAS.TMAS(SELECT_STATE, PATH_TMAS_STATION, 
                          r'H:\DANATool\TMAS 2021\TMAS_Class_2021_1.dat', PATH_FIPS, PATH_NEI, PREREADSTATION = True)
     if step == 1:
-        NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, AUTO_DETECT_DATES=True, DATE_START=dateStart, DATE_END=dateEnd)
+        NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, AUTO_DETECT_DATES=True)
     elif step == 2:
-        NTD_02_MOVES.MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)
+        #NTD_02_MOVES.MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)
+        pass
     elif step == 3:
         NTD_03_SPEED.SPEED(SELECT_STATE, PATH_NPMRDS)  
     elif step == 4:
