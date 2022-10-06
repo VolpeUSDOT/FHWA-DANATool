@@ -36,8 +36,8 @@ def f(tmas_station):
     tmas_station = tmas_station[1]
     
     states = {
-    'AK':['Alaska', 2], 'AL':['Alabama',1],'AZ':['Arizona',4],'AR':['Arkansas',5],'CA':['California',6],'CO':['Colorado',8],
-    'CT':['Connecticut',9],'DE':['Delaware',10],'DC':['District of Columbia',11],'FL':['Florida',12],'GA':['Georgia',13],'ID':['Idaho',16],'IL':['Illinois',17],'IN':['Indiana',18],'IA':['Iowa',19],'KS':['Kansas',20],
+    'AK':['Alaska', 2],'AL':['Alabama',1],'AZ':['Arizona',4],'AR':['Arkansas',5],'CA':['California',6],'CO':['Colorado',8],
+    'CT':['Connecticut',9],'DE':['Delaware',10],'DC':['District of Columbia',11],'FL':['Florida',12],'GA':['Georgia',13],'HI':['Hawaii',15],'ID':['Idaho',16],'IL':['Illinois',17],'IN':['Indiana',18],'IA':['Iowa',19],'KS':['Kansas',20],
     'KY':['Kentucky',21],'LA':['Louisiana',22],'ME':['Maine',23],'MD':['Maryland',24],'MA':['Massachusetts',25],
     'MI':['Michigan',26],'MN':['Minnesota',27],'MS':['Mississippi',28],'MO':['Missouri',29],'MT':['Montana',30],'NE':['Nebraska',31],
     'NV':['Nevada',32],'NH':['New Hampshire',33],'NJ':['New Jersey',34],'NM':['New Mexico',35],'NY':['New York',36],
@@ -108,6 +108,19 @@ def f(tmas_station):
                 tmas_station.loc['F_SYSTEM'] = link.loc['f_system']
                 tmas_station.loc['PR_SIGNING'] = link.loc['route_signing']
                 tmas_station.loc['PR_NUMBER'] = link.loc['route_number']
+                
+                return tmas_station
+        if 'route_id' in links.columns:
+            links_test = links.loc[links['route_id'].str.isspace()==False].reset_index()
+            if (len(links_test['route_id'].unique())) == 1:
+                link = links_test.loc[0, :]
+                tmas_station.loc['FIPS_COUNTY'] = link.loc['county_code']
+                tmas_station.loc['URBAN_CODE'] = link.loc['urban_code']
+                tmas_station.loc['F_SYSTEM'] = link.loc['f_system']
+                tmas_station.loc['PR_SIGNING'] = link.loc['route_signing']
+                tmas_station.loc['PR_NUMBER'] = link.loc['route_number']
+                
+                return tmas_station
         if 'route_number_t' in links.columns:
             links = links.loc[links['route_number_t'].str.isspace()==False].reset_index()
             if (len(links['route_number_t'].unique())) == 1:
@@ -117,6 +130,8 @@ def f(tmas_station):
                 tmas_station.loc['F_SYSTEM'] = link.loc['f_system']
                 tmas_station.loc['PR_SIGNING'] = link.loc['route_signing']
                 tmas_station.loc['PR_NUMBER'] = link.loc['route_number']
+                
+                return tmas_station
         elif len(links) < 1:
             pass
         else:    
@@ -137,7 +152,7 @@ def f(tmas_station):
     return tmas_station
 
 def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, /, PATH_OUTPUT = 'Final Output', PREREADSTATION = False):
-    
+    pathlib.Path(PATH_OUTPUT).mkdir(exist_ok=True)
     filepath = PATH_OUTPUT + '/TMAS_Intermediate_Output/'
     pathlib.Path(filepath).mkdir(exist_ok=True) 
     
@@ -151,8 +166,6 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
         print("Reading Pre-Processed TMAS Station Data")
         tmas_station = pd.read_csv(PATH_TMAS_STATION)
     else:    
-        filepath = 'TMAS_Intermediate_Output/'
-        pathlib.Path(filepath).mkdir(exist_ok=True) 
         
         print('')
         print ('********** Process Raw TMAS Data **********')
@@ -168,7 +181,7 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
         tmas_station_locs.loc[:, 'LONG']=(tmas_station_locs['LONG']*-1)/1000000
         tmas_station_locs.loc[:, 'LAT']=tmas_station_locs['LAT']/1000000
         
-        #t = f((472, tmas_station_locs.loc[423, :]))
+        #t = f((472, tmas_station_locs.loc[2, :]))
     
         n = len(tmas_station_locs)
         with Pool(5) as p:
@@ -187,14 +200,17 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
         repcty = pd.read_csv(PATH_NEI)
         repcty['countyid'] = repcty['countyid'] % 1000
         repcty['repcty'] = repcty['repcty'] % 1000
-        tmas_station = pd.merge(tmas_station, repcty, left_on=['FIPS','FIPS_COUNTY'], right_on=['stateid','countyid'], how='inner')
+        tmas_station = pd.merge(tmas_station, repcty, left_on=['FIPS','FIPS_COUNTY'], right_on=['stateid','countyid'], how='left')
+        
         
         tmas_station.loc[tmas_station['URBAN_CODE']<99999, 'URB_RURAL']='U'
         tmas_station.loc[tmas_station['URBAN_CODE']>=99999, 'URB_RURAL']='R'
         
         tmas_station=tmas_station[['FIPS','FIPS_COUNTY','STATION_ID','DIR','URB_RURAL','F_SYSTEM','PR_SIGNING','PR_NUMBER','LAT','LONG','STATE_NAME','COUNTY_NAME','repcty']]
         tmas_station.rename(columns={'FIPS': 'STATE', 'FIPS_COUNTY': 'COUNTY', 'PR_SIGNING':'ROUTE_SIGN', 'PR_NUMBER':'ROUTE_NUMBER', 'repcty':'REPCTY'}, inplace=True)
-        
+    
+    
+    tmas_station = tmas_station.loc[~tmas_station['COUNTY'].isnull()].reset_index()
     #c.	Select only desired State
     tmas_station_State = tmas_station[tmas_station['STATE_NAME']==SELECT_STATE]
     tmas_station_State.reset_index(inplace=True, drop=True)
@@ -218,6 +234,7 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
                     'CLASS_8','CLASS_9','CLASS_10','CLASS_11','CLASS_12','CLASS_13']
     tmas_types = {
         'TYPE':'category',
+        'STATE': 'Int64',
         'FIPS':'float16',
         'STATION_ID':str,
         'DIR':'float16',
@@ -242,7 +259,7 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
         'CLASS_13':'float16',
         }
     tmas_class_raw = dd.read_fwf(PATH_TMAS_CLASS,widths=class_width,header=None,names=class_header,
-                                      dtype=tmas_types)# chunksize=100000)
+                                      dtype=tmas_types) #.head(n=100000)# chunksize=100000)
     
     # tmas_class_raw = pd.DataFrame()
     # i = 0
@@ -269,6 +286,8 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
     clean_tmas = tmas_day.filter(lambda x: x['VOL'].sum()>0)    ## aggregate hourly volumes to daily volumes
     tmas_class_sum = tmas_class_sum.loc[clean_tmas.index]       ## maintain the original index
     tmas_class_sum.reset_index(inplace=True)
+    del tmas_day
+    del clean_tmas
     now=lapTimer('  took: ',now)
     
     #b3. Join file with TMAS station data
@@ -276,6 +295,7 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
     #tmas_station = pd.read_csv('Temp Files/TMAS_station.csv', dtype={'STATION_ID':str})
     tmas_class = pd.merge(tmas_class_sum, tmas_station, left_on=['STATE','STATION_ID','DIR'], 
                           right_on=['STATE','STATION_ID','DIR'], how='inner')
+    del tmas_class_sum
     now=lapTimer('  took: ',now)
     
     #b4. Identify the peaking time period for the location and direction.
@@ -301,6 +321,7 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
     tmas_class = pd.merge(tmas_class, tmas_class_peak, left_on=['STATE','STATION_ID','DIR'], right_on=['STATE','STATION_ID','DIR'], how='left')
     # default is 'PM' in case no peaking assignment with WD & HOUR 8
     tmas_class.loc[~tmas_class['PEAKING'].isin(['AM','PM']), 'PEAKING']='PM'
+    del tmas_class_peak
     now=lapTimer('  took: ',now) 
     
     # DOW for holidays
@@ -350,7 +371,7 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
     #c. Save the final dataset in "Temp Files" to merge it with TMC link later
     #This took 15 min
     print('Exporting classification data as a csv')
-    tmas_class_clean.to_csv(filepath+'tmas_class_clean.csv',index=False)
+    tmas_class_clean.to_csv(filepath+'tmas_class_clean.csv',index=False, chunksize=10000)
     tmas_class_clean_sample = tmas_class_clean[0:10]
     tmas_class_clean_sample.to_csv(filepath+'tmas_class_clean_sample.csv',index=False)
     #tmas_class_clean.to_csv(PATH_TMAS_CLASS.replace('.dat','_clean.csv'),index=False)

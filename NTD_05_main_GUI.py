@@ -887,7 +887,7 @@ if __name__ == "__main__":
     
     # 2. Combobox
     # List of States Combobox
-    list_states = ['','AL','AZ','AR','CA','CO','CT','DE','DC','FL','GA','ID','IL','IN','IA','KS','KY','LA',
+    list_states = ['','AK','AL','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA',
                    'ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']
     StateValue = StringVar()
     w_state = ttk.Combobox(mainframe, textvariable=StateValue, state='readonly', width=30)
