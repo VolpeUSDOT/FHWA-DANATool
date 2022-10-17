@@ -9,7 +9,7 @@
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{3A5F7175-BE70-46A0-AF9C-1FE233C750CE}
+AppId={{92896F24-D924-42F5-B22D-FAFC7EC9C591}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
@@ -17,7 +17,7 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
-DefaultDirName={localappdata}\FHWA DANA Tool\TMAS Data
+DefaultDirName={localappdata}\FHWA DANA Tool\Default Input Files\TMAS Data
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 ; Remove the following line to run in administrative install mode (install for all users.)
@@ -35,7 +35,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
 
-Source: "C:\Users\William.Chupp\OneDrive - DOT OST\Documents\DANAToolTesting\FHWA-DANATool\Default Input Files\TMAS Data\TMAS 2019\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "C:\Users\William.Chupp\OneDrive - DOT OST\Documents\DANAToolTesting\FHWA-DANATool\Default Input Files\TMAS Data\TMAS 2019\*"; DestDir: "{app}\TMAS 2019"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 

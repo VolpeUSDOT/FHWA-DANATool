@@ -19,7 +19,6 @@ AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={localappdata}\{#MyAppName}
-DisableDirPage=yes
 DisableProgramGroupPage=yes
 ; Remove the following line to run in administrative install mode (install for all users.)
 PrivilegesRequired=lowest
@@ -39,7 +38,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "C:\Users\William.Chupp\OneDrive - DOT OST\Documents\DANAToolTesting\FHWA-DANATool\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\William.Chupp\OneDrive - DOT OST\Documents\DANAToolTesting\FHWA-DANATool\Default Input Files\*"; Excludes: "TMAS Data\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "C:\Users\William.Chupp\OneDrive - DOT OST\Documents\DANAToolTesting\FHWA-DANATool\Default Input Files\*"; Excludes: "TMAS Data\*"; DestDir: "{app}\Default Input Files"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
