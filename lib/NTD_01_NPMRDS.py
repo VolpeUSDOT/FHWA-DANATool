@@ -831,7 +831,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     pollutants = [2, 3, 5, 6, 87, 90, 98, 100, 110]
     vehtypes = [10, 25, 40, 50, 60]
     for pol in pollutants:
-        df_emissions_summary_cols['TotEmissionsPerMile_{}'.format(pol)] = None
+        df_emissions_summary_cols['TotEmissionsPerMile_{}'.format(pol)] = 0
         for veh in vehtypes:
             if '{}_{}'.format(veh, pol) in df_emissions.columns:
                 df_emissions_summary_cols['TotEmissionsPerMile_{}'.format(pol)] = df_emissions_summary_cols['TotEmissionsPerMile_{}'.format(pol)] + \
