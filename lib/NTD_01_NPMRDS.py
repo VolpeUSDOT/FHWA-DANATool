@@ -395,6 +395,11 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
         tier1_class.to_csv(filepath+'tier1_class.csv',index=False)
         now=lapTimer('  took: ',now)
         
+        # Defining annual average tier 1
+        tier1_annual_average_class = tier1_class.groupby(['STATION_ID','tmc','DIR','DAY_TYPE','HOUR'])['PCT_TYPE10', 'PCT_TYPE25', 'PCT_TYPE40', 'PCT_TYPE50', 'PCT_TYPE60', 'PCT_NOISE_AUTO', 'PCT_NOISE_MED_TRUCK', 'PCT_NOISE_HVY_TRUCK', 'PCT_NOISE_BUS', 'PCT_NOISE_MC'].mean()
+        tier1_annual_average_class.reset_index(inplace=True)
+        tier1_annual_average_class.to_csv(filepath+'tier1_annualaverage_class.csv',index=False)
+        
         ##################################################
         #d. Creating Classification for Tier 2
         #Cross-classification variables are: STATE, COUNTY, ROUTE_SIGN, ROUTE_NUMBER, DOW, PEAKING, HOUR.
@@ -411,6 +416,11 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
         tier2_class.to_csv(filepath+'tier2_class.csv',index=False)
         now=lapTimer('  took: ', now)
         
+        # Defining annual average tier 2
+        tier2_annual_average_class = tier2_class.groupby((['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','DAY_TYPE','PEAKING','HOUR']))['PCT_TYPE10', 'PCT_TYPE25', 'PCT_TYPE40', 'PCT_TYPE50', 'PCT_TYPE60', 'PCT_NOISE_AUTO', 'PCT_NOISE_MED_TRUCK', 'PCT_NOISE_HVY_TRUCK', 'PCT_NOISE_BUS', 'PCT_NOISE_MC'].mean()
+        tier2_annual_average_class.reset_index(inplace=True)
+        tier2_annual_average_class.to_csv(filepath+'tier2_annualaverage_class.csv', index=False)
+        
         ##################################################
         #e. Creating Classification for Tier 3
         #Cross-classification variables are: STATE, URB_RURAL, F_SYSTEM, DOW, PEAKING, HOUR.
@@ -426,6 +436,11 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
         tier3_class.rename(index=str, columns={'HPMS_TYPE10':'PCT_TYPE10','HPMS_TYPE25':'PCT_TYPE25','HPMS_TYPE40':'PCT_TYPE40','HPMS_TYPE50':'PCT_TYPE50','HPMS_TYPE60':'PCT_TYPE60','NOISE_AUTO':'PCT_NOISE_AUTO','NOISE_MED_TRUCK':'PCT_NOISE_MED_TRUCK','NOISE_HVY_TRUCK':'PCT_NOISE_HVY_TRUCK','NOISE_BUS':'PCT_NOISE_BUS','NOISE_MC':'PCT_NOISE_MC'},inplace=True)
         tier3_class.to_csv(filepath+'tier3_class.csv',index=False)
         now=lapTimer('  took: ',now)
+        
+        # Defining annual average tier 3
+        tier3_annual_average_class = tier3_class.groupby((['URB_RURAL','F_SYSTEM','DAY_TYPE','PEAKING','HOUR']))['PCT_TYPE10', 'PCT_TYPE25', 'PCT_TYPE40', 'PCT_TYPE50', 'PCT_TYPE60', 'PCT_NOISE_AUTO', 'PCT_NOISE_MED_TRUCK', 'PCT_NOISE_HVY_TRUCK', 'PCT_NOISE_BUS', 'PCT_NOISE_MC'].mean()
+        tier3_annual_average_class.reset_index(inplace=True)
+        tier3_annual_average_class.to_csv(filepath+'tier3_annualaverage_class.csv', index=False)
     
     ##################################################
     #f. Creating Classification for Tier 4
@@ -516,6 +531,36 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
         npmrds_tier1 = npmrds_tier1[pd.notnull(npmrds_tier1['tier'])]
         now=lapTimer('  took: ',now)
         
+        #b1. Tier 1 annual average
+        #Read Tier 1 annual average classifications
+        print('Merging Tier 1 annual average to NPMRDS')
+        tier1_annualaverage_types = {
+            'STATION_ID':str,
+            'tmc':str,
+            'DIR':'int32',
+            'DAY_TYPE':str,
+            'HOUR':'int32',
+            'PCT_TYPE10':'float32',
+            'PCT_TYPE25':'float32',
+            'PCT_TYPE40':'float32',
+            'PCT_TYPE50':'float32',
+            'PCT_TYPE60':'float32',
+            'PCT_NOISE_AUTO':'float32',
+            'PCT_NOISE_MED_TRUCK':'float32',
+            'PCT_NOISE_HVY_TRUCK':'float32',
+            'PCT_NOISE_BUS':'float32',
+            'PCT_NOISE_MC':'float32',
+            'tier':'int32'}
+        tier1_annualaverage_class = pd.read_csv(filepath+'tier1_annualaverage_class.csv', dtype=tier1_annualaverage_types)
+        tier1_annualaverage_class['tier']=1.5
+        tier1_annualaverage_class.drop('STATION_ID',inplace=True,axis=1)
+        #Merge with NPMRDS data
+        npmrds_for_tiers.drop(['DIR','MONTH','DAY_TYPE','HOUR','PCT_TYPE10','PCT_TYPE25','PCT_TYPE40','PCT_TYPE50','PCT_TYPE60','PCT_NOISE_AUTO','PCT_NOISE_MED_TRUCK','PCT_NOISE_HVY_TRUCK','PCT_NOISE_BUS','PCT_NOISE_MC','tier'], inplace=True, axis=1)
+        npmrds_tier1_annualaverage = pd.merge(npmrds_for_tiers, tier1_annualaverage_class, left_on=['tmc','dir_num', 'dow','hour'], right_on=['tmc','DIR','DAY_TYPE','HOUR'], how='left')
+        npmrds_for_tiers = npmrds_tier1_annualaverage[pd.isnull(npmrds_tier1_annualaverage['tier'])]
+        npmrds_tier1_annualaverage = npmrds_tier1_annualaverage[pd.notnull(npmrds_tier1_annualaverage['tier'])]
+        now=lapTimer('  took: ',now)
+        
         #b2. Tier 2
         #Read Tier 2 classifications
         print('Merging Tier 2 to NPMRDS')
@@ -541,12 +586,43 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
         tier2_class['tier']=2
         #tier2_class['ROUTE_NUMBER'] = pd.to_numeric(tier2_class['ROUTE_NUMBER'], errors='coerce')
         #tier2_class['COUNTY'] = tier2_class['COUNTY'].str.replace(' County','').str.upper()
-        npmrds_for_tiers.drop(['DIR','MONTH','DAY_TYPE','HOUR','PCT_TYPE10','PCT_TYPE25','PCT_TYPE40','PCT_TYPE50','PCT_TYPE60','PCT_NOISE_AUTO','PCT_NOISE_MED_TRUCK','PCT_NOISE_HVY_TRUCK','PCT_NOISE_BUS','PCT_NOISE_MC','tier'], inplace=True, axis=1)
+        npmrds_for_tiers.drop(['DIR','DAY_TYPE','HOUR','PCT_TYPE10','PCT_TYPE25','PCT_TYPE40','PCT_TYPE50','PCT_TYPE60','PCT_NOISE_AUTO','PCT_NOISE_MED_TRUCK','PCT_NOISE_HVY_TRUCK','PCT_NOISE_BUS','PCT_NOISE_MC','tier'], inplace=True, axis=1)
         #Merge with NPMRDS data
         npmrds_tier2 = pd.merge(npmrds_for_tiers, tier2_class, left_on=['county','route_sign','route_numb','month','dow','peaking','hour'], 
                                 right_on=['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','MONTH','DAY_TYPE','PEAKING','HOUR'], how='left')
         npmrds_for_tiers = npmrds_tier2[pd.isnull(npmrds_tier2['tier'])]
         npmrds_tier2 = npmrds_tier2[pd.notnull(npmrds_tier2['tier'])]
+        now=lapTimer('  took: ',now)
+        
+        #b2. Tier 2 annual average
+        #Read Tier 2 classifications
+        print('Merging Tier 2 annual average to NPMRDS')
+        tier2_annualaverage_types = {
+            #'COUNTY':str,
+            'ROUTE_SIGN':'int32',
+            'ROUTE_NUMBER':str,
+            'DAY_TYPE':str,
+            'PEAKING':str,
+            'HOUR':'int32',
+            'PCT_TYPE10':'float32',
+            'PCT_TYPE25':'float32',
+            'PCT_TYPE40':'float32',
+            'PCT_TYPE50':'float32',
+            'PCT_TYPE60':'float32',
+            'PCT_NOISE_AUTO':'float32',
+            'PCT_NOISE_MED_TRUCK':'float32',
+            'PCT_NOISE_HVY_TRUCK':'float32',
+            'PCT_NOISE_BUS':'float32',
+            'PCT_NOISE_MC':'float32',
+            'tier':'int32'}
+        tier2_annualaverage_class = pd.read_csv(filepath+'tier2_annualaverage_class.csv',dtype=tier2_annualaverage_types)
+        tier2_annualaverage_class['tier']=2.5
+        npmrds_for_tiers.drop(['COUNTY', 'ROUTE_SIGN', 'ROUTE_NUMBER', 'PEAKING', 'MONTH', 'DAY_TYPE','HOUR','PCT_TYPE10','PCT_TYPE25','PCT_TYPE40','PCT_TYPE50','PCT_TYPE60','PCT_NOISE_AUTO','PCT_NOISE_MED_TRUCK','PCT_NOISE_HVY_TRUCK','PCT_NOISE_BUS','PCT_NOISE_MC','tier'], inplace=True, axis=1)
+        #Merge with NPMRDS data
+        npmrds_tier2_annualaverage = pd.merge(npmrds_for_tiers, tier2_annualaverage_class, left_on=['county','route_sign','route_numb','dow','peaking','hour'], 
+                                right_on=['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','DAY_TYPE','PEAKING','HOUR'], how='left')
+        npmrds_for_tiers = npmrds_tier2_annualaverage[pd.isnull(npmrds_tier2_annualaverage['tier'])]
+        npmrds_tier2_annualaverage = npmrds_tier2_annualaverage[pd.notnull(npmrds_tier2_annualaverage['tier'])]
         now=lapTimer('  took: ',now)
         
         #b3. Tier 3
@@ -571,11 +647,40 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
             'tier':'int32'}
         tier3_class = pd.read_csv(filepath+'tier3_class.csv', dtype=tier3_types)
         tier3_class['tier']=3
-        npmrds_for_tiers.drop(['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','MONTH','DAY_TYPE','PEAKING','HOUR','PCT_TYPE10','PCT_TYPE25','PCT_TYPE40','PCT_TYPE50','PCT_TYPE60','PCT_NOISE_AUTO','PCT_NOISE_MED_TRUCK','PCT_NOISE_HVY_TRUCK','PCT_NOISE_BUS','PCT_NOISE_MC','tier'], inplace=True, axis=1)
+        npmrds_for_tiers.drop(['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','DAY_TYPE','PEAKING','HOUR','PCT_TYPE10','PCT_TYPE25','PCT_TYPE40','PCT_TYPE50','PCT_TYPE60','PCT_NOISE_AUTO','PCT_NOISE_MED_TRUCK','PCT_NOISE_HVY_TRUCK','PCT_NOISE_BUS','PCT_NOISE_MC','tier'], inplace=True, axis=1)
         #Merging with Tier 3
         npmrds_tier3 = pd.merge(npmrds_for_tiers, tier3_class, left_on=['urban_rural','f_system','month','dow','peaking','hour'], right_on=['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'], how='left')
         npmrds_for_tiers = npmrds_tier3[pd.isnull(npmrds_tier3['tier'])]
         npmrds_tier3 = npmrds_tier3[pd.notnull(npmrds_tier3['tier'])]
+        now=lapTimer('  took: ',now)
+
+        #b3. Tier 3
+        #Read Tier 3 annual average classifications
+        print('Merging Tier 3 annual average to NPMRDS')
+        tier3_annualaverage_types = {
+            'URB_RURAL':str,
+            'F_SYSTEM':'int32',
+            'DAY_TYPE':str,
+            'PEAKING':str,
+            'HOUR':'int32',
+            'PCT_TYPE10':'float32',
+            'PCT_TYPE25':'float32',
+            'PCT_TYPE40':'float32',
+            'PCT_TYPE50':'float32',
+            'PCT_TYPE60':'float32',
+            'PCT_NOISE_AUTO':'float32',
+            'PCT_NOISE_MED_TRUCK':'float32',
+            'PCT_NOISE_HVY_TRUCK':'float32',
+            'PCT_NOISE_BUS':'float32',
+            'PCT_NOISE_MC':'float32',
+            'tier':'int32'}
+        tier3_annualaverage_class = pd.read_csv(filepath+'tier3_annualaverage_class.csv', dtype=tier3_types)
+        tier3_annualaverage_class['tier']=3.5
+        npmrds_for_tiers.drop(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR','MONTH','DAY_TYPE','PEAKING','HOUR','PCT_TYPE10','PCT_TYPE25','PCT_TYPE40','PCT_TYPE50','PCT_TYPE60','PCT_NOISE_AUTO','PCT_NOISE_MED_TRUCK','PCT_NOISE_HVY_TRUCK','PCT_NOISE_BUS','PCT_NOISE_MC','tier'], inplace=True, axis=1)
+        #Merging with Tier 3
+        npmrds_tier3_annualaverage = pd.merge(npmrds_for_tiers, tier3_annualaverage_class, left_on=['urban_rural','f_system','dow','peaking','hour'], right_on=['URB_RURAL','F_SYSTEM','DAY_TYPE','PEAKING','HOUR'], how='left')
+        npmrds_for_tiers = npmrds_tier3_annualaverage[pd.isnull(npmrds_tier3_annualaverage['tier'])]
+        npmrds_tier3_annualaverage = npmrds_tier3_annualaverage[pd.notnull(npmrds_tier3_annualaverage['tier'])]
         now=lapTimer('  took: ',now)
     
     #b4. Tier 4
@@ -601,7 +706,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     tier4_class['tier']=4
            
     if SELECT_STATE in states_avlb.values:
-        npmrds_for_tiers.drop(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR','PCT_TYPE10','PCT_TYPE25','PCT_TYPE40','PCT_TYPE50','PCT_TYPE60','PCT_NOISE_AUTO','PCT_NOISE_MED_TRUCK','PCT_NOISE_HVY_TRUCK','PCT_NOISE_BUS','PCT_NOISE_MC','tier'], inplace=True, axis=1)
+        npmrds_for_tiers.drop(['URB_RURAL','F_SYSTEM','DAY_TYPE','PEAKING','HOUR','PCT_TYPE10','PCT_TYPE25','PCT_TYPE40','PCT_TYPE50','PCT_TYPE60','PCT_NOISE_AUTO','PCT_NOISE_MED_TRUCK','PCT_NOISE_HVY_TRUCK','PCT_NOISE_BUS','PCT_NOISE_MC','tier'], inplace=True, axis=1)
         #Merging with Tier 4
         npmrds_tier4 = pd.merge(npmrds_for_tiers, tier4_class, left_on=['urban_rural','f_system','month','dow','peaking','hour'], right_on=['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'], how='left')
         npmrds_for_tiers = npmrds_tier4[pd.isnull(npmrds_tier4['tier'])]
@@ -617,10 +722,13 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     npmrds_for_tiers.drop(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'], inplace=True, axis=1)
     if SELECT_STATE in states_avlb.values:
         npmrds_tier1.drop(['DIR','MONTH','DAY_TYPE','HOUR'], inplace=True, axis=1)
+        npmrds_tier1_annualaverage.drop(['DIR','DAY_TYPE','HOUR'], inplace=True, axis=1)
         npmrds_tier2.drop(['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','MONTH','DAY_TYPE','PEAKING','HOUR'], inplace=True, axis=1)
+        npmrds_tier2_annualaverage.drop(['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','DAY_TYPE','PEAKING','HOUR'], inplace=True, axis=1)
         npmrds_tier3.drop(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'], inplace=True, axis=1)
-        npmrds_tier4.drop(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'], inplace=True, axis=1)
-        tiers=[npmrds_tier1, npmrds_tier2, npmrds_tier3, npmrds_tier4, npmrds_for_tiers]
+        npmrds_tier3_annualaverage.drop(['URB_RURAL','F_SYSTEM','DAY_TYPE','PEAKING','HOUR'], inplace=True, axis=1)
+        npmrds_tier4.drop(['URB_RURAL','F_SYSTEM','DAY_TYPE','PEAKING','HOUR'], inplace=True, axis=1)
+        tiers=[npmrds_tier1, npmrds_tier1_annualaverage, npmrds_tier2, npmrds_tier2_annualaverage, npmrds_tier3, npmrds_tier3_annualaverage, npmrds_tier4, npmrds_for_tiers]
     else:
         npmrds_tier4.drop(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'], inplace=True, axis=1)
         tiers=[npmrds_tier4, npmrds_for_tiers]
@@ -644,13 +752,19 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     # QC
     total_tmc = df['tmc'].nunique()
     tier1_tmc = df.loc[df['tier']==1,'tmc'].nunique()
+    tier1_annualaverage_tmc = df.loc[df['tier']==1.5,'tmc'].nunique()
     tier2_tmc = df.loc[df['tier']==2,'tmc'].nunique()
+    tier2_annualaverage_tmc = df.loc[df['tier']==2.5,'tmc'].nunique()
     tier3_tmc = df.loc[df['tier']==3,'tmc'].nunique()
+    tier3_annualaverage_tmc = df.loc[df['tier']==3.5,'tmc'].nunique()
     tier4_tmc = df.loc[df['tier']==4,'tmc'].nunique()
     print('Total TMCs: %i' %total_tmc)
     print('Tier 1 TMCs: %i' %tier1_tmc)
+    print('Tier 1 annual average TMCs: %i' %tier1_annualaverage_tmc)
     print('Tier 2 TMCs: %i' %tier2_tmc)
+    print('Tier 2 annual average TMCs: %i' %tier2_annualaverage_tmc)
     print('Tier 3 TMCs: %i' %tier3_tmc)
+    print('Tier 3 annual average TMCs: %i' %tier3_annualaverage_tmc)
     print('Tier 4 TMCs: %i' %tier4_tmc)
     
     '''
