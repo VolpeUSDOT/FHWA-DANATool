@@ -847,6 +847,20 @@ if __name__ == "__main__":
     
     for child in TMCSelection_frame.winfo_children(): child.grid_configure(padx=2, pady=4)
     
+    # TNM_AID GUI TAB
+    tnmaid = tk.Frame(notebook)
+    tnmaid.grid(row=0, column=0, sticky="news")
+    tnmaid.grid_rowconfigure(0, weight=1)
+    tnmaid.grid_columnconfigure(0, weight=1)
+    notebook.add(tnmaid, text='TNMAid')
+    
+    # Vizualization Tab
+    vis = tk.Frame(notebook)
+    vis.grid(row=0, column=0, sticky="news")
+    vis.grid_rowconfigure(0, weight=1)
+    vis.grid_columnconfigure(0, weight=1)
+    notebook.add(vis, text='Data Vizualization')
+    
     #print(notebook.tabs())
     
     ##################################################
