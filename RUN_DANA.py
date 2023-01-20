@@ -14,7 +14,7 @@ import sys
 import datetime as dt
 
 # Basic Input Parameters
-step = 3
+step = 1
 
 testOption = 11
 
