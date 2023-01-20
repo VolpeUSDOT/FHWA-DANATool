@@ -198,12 +198,16 @@ def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE, /
     print('Reading Composite Dataset')
     composite_df = pq.read_table(PATH_NPMRDS)
     composite_df = composite_df.to_pandas()
+    composite_df_vmt = composite_df.copy()
+    pctCols = ['PCT_TYPE10','PCT_TYPE25','PCT_TYPE40','PCT_TYPE50','PCT_TYPE60']
+    for col in pctCols:
+        composite_df_vmt[col] = composite_df_vmt[col]*composite_df_vmt['aadt']*composite_df_vmt['VOLUME_MODIFIER']
     now=lapTimer('  took: ',now)
     
     # Developing monthly vmt fractions
     print('Developing monthly VMT Fractions dataset')
-    df_monthVMT = composite_df.groupby(['county','monthid']).agg({'PCT_TYPE10':'sum','PCT_TYPE25':'sum','PCT_TYPE40':'sum','PCT_TYPE50':'sum','PCT_TYPE60':'sum'})
-    df_monthVMT_den = composite_df.groupby(['county']).agg({'PCT_TYPE10':'sum','PCT_TYPE25':'sum','PCT_TYPE40':'sum','PCT_TYPE50':'sum','PCT_TYPE60':'sum'})
+    df_monthVMT = composite_df_vmt.groupby(['county','monthid']).agg({'PCT_TYPE10':'sum','PCT_TYPE25':'sum','PCT_TYPE40':'sum','PCT_TYPE50':'sum','PCT_TYPE60':'sum'})
+    df_monthVMT_den = composite_df_vmt.groupby(['county']).agg({'PCT_TYPE10':'sum','PCT_TYPE25':'sum','PCT_TYPE40':'sum','PCT_TYPE50':'sum','PCT_TYPE60':'sum'})
     df_monthVMT_class = df_monthVMT.div(df_monthVMT_den, level=0)
     df_monthVMT_class.reset_index(inplace=True)
     
@@ -243,7 +247,7 @@ def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE, /
     
     #e. Developing Daily VMT fractions
     print('Developing daily VMT Fractions dataset')
-    df_dayVMT = composite_df.groupby(['county', 'monthid', 'f_system', 'urban_rural', 'dayid']).agg({'PCT_TYPE10':'sum','PCT_TYPE25':'sum','PCT_TYPE40':'sum','PCT_TYPE50':'sum','PCT_TYPE60':'sum'})
+    df_dayVMT = composite_df_vmt.groupby(['county', 'monthid', 'f_system', 'urban_rural', 'dayid']).agg({'PCT_TYPE10':'sum','PCT_TYPE25':'sum','PCT_TYPE40':'sum','PCT_TYPE50':'sum','PCT_TYPE60':'sum'})
     df_dayVMT.reset_index(inplace=True)
     df_dayVMT.dayid.unique()
     
@@ -291,7 +295,7 @@ def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE, /
     
     #f. Developing hourly summaries
     print('Developing hourly VMT Fractions dataset')
-    df_hourVMT = composite_df.groupby(['county','roadtypeid','dayid','hourid']).agg({'PCT_TYPE10':'sum','PCT_TYPE25':'sum','PCT_TYPE40':'sum','PCT_TYPE50':'sum','PCT_TYPE60':'sum'})
+    df_hourVMT = composite_df_vmt.groupby(['county','roadtypeid','dayid','hourid']).agg({'PCT_TYPE10':'sum','PCT_TYPE25':'sum','PCT_TYPE40':'sum','PCT_TYPE50':'sum','PCT_TYPE60':'sum'})
     df_hourVMT_class = df_hourVMT.div(df_hourVMT.groupby(['county','roadtypeid','dayid']).transform('sum'))
     df_hourVMT_class.reset_index(inplace=True)
     
@@ -334,7 +338,7 @@ def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE, /
     State_VMT_1 = State_VMT.groupby(['state','county'], as_index=False)['VMT'].sum()
     
     #g1. Aggregating all volume by County
-    veh_county = composite_df.groupby('county').agg({'PCT_TYPE10':'sum','PCT_TYPE25':'sum','PCT_TYPE40':'sum','PCT_TYPE50':'sum','PCT_TYPE60':'sum'})
+    veh_county = composite_df_vmt.groupby('county').agg({'PCT_TYPE10':'sum','PCT_TYPE25':'sum','PCT_TYPE40':'sum','PCT_TYPE50':'sum','PCT_TYPE60':'sum'})
     veh_county.reset_index(inplace=True)
     veh_county.rename(index=str, columns={'PCT_TYPE10':'VEH10','PCT_TYPE25':'VEH25','PCT_TYPE40':'VEH40','PCT_TYPE50':'VEH50','PCT_TYPE60':'VEH60'}, inplace=True)
     #Creating classification percentages for County level
@@ -388,7 +392,7 @@ def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE, /
     State_VMT.rename(columns={'County_Cod': 'county'}, inplace=True)
     
     #h1. Aggregating all volume by County
-    df_roadtypeVMT = composite_df.groupby(['county','roadtypeid']).agg({'PCT_TYPE10':'sum','PCT_TYPE25':'sum','PCT_TYPE40':'sum','PCT_TYPE50':'sum','PCT_TYPE60':'sum'})
+    df_roadtypeVMT = composite_df_vmt.groupby(['county','roadtypeid']).agg({'PCT_TYPE10':'sum','PCT_TYPE25':'sum','PCT_TYPE40':'sum','PCT_TYPE50':'sum','PCT_TYPE60':'sum'})
     df_roadtypeVMT_class = df_roadtypeVMT.div(df_roadtypeVMT.groupby('county').transform('sum'))
     df_roadtypeVMT_class.reset_index(inplace=True)
     

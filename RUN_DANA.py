@@ -14,7 +14,7 @@ import sys
 import datetime as dt
 
 # Basic Input Parameters
-step = 1
+step = 3
 
 testOption = 11
 
@@ -133,7 +133,6 @@ elif computerName in ('VOLSLBOS-06756'):
     pathPrefix2 = 'H:/TestData/{}_{}'.format(county, state)
     pathPrefix3 = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Final Output'
 
-
 # Set File Paths for Calling DANA Scripts
 PATH_TMAS_STATION = pathPrefix1 + '/TMAS Data/TMAS {}/tmas_station_{}.csv'.format(tmas_year, tmas_year)
 PATH_TMAS_CLASS_CLEAN = pathPrefix1 + '/TMAS Data/TMAS {}/tmas_class_clean_{}.csv'.format(tmas_year, tmas_year)
@@ -148,7 +147,7 @@ PATH_tmc_identification = pathPrefix2 + '/NPMRDS Data/TMC_Identification.csv'
 PATH_tmc_shp = 'lib/ShapeFiles/'
 PATH_emission = pathPrefix1 + '/NEI2017_RepresentativeEmissionsRates.parquet'
 
-PATH_HPMS  = pathPrefix2 + '/HPMS Data/{}_HPMS_{}.csv'.format(state.upper(), npmrds_year-2) # Need to confirm - ALH
+PATH_HPMS  = pathPrefix2 + '/HPMS Data/{}_HPMS_{}.csv'.format(state.upper(), npmrds_year) # Need to confirm - ALH
 PATH_VM2 = pathPrefix1 + '/Statewide Functional Class VMT/State_VMT_by_Class_{}.csv'.format(tmas_year) # Need to confirm - ALH
 PATH_COUNTY_MILEAGE = pathPrefix1 + '/HPMS County Road Mileage/County_Road_Mileage_{}.csv'.format(tmas_year) # Need to confirm - ALH
 

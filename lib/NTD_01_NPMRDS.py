@@ -17,7 +17,8 @@ import pathlib
 from .load_shapes import *
 import pkg_resources
 from tqdm.tk import tqdm
-
+import dask.dataframe as dd
+from dask.diagnostics import ProgressBar
 PATH_tmc_shp = pkg_resources.resource_filename('lib', 'ShapeFiles/')
 
 def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass,PATH_npmrds_raw_truck, 
@@ -26,7 +27,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     #!!! INPUT Parameters
     filepath = PATH_OUTPUT + '/Process1_LinkLevelDataset/'
     pathlib.Path(filepath).mkdir(exist_ok=True) 
-    
+
     '''
     #SELECT_STATE='CO'
     SELECT_STATE='TX'
@@ -61,7 +62,6 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
         return time.time()
     
     now=time.time()
-    
     # State definition
     states = {
     'AK':['Alaska', 2], 'AL':['Alabama',1],'AZ':['Arizona',4],'AR':['Arkansas',5],'CA':['California',6],'CO':['Colorado',8],
@@ -320,11 +320,14 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     
     #a. Read TMAS Station and Classification
     print('Reading TMAS Data')    #This takes like 10 min
-    tmas_class = pd.read_csv(PATH_TMAS_CLASS_CLEAN, dtype={'STATION_ID':str, 'ROUTE_NUMBER':str})
-    states_avlb=tmas_class['STATE_NAME'].drop_duplicates()
+    tmas_class = dd.read_csv(PATH_TMAS_CLASS_CLEAN, dtype={'STATION_ID':str, 'ROUTE_NUMBER':str})
     now=lapTimer('  took: ',now)
+    tmas_class_state = tmas_class[tmas_class['STATE_NAME']==SELECT_STATE]
+    # with ProgressBar():
+    tmas_class_state = tmas_class_state.compute()
+    states_avlb=tmas_class_state['STATE_NAME'].drop_duplicates()
     if SELECT_STATE in states_avlb.values:
-        tmas_class_state = tmas_class[tmas_class['STATE_NAME']==SELECT_STATE]
+        
         #tmas_class_state['ROUTE_NUMBER'] = pd.to_numeric(tmas_class_state['ROUTE_NUMBER'], errors='coerce')
         tmas_class_state['ROUTE_NUMBER'].dropna(axis=0, inplace=True)
     
@@ -332,7 +335,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
         #    Select only desired State, 
         #    Select only data in the clean station array
         clean_stations = tmas_class_state['STATION_ID'].unique()
-        tmas_station = pd.read_csv(PATH_TMAS_STATION, dtype={'STATION_ID':str}, low_memory=False)
+        tmas_station = pd.read_csv(PATH_TMAS_STATION, dtype={'STATION_ID':str})
         tmas_station_State = tmas_station[tmas_station['STATE_NAME']==SELECT_STATE]
         tmas_station_State.reset_index(inplace=True, drop=True)
         tmas_station_clean = tmas_station_State.loc[tmas_station_State['STATION_ID'].isin(clean_stations)]
@@ -343,7 +346,8 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
         tmas_station_clean['geometry']=tmas_station_clean.apply(lambda row: Point(row["LONG"], row["LAT"]), axis=1)
         tmas_station_clean.reset_index(drop=True, inplace=True)    #Start the dataframe index from 0
         #Create a geodataframe to test geopandas capabilities
-        geo_tmas = GeoDataFrame(tmas_station_clean, crs=crs, geometry='geometry')
+        geo_tmas = GeoDataFrame(tmas_station_clean.copy(), crs=crs, geometry='geometry')
+        del tmas_station_clean
         now=lapTimer('  took: ',now)
         #b Read TMC Indentification data
         '''
@@ -376,12 +380,23 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
             tier1_class = pd.DataFrame(columns=['STATION_ID','tmc','DIR','MONTH','DAY_TYPE','HOUR', 
                                                 'HPMS_TYPE10','HPMS_TYPE25','HPMS_TYPE40','HPMS_TYPE50','HPMS_TYPE60', 
                                                 'NOISE_AUTO','NOISE_MED_TRUCK','NOISE_HVY_TRUCK','NOISE_BUS','NOISE_MC'])
+            tier1_volume = pd.DataFrame(columns=['STATION_ID', 'tmc','DIR',	'MONTH', 'DAY_TYPE', 'VOL', 'VOL_MEAN', 'VOLUME_MODIFIER'])
         else:
             #c4. Creating Tier 1 Classifications
             print('Defining Tier 1 Classifications')
             tmas_class_state_tier1 = pd.merge(tmas_class_state, tier1, on=['STATION_ID','DIR'])
             tmas_class_state_tier1_clean = tmas_class_state_tier1[tmas_class_state_tier1['tier']==1]
             # 'tmc' and 'STATION_ID'+'DIR' can be many-to-many 
+            
+            #daily_volume modifier
+            daily_volume = tmas_class_state_tier1_clean.groupby(['STATION_ID','tmc','DIR','MONTH', 'DAY', 'DAY_TYPE']).filter(lambda x: x['VOL'].count()==24)
+            daily_volume = daily_volume.groupby(['STATION_ID','tmc','DIR','MONTH', 'DAY', 'DAY_TYPE'])['VOL'].sum().reset_index()
+            daily_volume = daily_volume.groupby(['STATION_ID','tmc','DIR','MONTH','DAY_TYPE'])['VOL'].mean().reset_index()
+            daily_volume_den = daily_volume.groupby(['STATION_ID','tmc','DIR'])['VOL'].mean().reset_index()
+            daily_volume = daily_volume.merge(daily_volume_den, on=['STATION_ID','tmc','DIR'], suffixes=['', '_MEAN'])
+            daily_volume['VOLUME_MODIFIER'] = daily_volume['VOL']/daily_volume['VOL_MEAN']
+            tier1_volume = daily_volume.groupby(['STATION_ID','tmc','DIR']).filter(lambda x: x['VOL'].count()>=6)
+            
             hpms_numerator = tmas_class_state_tier1_clean.groupby(['STATION_ID','tmc','DIR','MONTH','DAY_TYPE','HOUR'])['HPMS_TYPE10','HPMS_TYPE25','HPMS_TYPE40','HPMS_TYPE50','HPMS_TYPE60'].sum()
             noise_numerator = tmas_class_state_tier1_clean.groupby(['STATION_ID','tmc','DIR','MONTH','DAY_TYPE','HOUR'])['NOISE_AUTO','NOISE_MED_TRUCK','NOISE_HVY_TRUCK','NOISE_BUS','NOISE_MC'].sum()
             tier1_hpms_classification = hpms_numerator.groupby(level=[0,1,2,3,4]).apply(lambda x: x/x.sum().sum())      # aggregate hours to day first, then sum across typeXX, (without axis=1)
@@ -389,21 +404,36 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
             tier1_hpms_classification.reset_index(inplace=True)
             tier1_noise_classification.reset_index(inplace=True, drop=True)
             tier1_class = pd.concat([tier1_hpms_classification,tier1_noise_classification], axis=1)
-            
+        
+        tier1_volume.to_csv(filepath+'tier1_volume.csv',index=False)
         #tier1_class = pd.concat([tier1_hpms_classification,tier1_noise_classification], axis=1, sort=False)
-        tier1_class.rename(index=str, columns={'HPMS_TYPE10':'PCT_TYPE10','HPMS_TYPE25':'PCT_TYPE25','HPMS_TYPE40':'PCT_TYPE40','HPMS_TYPE50':'PCT_TYPE50','HPMS_TYPE60':'PCT_TYPE60','NOISE_AUTO':'PCT_NOISE_AUTO','NOISE_MED_TRUCK':'PCT_NOISE_MED_TRUCK','NOISE_HVY_TRUCK':'PCT_NOISE_HVY_TRUCK','NOISE_BUS':'PCT_NOISE_BUS','NOISE_MC':'PCT_NOISE_MC'},inplace=True)
+        tier1_class.rename(index=str, columns={'HPMS_TYPE10':'PCT_TYPE10','HPMS_TYPE25':'PCT_TYPE25','HPMS_TYPE40':'PCT_TYPE40','HPMS_TYPE50':'PCT_TYPE50','HPMS_TYPE60':'PCT_TYPE60','NOISE_AUTO':'PCT_NOISE_AUTO','NOISE_MED_TRUCK':'PCT_NOISE_MED_TRUCK','NOISE_HVY_TRUCK':'PCT_NOISE_HVY_TRUCK','NOISE_BUS':'PCT_NOISE_BUS','NOISE_MC':'PCT_NOISE_MC', 'VOL':'DAILY_VOL'},inplace=True)
         tier1_class.to_csv(filepath+'tier1_class.csv',index=False)
         now=lapTimer('  took: ',now)
         
         # Defining annual average tier 1
-        tier1_annual_average_class = tier1_class.groupby(['STATION_ID','tmc','DIR','DAY_TYPE','HOUR'])['PCT_TYPE10', 'PCT_TYPE25', 'PCT_TYPE40', 'PCT_TYPE50', 'PCT_TYPE60', 'PCT_NOISE_AUTO', 'PCT_NOISE_MED_TRUCK', 'PCT_NOISE_HVY_TRUCK', 'PCT_NOISE_BUS', 'PCT_NOISE_MC'].mean()
+        tier1_annual_average_class = tier1_class.groupby(['STATION_ID','tmc','DIR','DAY_TYPE','HOUR']).agg({'tmc':'count', 'PCT_TYPE10':'mean', 'PCT_TYPE25':'mean', 'PCT_TYPE40':'mean', 'PCT_TYPE50':'mean', 'PCT_TYPE60':'mean', 'PCT_NOISE_AUTO':'mean', 'PCT_NOISE_MED_TRUCK':'mean', 'PCT_NOISE_HVY_TRUCK':'mean', 'PCT_NOISE_BUS':'mean', 'PCT_NOISE_MC':'mean'})
+        tier1_annual_average_class.rename(columns={'tmc':'count'}, inplace=True)
         tier1_annual_average_class.reset_index(inplace=True)
+        tier1_annual_average_class = tier1_annual_average_class[tier1_annual_average_class['count']>=3].drop('count', axis=1)
         tier1_annual_average_class.to_csv(filepath+'tier1_annualaverage_class.csv',index=False)
         
         ##################################################
         #d. Creating Classification for Tier 2
         #Cross-classification variables are: STATE, COUNTY, ROUTE_SIGN, ROUTE_NUMBER, DOW, PEAKING, HOUR.
         print('Defining Tier 2 Classification')
+        #daily_volume modifier
+        daily_volume = tmas_class_state.groupby(['STATION_ID', 'COUNTY','ROUTE_SIGN','ROUTE_NUMBER','MONTH','DAY','DAY_TYPE','PEAKING']).filter(lambda x: x['VOL'].count()==24)
+        daily_volume = daily_volume.groupby(['STATION_ID', 'COUNTY','ROUTE_SIGN','ROUTE_NUMBER','MONTH','DAY','DAY_TYPE','PEAKING'])['VOL'].sum().reset_index()
+        daily_volume = daily_volume.groupby(['STATION_ID', 'COUNTY','ROUTE_SIGN','ROUTE_NUMBER','MONTH','DAY_TYPE','PEAKING'])['VOL'].mean().reset_index()
+        daily_volume = daily_volume.groupby(['STATION_ID', 'COUNTY','ROUTE_SIGN','ROUTE_NUMBER','PEAKING']).filter(lambda x: x['VOL'].count()>=6) # filter stations so that outliers don't affect averages
+        daily_volume = daily_volume.groupby(['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','MONTH','DAY_TYPE','PEAKING'])['VOL'].mean().reset_index() #average volume across all stations
+        daily_volume_den = daily_volume.groupby(['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','PEAKING'])['VOL'].mean().reset_index()
+        daily_volume = daily_volume.merge(daily_volume_den, on=['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','PEAKING'], suffixes=['', '_MEAN'])
+        daily_volume['VOLUME_MODIFIER'] = daily_volume['VOL']/daily_volume['VOL_MEAN']
+        tier2_volume = daily_volume.groupby(['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','PEAKING']).filter(lambda x: x['VOL'].count()>=6) #filter tier data so only data with at least 3 months is included
+        tier2_volume.to_csv(filepath+'tier2_volume.csv',index=False)
+        
         tier2_hpms = tmas_class_state.groupby(['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','MONTH','DAY_TYPE','PEAKING','HOUR'])['HPMS_TYPE10','HPMS_TYPE25','HPMS_TYPE40','HPMS_TYPE50','HPMS_TYPE60'].sum()
         tier2_noise = tmas_class_state.groupby(['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','MONTH','DAY_TYPE','PEAKING','HOUR'])['NOISE_AUTO','NOISE_MED_TRUCK','NOISE_HVY_TRUCK','NOISE_BUS','NOISE_MC'].sum()
         tier2_hpms_classification = tier2_hpms.groupby(level=[0,1,2,3,4,5]).apply(lambda x: x/x.sum().sum())
@@ -412,19 +442,35 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
         tier2_noise_classification.reset_index(inplace=True, drop=True)
         #tier2_class = pd.concat([tier2_hpms_classification,tier2_noise_classification], axis=1, sort=False)
         tier2_class = pd.concat([tier2_hpms_classification,tier2_noise_classification], axis=1)
-        tier2_class.rename(index=str, columns={'HPMS_TYPE10':'PCT_TYPE10','HPMS_TYPE25':'PCT_TYPE25','HPMS_TYPE40':'PCT_TYPE40','HPMS_TYPE50':'PCT_TYPE50','HPMS_TYPE60':'PCT_TYPE60','NOISE_AUTO':'PCT_NOISE_AUTO','NOISE_MED_TRUCK':'PCT_NOISE_MED_TRUCK','NOISE_HVY_TRUCK':'PCT_NOISE_HVY_TRUCK','NOISE_BUS':'PCT_NOISE_BUS','NOISE_MC':'PCT_NOISE_MC'},inplace=True)
+        tier2_class.rename(index=str, columns={'HPMS_TYPE10':'PCT_TYPE10','HPMS_TYPE25':'PCT_TYPE25','HPMS_TYPE40':'PCT_TYPE40','HPMS_TYPE50':'PCT_TYPE50','HPMS_TYPE60':'PCT_TYPE60','NOISE_AUTO':'PCT_NOISE_AUTO','NOISE_MED_TRUCK':'PCT_NOISE_MED_TRUCK','NOISE_HVY_TRUCK':'PCT_NOISE_HVY_TRUCK','NOISE_BUS':'PCT_NOISE_BUS','NOISE_MC':'PCT_NOISE_MC', 'VOL':'DAILY_VOL'},inplace=True)
         tier2_class.to_csv(filepath+'tier2_class.csv',index=False)
         now=lapTimer('  took: ', now)
         
         # Defining annual average tier 2
-        tier2_annual_average_class = tier2_class.groupby((['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','DAY_TYPE','PEAKING','HOUR']))['PCT_TYPE10', 'PCT_TYPE25', 'PCT_TYPE40', 'PCT_TYPE50', 'PCT_TYPE60', 'PCT_NOISE_AUTO', 'PCT_NOISE_MED_TRUCK', 'PCT_NOISE_HVY_TRUCK', 'PCT_NOISE_BUS', 'PCT_NOISE_MC'].mean()
+        tier2_annual_average_class = tier2_class.groupby(['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','DAY_TYPE','PEAKING','HOUR']).agg({'COUNTY':'count', 'PCT_TYPE10':'mean', 'PCT_TYPE25':'mean', 'PCT_TYPE40':'mean', 'PCT_TYPE50':'mean', 'PCT_TYPE60':'mean', 'PCT_NOISE_AUTO':'mean', 'PCT_NOISE_MED_TRUCK':'mean', 'PCT_NOISE_HVY_TRUCK':'mean', 'PCT_NOISE_BUS':'mean', 'PCT_NOISE_MC':'mean'})
+        tier2_annual_average_class.rename(columns={'COUNTY':'count'}, inplace=True)
         tier2_annual_average_class.reset_index(inplace=True)
-        tier2_annual_average_class.to_csv(filepath+'tier2_annualaverage_class.csv', index=False)
+        tier2_annual_average_class = tier2_annual_average_class[tier2_annual_average_class['count']>=3].drop('count', axis=1)
+        tier2_annual_average_class.to_csv(filepath+'tier2_annualaverage_class.csv',index=False)
+
         
         ##################################################
         #e. Creating Classification for Tier 3
         #Cross-classification variables are: STATE, URB_RURAL, F_SYSTEM, DOW, PEAKING, HOUR.
         print('Defining Tier 3 Classification')
+        
+        #Daily Volume Modifier
+        daily_volume = tmas_class_state.groupby(['STATION_ID', 'URB_RURAL','F_SYSTEM','MONTH','DAY','DAY_TYPE','PEAKING']).filter(lambda x: x['VOL'].count()==24)
+        daily_volume = daily_volume.groupby(['STATION_ID','URB_RURAL','F_SYSTEM','MONTH','DAY','DAY_TYPE','PEAKING'])['VOL'].sum().reset_index()
+        daily_volume = daily_volume.groupby(['STATION_ID','URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING'])['VOL'].mean().reset_index()
+        daily_volume = daily_volume.groupby(['STATION_ID','URB_RURAL','F_SYSTEM','PEAKING']).filter(lambda x: x['VOL'].count()>=6) # filter stations so that outliers don't affect averages
+        daily_volume = daily_volume.groupby(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING'])['VOL'].mean().reset_index() # average volume across all stations
+        daily_volume_den = daily_volume.groupby(['URB_RURAL','F_SYSTEM','PEAKING'])['VOL'].mean().reset_index()
+        daily_volume = daily_volume.merge(daily_volume_den, on=['URB_RURAL','F_SYSTEM','PEAKING'], suffixes=['', '_MEAN'])
+        daily_volume['VOLUME_MODIFIER'] = daily_volume['VOL']/daily_volume['VOL_MEAN']
+        tier3_volume = daily_volume.groupby(['URB_RURAL','F_SYSTEM','PEAKING']).filter(lambda x: x['VOL'].count()>=6) #filter to make sure there is at least 3 months of data to use the modifier
+        tier3_volume.to_csv(filepath+'tier3_volume.csv',index=False)
+        
         tier3_hpms = tmas_class_state.groupby(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'])['HPMS_TYPE10','HPMS_TYPE25','HPMS_TYPE40','HPMS_TYPE50','HPMS_TYPE60'].sum()
         tier3_noise = tmas_class_state.groupby(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'])['NOISE_AUTO','NOISE_MED_TRUCK','NOISE_HVY_TRUCK','NOISE_BUS','NOISE_MC'].sum()
         tier3_hpms_classification = tier3_hpms.groupby(level=[0,1,2,3,4]).apply(lambda x: x/x.sum().sum())
@@ -432,22 +478,46 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
         tier3_hpms_classification.reset_index(inplace=True)
         tier3_noise_classification.reset_index(inplace=True, drop=True)
         tier3_class = pd.concat([tier3_hpms_classification,tier3_noise_classification], axis=1)
-        #tier3_class = pd.concat([tier3_hpms_classification,tier3_noise_classification], axis=1, sort=False)
-        tier3_class.rename(index=str, columns={'HPMS_TYPE10':'PCT_TYPE10','HPMS_TYPE25':'PCT_TYPE25','HPMS_TYPE40':'PCT_TYPE40','HPMS_TYPE50':'PCT_TYPE50','HPMS_TYPE60':'PCT_TYPE60','NOISE_AUTO':'PCT_NOISE_AUTO','NOISE_MED_TRUCK':'PCT_NOISE_MED_TRUCK','NOISE_HVY_TRUCK':'PCT_NOISE_HVY_TRUCK','NOISE_BUS':'PCT_NOISE_BUS','NOISE_MC':'PCT_NOISE_MC'},inplace=True)
+        tier3_class.rename(index=str, columns={'HPMS_TYPE10':'PCT_TYPE10','HPMS_TYPE25':'PCT_TYPE25','HPMS_TYPE40':'PCT_TYPE40','HPMS_TYPE50':'PCT_TYPE50','HPMS_TYPE60':'PCT_TYPE60','NOISE_AUTO':'PCT_NOISE_AUTO','NOISE_MED_TRUCK':'PCT_NOISE_MED_TRUCK','NOISE_HVY_TRUCK':'PCT_NOISE_HVY_TRUCK','NOISE_BUS':'PCT_NOISE_BUS','NOISE_MC':'PCT_NOISE_MC', 'VOL':'DAILY_VOL'},inplace=True)
         tier3_class.to_csv(filepath+'tier3_class.csv',index=False)
         now=lapTimer('  took: ',now)
         
         # Defining annual average tier 3
-        tier3_annual_average_class = tier3_class.groupby((['URB_RURAL','F_SYSTEM','DAY_TYPE','PEAKING','HOUR']))['PCT_TYPE10', 'PCT_TYPE25', 'PCT_TYPE40', 'PCT_TYPE50', 'PCT_TYPE60', 'PCT_NOISE_AUTO', 'PCT_NOISE_MED_TRUCK', 'PCT_NOISE_HVY_TRUCK', 'PCT_NOISE_BUS', 'PCT_NOISE_MC'].mean()
+        tier3_annual_average_class = tier3_class.groupby(['URB_RURAL','F_SYSTEM','DAY_TYPE','PEAKING','HOUR']).agg({'HOUR':'count', 'PCT_TYPE10':'mean', 'PCT_TYPE25':'mean', 'PCT_TYPE40':'mean', 'PCT_TYPE50':'mean', 'PCT_TYPE60':'mean', 'PCT_NOISE_AUTO':'mean', 'PCT_NOISE_MED_TRUCK':'mean', 'PCT_NOISE_HVY_TRUCK':'mean', 'PCT_NOISE_BUS':'mean', 'PCT_NOISE_MC':'mean'})
+        tier3_annual_average_class.rename(columns={'HOUR':'count'}, inplace=True)
         tier3_annual_average_class.reset_index(inplace=True)
-        tier3_annual_average_class.to_csv(filepath+'tier3_annualaverage_class.csv', index=False)
+        tier3_annual_average_class = tier3_annual_average_class[tier3_annual_average_class['count']>=3].drop('count', axis=1)
+        tier3_annual_average_class.to_csv(filepath+'tier3_annualaverage_class.csv',index=False)
+
     
     ##################################################
     #f. Creating Classification for Tier 4
     #Cross-classification variables are: URB_RURAL, F_SYSTEM, DOW, PEAKING, HOUR.  Note:  This distribution uses data from the entire country in the TMAS dataset.
     print('Defining Tier 4 Classification')
+    
+    #Daily Volume Modifier
+    grouped = tmas_class.groupby(['STATION_ID', 'URB_RURAL','F_SYSTEM','MONTH','DAY','DAY_TYPE','PEAKING'])['VOL'].count().reset_index()
+    grouped = grouped.rename(columns={'VOL': 'Count'})
+    daily_volume = tmas_class.groupby(['STATION_ID','URB_RURAL','F_SYSTEM','MONTH','DAY','DAY_TYPE','PEAKING'])['VOL'].sum().reset_index()
+    daily_volume = daily_volume.merge(grouped, on=['STATION_ID', 'URB_RURAL','F_SYSTEM','MONTH','DAY','DAY_TYPE','PEAKING'])
+    daily_volume = daily_volume[daily_volume['Count']==24]
+    daily_volume = daily_volume.groupby(['STATION_ID','URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING'])['VOL'].mean().reset_index()
+    # with ProgressBar():
+    daily_volume = daily_volume.compute()
+    daily_volume = daily_volume.groupby(['STATION_ID','URB_RURAL','F_SYSTEM','PEAKING']).filter(lambda x: x['VOL'].count()>=6)  # filter stations so that outliers don't affect averages
+    daily_volume = daily_volume.groupby(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING'])['VOL'].mean().reset_index() # Average Volume across all stations
+    daily_volume_den = daily_volume.groupby(['URB_RURAL','F_SYSTEM','PEAKING'])['VOL'].mean().reset_index()
+    daily_volume = daily_volume.merge(daily_volume_den, on=['URB_RURAL','F_SYSTEM','PEAKING'], suffixes=['', '_MEAN'])
+    daily_volume['VOLUME_MODIFIER'] = daily_volume['VOL']/daily_volume['VOL_MEAN']
+    tier4_volume = daily_volume.groupby(['URB_RURAL','F_SYSTEM','PEAKING']).filter(lambda x: x['VOL'].count()>=6) #filter to make sure there is at least 3 months of data to use the modifier
+    tier4_volume.to_csv(filepath+'tier4_volume.csv',index=False)
+    
+    
     tier4_hpms = tmas_class.groupby(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'])['HPMS_TYPE10','HPMS_TYPE25','HPMS_TYPE40','HPMS_TYPE50','HPMS_TYPE60'].sum()
     tier4_noise = tmas_class.groupby(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'])['NOISE_AUTO','NOISE_MED_TRUCK','NOISE_HVY_TRUCK','NOISE_BUS','NOISE_MC'].sum()
+    #with ProgressBar():
+    tier4_hpms = tier4_hpms.compute()
+    tier4_noise = tier4_noise.compute()
     tier4_hpms_classification = tier4_hpms.groupby(level=[0,1,2,3,4]).apply(lambda x: x/x.sum().sum())
     tier4_noise_classification = tier4_noise.groupby(level=[0,1,2,3,4]).apply(lambda x: x/x.sum().sum())
     tier4_hpms_classification.reset_index(inplace=True)
@@ -458,8 +528,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     tier4_class.to_csv(filepath+'tier4_class.csv',index=False)
     del tmas_class
     now=lapTimer('  took: ',now)
-    
-    
+         
     ##########################################################################################
     # Merge Tiers (TMAS class vol % by tier) to NPMRDS (tmc)
     
@@ -727,17 +796,16 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
         npmrds_tier2_annualaverage.drop(['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','DAY_TYPE','PEAKING','HOUR'], inplace=True, axis=1)
         npmrds_tier3.drop(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'], inplace=True, axis=1)
         npmrds_tier3_annualaverage.drop(['URB_RURAL','F_SYSTEM','DAY_TYPE','PEAKING','HOUR'], inplace=True, axis=1)
-        npmrds_tier4.drop(['URB_RURAL','F_SYSTEM','DAY_TYPE','PEAKING','HOUR'], inplace=True, axis=1)
+        npmrds_tier4.drop(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'], inplace=True, axis=1)
         tiers=[npmrds_tier1, npmrds_tier1_annualaverage, npmrds_tier2, npmrds_tier2_annualaverage, npmrds_tier3, npmrds_tier3_annualaverage, npmrds_tier4, npmrds_for_tiers]
     else:
         npmrds_tier4.drop(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'], inplace=True, axis=1)
         tiers=[npmrds_tier4, npmrds_for_tiers]
     df = pd.concat(tiers)
     df.rename(index=str, columns={'miles':'tmc_length'}, inplace=True)
-    df.drop(['route_numb','route_sign','dir_num'],axis=1,inplace=True)
+    #df.drop(['route_numb','route_sign','dir_num'],axis=1,inplace=True)
     now=lapTimer('  took: ',now)
     
-    del npmrds_tmc
     del npmrds_template
     if 'npmrds_tier4' in locals():
         del npmrds_tier4
@@ -775,6 +843,70 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     pq.write_table(npmrds_tmc, outputpath+SELECT_STATE+'_Composite_Dataset.parquet')
     now=lapTimer('  took: ',now)
     '''
+    ##########################################################################################
+    # Daily AADT Volume Modifier
+    if SELECT_STATE in states_avlb.values:
+        tier1_volume['tier']=1
+        #tier1_volume.drop('STATION_ID',inplace=True,axis=1)
+        #Merge with NPMRDS data
+        npmrds_tier1_volume = pd.merge(npmrds_tmc, tier1_volume, left_on=['tmc','dir_num', 'month', 'dow'], 
+                                       right_on=['tmc','DIR','MONTH','DAY_TYPE'], how='left')
+        npmrds_for_tiers_volume = npmrds_tier1_volume[pd.isnull(npmrds_tier1_volume['tier'])]
+        npmrds_tier1_volume = npmrds_tier1_volume[pd.notnull(npmrds_tier1_volume['tier'])]
+        now=lapTimer('  took: ',now)
+        
+        tier2_volume['tier']=2
+        npmrds_for_tiers_volume.drop(['DIR','MONTH','DAY_TYPE','VOL', 'VOL_MEAN', 'VOLUME_MODIFIER', 'tier'], inplace=True, axis=1)
+        #Merge with NPMRDS data
+        npmrds_tier2_volume = pd.merge(npmrds_for_tiers_volume, tier2_volume, left_on=['county','route_sign','route_numb','month','dow','peaking'], 
+                                right_on=['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','MONTH','DAY_TYPE','PEAKING'], how='left')
+        npmrds_for_tiers_volume = npmrds_tier2_volume[pd.isnull(npmrds_tier2_volume['tier'])]
+        npmrds_tier2_volume = npmrds_tier2_volume[pd.notnull(npmrds_tier2_volume['tier'])]
+        now=lapTimer('  took: ',now)
+        
+        tier3_volume['tier']=3
+        npmrds_for_tiers_volume.drop(['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','MONTH','DAY_TYPE','PEAKING','VOL','VOL_MEAN','VOLUME_MODIFIER','tier'], inplace=True, axis=1)
+        #Merging with Tier 3
+        npmrds_tier3_volume = pd.merge(npmrds_for_tiers_volume, tier3_volume, left_on=['urban_rural','f_system','month','dow','peaking'], 
+                                       right_on=['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING'], how='left')
+        npmrds_for_tiers_volume = npmrds_tier3_volume[pd.isnull(npmrds_tier3_volume['tier'])]
+        npmrds_tier3_volume = npmrds_tier3_volume[pd.notnull(npmrds_tier3_volume['tier'])]
+        now=lapTimer('  took: ',now)
+        
+    tier4_volume['tier']=4           
+    if SELECT_STATE in states_avlb.values:
+        npmrds_for_tiers_volume.drop(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','VOL','VOL_MEAN','VOLUME_MODIFIER','tier'], inplace=True, axis=1)
+        #Merging with Tier 4
+        npmrds_tier4_volume = pd.merge(npmrds_for_tiers_volume, tier4_volume, left_on=['urban_rural','f_system','month','dow','peaking'], 
+                                right_on=['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING'], how='left')
+        npmrds_for_tiers_volume = npmrds_tier4_volume[pd.isnull(npmrds_tier4_volume['tier'])]
+        npmrds_tier4_volume = npmrds_tier4_volume[pd.notnull(npmrds_tier4_volume['tier'])]
+    else:
+        npmrds_tier4_volume = pd.merge(npmrds_tmc, tier4_volume, left_on=['urban_rural','f_system','month','dow','peaking'], 
+                                       right_on=['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING'], how='left')
+        npmrds_for_tiers_volume = npmrds_tier4_volume[pd.isnull(npmrds_tier4['tier'])]
+        npmrds_tier4_volume = npmrds_tier4_volume[pd.notnull(npmrds_tier4_volume['tier'])]
+    now=lapTimer('  took: ',now)
+        
+    print('Combining NPMRDS with Tiers')
+    npmrds_for_tiers_volume.drop(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING'], inplace=True, axis=1)
+    if SELECT_STATE in states_avlb.values:
+        npmrds_tier1_volume.drop(['DIR','MONTH','DAY_TYPE'], inplace=True, axis=1)
+        npmrds_tier2_volume.drop(['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','MONTH','DAY_TYPE','PEAKING'], inplace=True, axis=1)
+        npmrds_tier3_volume.drop(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING'], inplace=True, axis=1)
+        npmrds_tier4_volume.drop(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING'], inplace=True, axis=1)
+        tiers=[npmrds_tier1_volume, npmrds_tier2_volume, npmrds_tier3_volume, npmrds_tier4_volume, npmrds_for_tiers_volume]
+    else:
+        npmrds_tier4_volume.drop(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING'], inplace=True, axis=1)
+        tiers=[npmrds_tier4_volume, npmrds_for_tiers_volume]
+    df_volume = pd.concat(tiers)
+    df_volume = df_volume[['tmc', 'measurement_tstamp', 'VOL','VOL_MEAN','VOLUME_MODIFIER','tier']]
+    df_volume.rename(index=str, columns={'miles':'tmc_length', 'tier':'tier_volume'}, inplace=True)
+    now=lapTimer('  took: ',now)
+    
+    df = df.merge(df_volume, on=['tmc', 'measurement_tstamp'])
+    
+    
     ##########################################################################################
     # Emission Rates
     '''
@@ -917,7 +1049,9 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     
     df['repcty'] = df['repcty'] % 1000
     
-    df['VMT'] = (df['PCT_TYPE10']+df['PCT_TYPE25']+df['PCT_TYPE40']+df['PCT_TYPE50']+df['PCT_TYPE60'])*df['aadt']*df['tmc_length']
+    df['VMT'] = (df['PCT_TYPE10']+df['PCT_TYPE25']+df['PCT_TYPE40']+df['PCT_TYPE50']+df['PCT_TYPE60'])*df['aadt']*df['VOLUME_MODIFIER']*df['tmc_length']
+    df['MAADT'] = df['aadt']*df['VOLUME_MODIFIER']
+    df.drop(['VOL', 'VOL_MEAN'], inplace=True, axis=1)
     now=lapTimer('  took: ',now)
     
     df['avgspeedbinid_pass'].fillna(df['avgspeedbinid'], inplace=True)

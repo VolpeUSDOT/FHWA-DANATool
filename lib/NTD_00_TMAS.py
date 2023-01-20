@@ -20,7 +20,6 @@ import json
 import sys
 import dask.dataframe as dd
 from dask.diagnostics import ProgressBar
-ProgressBar().register()
 from tqdm.asyncio import tqdm
 from multiprocessing import Pool, TimeoutError
 from pandas.tseries.holiday import USFederalHolidayCalendar
@@ -277,6 +276,7 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
                                        'CLASS_1','CLASS_2','CLASS_3','CLASS_4','CLASS_5','CLASS_6','CLASS_7',
                                        'CLASS_8','CLASS_9','CLASS_10','CLASS_11','CLASS_12','CLASS_13'].sum()
     tmas_class_sum.reset_index(drop=True)
+    ProgressBar().register()
     tmas_class_sum = tmas_class_sum.compute()
     now=lapTimer('  took: ',now)
     
