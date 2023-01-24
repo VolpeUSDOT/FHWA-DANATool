@@ -4,6 +4,7 @@ Created By: Volpe National Transportation Systems Center
 Based On: TNMAide.xlsm created by Cambridge Systematics 
 Created on Tue May 17, 07:36:17, 2022
 Last Revision on June 9, 2022
+VERSION 2.0
 
 @author: Aaron.Hastings
 """
@@ -13,7 +14,6 @@ import numpy as np
 import math
 
 class TNMAide: 
-    #%% Comments
     # SCOPE:
     #--------------------------------------------------------------------------
     # This script implements all the functionality of the TNMAide Spreadsheet
@@ -35,7 +35,7 @@ class TNMAide:
     #                  or 366* days all hours inclusive
     # AVG_HOUR         refers to metrics that have been averaged over the same 
     #                  hour for the entire calendar year*
-    # WORST_HOUR_AVG   refers to the worst hour within an AVG DAY
+    # WORST_HOUR_AVG   refers to the worst hour within an AVG_DAY
     # * assuming a full year has been provided
     # NOTE - future levels are predicted based on Day, Evening, Night percents
     # and existing traffic volumes. However, the DEN percents do not indicate
@@ -183,10 +183,10 @@ class TNMAide:
     #           tnm_aide_userguide/
 
 
-    # PROPERTIES:
+    # ATTRIBUTES:
     #--------------------------------------------------------------------------
     
-    # Input Properties ...
+    # Input Attributes ...
     #--------------------------------------------------------------------------
     # number_of_lanes             (Same Value as Input Parameter)
     # median_width                (Same Value as Input Parameter)
@@ -194,7 +194,7 @@ class TNMAide:
     # df_input                    (Same Value as df Input Parameter)
     #
     
-    # Intermediate Properties (Used for Documentation) ...
+    # Intermediate Attributes (Used for Documentation) ...
     #--------------------------------------------------------------------------
     # TMCS                  = list of two TMCs, near lane / link assumed first
     # computed_futures      = (bool) flag that indicates if future metrics have  
@@ -210,7 +210,7 @@ class TNMAide:
     # df_Leq_Worst_Hour_Calculations   = (df) represents most of the "Leq Worst Hour 
     #                                    Calculations" tab of the spreadsheet
 
-    # "Results" Properties ...
+    # "Results" Attributes ...
     #--------------------------------------------------------------------------
     # AADT                    = (float) Average Annual Daily Traffic for 
     #                           present condition [df.aadt]
@@ -286,7 +286,7 @@ class TNMAide:
         self.median_width = median_width 
         self.near_lane_roadway_grade = near_lane_roadway_grade
         
-        # Intermediate Properties
+        # Intermediate Attributes
         self.TMCS = self.df_input.TMC.unique() # First TMC is assumed to be the near lanes
         if len(self.TMCS) != 2.0:
             print('Error: TNMAide requires two and only two TMCs. Exiting Instantiation.')
@@ -299,7 +299,7 @@ class TNMAide:
         self.county = df.loc[0,'COUNTY']
         self.state = df.loc[0,'STATE']
         
-        # "Results" Properties
+        # "Results" Attributes
         # These two dataframes hold all results
         #self.df_results_present = self.Get_Empty_Results_DataFrame()
         #self.df_results_future = self.Get_Empty_Results_DataFrame()
@@ -440,7 +440,7 @@ class TNMAide:
         elif vehicle_type == 'MC':
             a = 41.022542
             b = 10.013879
-            c = 56.086099 # CONSISTENCY CHECK: Spreadsheet version uses 56.
+            c = 56.086099 # CONSISTENCY CHECK: Spreadsheet version 1.0 uses 56.
             speed_mph = self.df_input.loc[:,'SPEED_ALL_vehs']
             
         if self.robust_speeds:
@@ -479,15 +479,15 @@ class TNMAide:
         # 2                 1198.049828   46.968836  ...  64.057102    57.537148    79.836404
         # 3                 1358.733293   63.569662  ...  58.730976    59.466569    80.460046
 
-        # Directly Accessable Properties
+        # Local variables
         number_of_total_spl_rows = math.floor(self.df_Leq_Worst_Hour_Calculations.shape[0]/2)
         idx_last_total_spl_row = number_of_total_spl_rows - 1
         number_of_nans_in_total_spl = np.isnan(self.df_Leq_Worst_Hour_Calculations.loc[0:idx_last_total_spl_row, 'AD']).sum()
         
+        # Directly Accessable Attributes
         if number_of_nans_in_total_spl >= number_of_total_spl_rows:
             self.df_day_WORST_HOUR_DATE = np.nan
             
-            # More Directly Accessable Properties
             self.LAeq_24hrs_WORST_HOUR_DATE = np.nan
             self.Ldn_WORST_HOUR_DATE = np.nan
             self.Lden_WORST_HOUR_DATE = np.nan
@@ -495,12 +495,13 @@ class TNMAide:
             self.WORST_HOUR_DATE = np.nan
             self.LAeq_WORST_HOUR = np.nan
             
-            return    
+            return 
+        
         self.WORST_HOUR = self.df_Leq_Worst_Hour_Calculations.B[self.df_Leq_Worst_Hour_Calculations.AD.idxmax()]
         self.WORST_HOUR_DATE = self.df_Leq_Worst_Hour_Calculations.C[self.df_Leq_Worst_Hour_Calculations.AD.idxmax()]
         self.LAeq_WORST_HOUR = self.df_Leq_Worst_Hour_Calculations.AD.max()
         
-        # Intermediate values
+        # Local variables
         df_all_days = self.df_Leq_Worst_Hour_Calculations.copy()
         idx_hour_WORST_HOUR = df_all_days.AD.idxmax()
         date_WORST_DAY = df_all_days.C[idx_hour_WORST_HOUR]
@@ -556,7 +557,7 @@ class TNMAide:
               
         self.df_day_WORST_HOUR_DATE = pd.DataFrame(data=d).reset_index(drop=True)
         
-        # More Directly Accessable Properties
+        # More Directly Accessable Attributes
         self.LAeq_24hrs_WORST_HOUR_DATE = self.Compute_24_Hour_LAeq(self.df_day_WORST_HOUR_DATE)
         self.Ldn_WORST_HOUR_DATE = self.Compute_LDN(self.df_day_WORST_HOUR_DATE)
         self.Lden_WORST_HOUR_DATE = self.Compute_LDEN(self.df_day_WORST_HOUR_DATE)
@@ -661,54 +662,7 @@ class TNMAide:
         return 0
     
     
-    def Compute_24_Hour_LAeq(self, df_summary_day):
-        LAeq_24hrs = 10*np.log10(sum(10**(df_summary_day.Total_SPL/10))) - 10*np.log10(24)
-        return LAeq_24hrs
-    
-    
-    def Compute_LDN(self, df_summary_day):
-        # Adjustments by Hour
-        # LDEN	LDN	HOUR
-        # 10	10	0
-        # 10	10	1
-        # 10	10	2
-        # 10	10	3
-        # 10	10	4
-        # 10	10	5
-        # 10	10	6
-        # 5		    19
-        # 5		    20
-        # 5		    21
-        # 10	10	22
-        # 10	10	23
-        df = df_summary_day.copy()
-        df.loc[0:6, 'Total_SPL'] = df.loc[0:6, 'Total_SPL'] + 10
-        df.loc[22:, 'Total_SPL'] = df.loc[22:, 'Total_SPL'] + 10
-        Ldn = 10*np.log10(sum(10**(df.Total_SPL/10))) - 10*np.log10(24)
-        return Ldn
- 
-    
-    def Compute_LDEN(self, df_summary_day):
-        # Adjustments by Hour
-        # LDEN	LDN	HOUR
-        # 10	10	0
-        # 10	10	1
-        # 10	10	2
-        # 10	10	3
-        # 10	10	4
-        # 10	10	5
-        # 10	10	6
-        # 5		    19
-        # 5		    20
-        # 5		    21
-        # 10	10	22
-        # 10	10	23
-        df = df_summary_day.copy()
-        df.loc[0:6, 'Total_SPL'] = df.loc[0:6, 'Total_SPL'] + 10
-        df.loc[19:21, 'Total_SPL'] = df.loc[19:21, 'Total_SPL'] + 5
-        df.loc[22:, 'Total_SPL'] = df.loc[22:, 'Total_SPL'] + 10
-        Lden = 10*np.log10(sum(10**(df.Total_SPL/10))) - 10*np.log10(24)
-        return Lden
+
     
     
     def Compute_Day_Eve_Night_Fractions(self, df, Vehicle_Type, bool_compute_ldn):

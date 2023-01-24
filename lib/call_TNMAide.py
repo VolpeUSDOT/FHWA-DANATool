@@ -8,7 +8,6 @@ Created By: Volpe National Transportation Systems Center
 from TNMAide import TNMAide
 import pandas as pd
 import datetime
-import copy
 
 t1 = datetime.datetime.now()
 
@@ -21,6 +20,7 @@ fileName = 'Sample Data - Required Inputs - Non-Leap Year.csv'
 #fileName = 'Sample Data - 101+05209 No average worst hour.csv'
 #fileName = 'test_csv_20220623.csv'
 #fileName = 'Sample Data - Required Inputs - Missing Speeds.csv'
+fileName = 'Sample Data - 111+04600 - Fails on DATE 24 hour metrics.csv'
 
 df = pd.read_csv(filePath + fileName)
 

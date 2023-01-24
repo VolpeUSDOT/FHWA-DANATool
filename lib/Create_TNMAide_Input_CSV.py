@@ -9,7 +9,7 @@ Created on Wed Jun  8 11:11:45 2022
 import pandas as pd
 import pyarrow.parquet as pq
     
-link_file = pq.ParquetFile(r'D:\Project\DANA\Data\TNMAide Input Samples\GA_Composite_Emissions-2019.parquet')
+link_file = pq.ParquetFile(r'D:\Project\DANA\Data\TNMAide Input Samples\TX_Composite_Emissions-2019.parquet')
 
 linkLevel_df = pd.DataFrame()
 
@@ -29,8 +29,9 @@ tmc = '101+07005' # No noise data - including worst hour
 tmc = '101+05209' # No average worst hour
 tmc = '101N05208' # Random No average worst hour
 tmc = '101N11044' # Also missing more than just speed data
+tmc = '111+04600' # Fails on DATE 24 hour metrics
 group = linkLevel_df[linkLevel_df.tmc==tmc]
-group['tmc'] = group['tmc'].astype(str)
+group.loc[:,'tmc'] = group.loc[:,'tmc'].astype(str)
 group.reset_index(inplace=True)
 group.loc[:,'date'] = pd.to_datetime(group[['year', 'month', 'day']])
 group_tmc2 = group.copy()
