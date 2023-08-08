@@ -16,12 +16,12 @@ import datetime as dt
 # Basic Input Parameters
 step = 1
 
-testOption = 11
+testOption = 12
 
 
 if testOption == 1:
     tmas_year = 2021
-    npmrds_year = 2019
+    npmrds_year = 2018
     state  = 'MA'
     county = 'Middlesex'
 elif testOption == 2:
@@ -107,7 +107,7 @@ elif testOption == 16:
     state = 'AK'
     county = 'Anchorage'
 
-SELECT_TMC = ['129+04374', '129P09003']
+SELECT_TMC = ['129+04132']
 SELECT_STATE = state
 
 if not sys.warnoptions: # Write "False and" after "if" to display warnings during runtime
@@ -142,6 +142,7 @@ PATH_NEI = pathPrefix1 + '/NEI2017_RepresentativeCounties.csv'
 PATH_npmrds_raw_all = pathPrefix2 + '/NPMRDS Data/{}_{}_{}_ALL.csv'.format(state.upper(), county.upper(), npmrds_year)
 PATH_npmrds_raw_pass = pathPrefix2 + '/NPMRDS Data/{}_{}_{}_PASSENGER.csv'.format(state.upper(), county.upper(),npmrds_year)
 PATH_npmrds_raw_truck = pathPrefix2 + '/NPMRDS Data/{}_{}_{}_TRUCKS.csv'.format(state.upper(), county.upper(),npmrds_year)
+PATH_default_speeds = pathPrefix1 + '/National_Default_Roadway_Operating_Speed.csv'
 PATH_tmc_identification = pathPrefix2 + '/NPMRDS Data/TMC_Identification.csv'
 
 PATH_tmc_shp = 'lib/ShapeFiles/'
@@ -164,7 +165,7 @@ if __name__ == '__main__':
         NTD_00_TMAS.TMAS(SELECT_STATE, r'H:\DANATool\TMAS 2019\TMAS_Station_2020.csv', 
                          r'H:\DANATool\TMAS 2019\TMAS_CLASS_2020.dat', PATH_FIPS, PATH_NEI, PREREADSTATION = True, PATH_OUTPUT = r'H:\DANATool\TMAS 2019\00Output_2020')
     if step == 1:
-        NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, AUTO_DETECT_DATES=True)
+        NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_default_speeds, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, AUTO_DETECT_DATES=True)
     elif step == 2:
         NTD_02_MOVES.MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)
     elif step == 3:
