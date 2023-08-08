@@ -159,6 +159,11 @@ def f_npmrds_truck():
     fn_npmrds_truck = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose NPMRDS Truck File',
         filetypes=[('csv file', '.csv')])
     pl_npmrds_truck.config(text=fn_npmrds_truck.replace('/','\\'))
+def f_default_speed():
+    global fn_defualt_speed
+    fn_defualt_speed = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose National Defualt Speed File',
+        filetypes=[('csv file', '.csv')])
+    pl_default_speed.config(text=fn_defualt_speed.replace('/','\\'))
 def f_npmrds_tmc():
     global fn_npmrds_tmc
     fn_npmrds_tmc = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose NPMRDS TMC Configuration',
@@ -371,6 +376,7 @@ def ProcessData(procNum):
             PATH_npmrds_raw_all = fn_npmrds_all
             PATH_npmrds_raw_pass = fn_npmrds_pass
             PATH_npmrds_raw_truck = fn_npmrds_truck
+            PATH_default_speeds = fn_defualt_speed
             PATH_tmc_identification = fn_npmrds_tmc
             PATH_tmc_shp = fn_npmrds_shp
             PATH_emission = fn_emission
@@ -383,7 +389,7 @@ def ProcessData(procNum):
             DATE_START = calStart.get_date()
             DATE_END = calEnd.get_date()
             NPMRDS_Proc = mp.Process(target=process_handler, name=step1, args=(NTD_01_NPMRDS.NPMRDS, thread_queue, 
-                                    (SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, 
+                                    (SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_default_speeds,
                                      PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, PATH_OUTPUT, AUTO_DETECT_DATES, DATE_START, DATE_END)))
             disable_buttons(step1)
             NPMRDS_Proc.start()
@@ -976,11 +982,12 @@ if __name__ == "__main__":
     w_npmrds_all = ttk.Button(mainframe, text='Select NPMRDS (All)', command=f_npmrds_all).grid(column=0, row=17, columnspan=1, sticky="w")
     w_npmrds_pass = ttk.Button(mainframe, text='Select NPMRDS (Passenger)', command=f_npmrds_pass).grid(column=0, row=18, columnspan=1, sticky="w")
     w_npmrds_truck = ttk.Button(mainframe, text='Select NPMRDS (Truck)', command=f_npmrds_truck).grid(column=0, row=19, columnspan=1, sticky="w")
-    w_npmrds_tmc = ttk.Button(mainframe, text='Select TMC Configuration', command=f_npmrds_tmc).grid(column=0, row=20, columnspan=1, sticky="w")
+    w_default_speed = ttk.Button(mainframe, text='Select Default Speeds', command=f_default_speed).grid(column=0, row=20, columnspan=1, sticky="w")
+    w_npmrds_tmc = ttk.Button(mainframe, text='Select TMC Configuration', command=f_npmrds_tmc).grid(column=0, row=21, columnspan=1, sticky="w")
     #w_npmrds_shp = ttk.Button(mainframe, text='Select TMC shapefile', command=f_npmrds_shp).grid(column=0, row=21, columnspan=1, sticky="w")
-    w_emission = ttk.Button(mainframe, text='Select Emission Rates', command=f_emission).grid(column=0, row=21, columnspan=1, sticky="w")
-    w_fips_2 = ttk.Button(mainframe, text='Select FIPS File', command=f_fips).grid(column=0, row=22, columnspan=1, sticky="w")
-    w_nei_2 = ttk.Button(mainframe, text='Select NEI Representative Counties', command=f_nei).grid(column=0, row=23, columnspan=1, sticky="w")
+    w_emission = ttk.Button(mainframe, text='Select Emission Rates', command=f_emission).grid(column=0, row=22, columnspan=1, sticky="w")
+    w_fips_2 = ttk.Button(mainframe, text='Select FIPS File', command=f_fips).grid(column=0, row=23, columnspan=1, sticky="w")
+    w_nei_2 = ttk.Button(mainframe, text='Select NEI Representative Counties', command=f_nei).grid(column=0, row=24, columnspan=1, sticky="w")
     
     # script 2
     #w_tmas_station_state_2 = ttk.Button(mainframe, text='Select Processed TMAS Station', command=f_tmas_station_state).grid(column=0, row=19, columnspan=1, sticky="w")
@@ -1054,16 +1061,18 @@ if __name__ == "__main__":
     pl_npmrds_pass.grid(column=1, row=18, columnspan=1, sticky="w")
     pl_npmrds_truck = ttk.Label(mainframe)
     pl_npmrds_truck.grid(column=1, row=19, columnspan=1, sticky="w")
+    pl_default_speed = ttk.Label(mainframe)
+    pl_default_speed.grid(column=1, row=20, columnspan=1, sticky="w")
     pl_npmrds_tmc = ttk.Label(mainframe)
-    pl_npmrds_tmc.grid(column=1, row=20, columnspan=1, sticky="w")
+    pl_npmrds_tmc.grid(column=1, row=21, columnspan=1, sticky="w")
     #pl_npmrds_shp = ttk.Label(mainframe)
     #pl_npmrds_shp.grid(column=1, row=19, columnspan=1, sticky="w")
     pl_emission = ttk.Label(mainframe)
-    pl_emission.grid(column=1, row=21, columnspan=1, sticky="w")
+    pl_emission.grid(column=1, row=22, columnspan=1, sticky="w")
     pl_fips_2 = ttk.Label(mainframe)
-    pl_fips_2.grid(column=1, row=22, columnspan=1, sticky="w")
+    pl_fips_2.grid(column=1, row=23, columnspan=1, sticky="w")
     pl_nei_2 = ttk.Label(mainframe)
-    pl_nei_2.grid(column=1, row=23, columnspan=1, sticky="w")
+    pl_nei_2.grid(column=1, row=24, columnspan=1, sticky="w")
     # script 2
     #pl_tmas_station_state_2 = ttk.Label(mainframe)
     #pl_tmas_station_state_2.grid(column=1, row=19, columnspan=1, sticky="w")
@@ -1104,7 +1113,13 @@ if __name__ == "__main__":
     else:
         pl_fips_1.config(text='')
         pl_fips_2.config(text='')
-        
+    #Default Speeds
+    if ('National_Default_Roadway_Operating_Speed.csv' in os.listdir('Default Input Files/')):
+        pl_default_speed.config(text=os.getcwd()+'\\Default Input Files\\National_Default_Roadway_Operating_Speed.csv')
+        fn_defualt_speed = 'Default Input Files/National_Default_Roadway_Operating_Speed.csv'
+    else:
+        pl_nei_1.config(text='')
+        pl_nei_2.config(text='')    
     # NEI
     if ('NEI2017_RepresentativeCounties.csv' in os.listdir('Default Input Files/')):
         pl_nei_1.config(text=os.getcwd()+'\\Default Input Files\\NEI2017_RepresentativeCounties.csv')
@@ -1121,7 +1136,7 @@ if __name__ == "__main__":
     else:
         pl_emission.config(text='')
            
-    if False:
+    if True:
         w_state.current(47)
         fn_tmas_station = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2021/TMAS_Station_2021.csv'
         pl_tmas_station_state_1.config(text=fn_tmas_station.replace('/','\\'))

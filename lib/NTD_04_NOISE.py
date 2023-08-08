@@ -46,7 +46,7 @@ def NOISE(SELECT_STATE, SELECT_TMC, PATH_NPMRDS, /, PATH_OUTPUT = 'Final Output'
         #df_emissions_select['date'] = str(df_emissions_select['year'])+'/'+str(df_emissions_select['month'])+'/'+str(df_emissions_select['day'])
         df_emissions_select = df_emissions_select[['tmc', 'date', 'hour', 'road', 'direction', 'state', 'county', 'start_latitude',
                                                    'start_longitude', 'end_latitude', 'end_longitude', 'tmc_length', 'road_order',
-                                                   'f_system', 'thrulanes', 'MADT', 'aadt', 'aadt_singl', 'aadt_combi', 'travel_time_all',
+                                                   'f_system', 'thrulanes', 'MAADT', 'aadt', 'aadt_singl', 'aadt_combi', 'travel_time_all',
                                                    'travel_time_pass', 'travel_time_truck', 'speed_all', 'speed_pass', 'speed_truck',
                                                    'PCT_NOISE_AUTO', 'PCT_NOISE_MED_TRUCK', 'PCT_NOISE_HVY_TRUCK', 'PCT_NOISE_BUS',
                                                    'PCT_NOISE_MC']]
