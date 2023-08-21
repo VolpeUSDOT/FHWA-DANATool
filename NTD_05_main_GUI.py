@@ -753,7 +753,7 @@ if __name__ == "__main__":
     
     iconPath = resource_path('lib\\dot.png')
     p1 = tk.PhotoImage(file = iconPath)
-    root.iconphoto(True, p1)
+    root.iconphoto(False, p1)
     
     headerFont = ("Ariel", 15, "bold")
     ttk.Label(root, wraplength = 500, text="Welcome to FHWA's DANA Tool", font=headerFont).grid(row=0, column=0, columnspan= 1, sticky="w")
@@ -1142,15 +1142,15 @@ if __name__ == "__main__":
         pl_tmas_station_state_1.config(text=fn_tmas_station.replace('/','\\'))
         fn_tmas_class_clean = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2021/TMAS_Class_Clean_2021.csv'
         pl_tmas_class_clean_1.config(text=fn_tmas_class_clean.replace('/','\\'))
-        fn_npmrds_all = 'H:/TestData/FairfaxCity_VA/NPMRDS Data/VA_FairfaxCity_2021_ALL.csv'
+        fn_npmrds_all = 'H:/TestData/Providence_RI/NPMRDS Data/RI_Providence_2019_ALL.csv'
         pl_npmrds_all.config(text=fn_npmrds_all.replace('/','\\'))
-        fn_npmrds_pass = 'H:/TestData/FairfaxCity_VA/NPMRDS Data/VA_FairfaxCity_2021_PASSENGER.csv'
+        fn_npmrds_pass = 'H:/TestData/Providence_RI/NPMRDS Data/RI_Providence_2019_PASSENGER.csv'
         pl_npmrds_pass.config(text=fn_npmrds_pass.replace('/','\\'))
-        fn_npmrds_truck = 'H:/TestData/FairfaxCity_VA/NPMRDS Data/VA_FairfaxCity_2021_TRUCKS.csv'
+        fn_npmrds_truck = 'H:/TestData/Providence_RI/NPMRDS Data/RI_Providence_2019_TRUCKS.csv'
         pl_npmrds_truck.config(text=fn_npmrds_truck.replace('/','\\'))
-        fn_npmrds_tmc = 'H:/TestData/FairfaxCity_VA/NPMRDS Data/TMC_Identification.csv'
+        fn_npmrds_tmc = 'H:/TestData/Providence_RI/NPMRDS Data/TMC_Identification.csv'
         pl_npmrds_tmc.config(text=fn_npmrds_tmc.replace('/','\\'))
-        fn_output = 'H:/DANATool/Outputs/TestMA_20220829'
+        fn_output = 'H:/DANATool/Outputs/TestPVD_20230818'
         pl_output_folder.config(text=fn_output.replace('/','\\'))
     
         #fn_npmrds_shp = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/National TMC Shapefile/NationalMerge.shp'

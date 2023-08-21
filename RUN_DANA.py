@@ -16,7 +16,7 @@ import datetime as dt
 # Basic Input Parameters
 step = 1
 
-testOption = 12
+testOption = 5
 
 
 if testOption == 1:

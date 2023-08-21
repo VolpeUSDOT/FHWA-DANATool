@@ -22,15 +22,41 @@ import dask
 import dask.dataframe as dd
 from dask.diagnostics import ProgressBar
 import psutil
+import math
+import io
+from .TNMPyAide.TNMPyAide import TNMPyAide
+from collections import namedtuple
 
-PATH_tmc_shp = './ShapeFiles/'
+PATH_tmc_shp = pkg_resources.resource_filename('lib', 'ShapeFiles/')
 
-def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_default_speeds,
+def runTNMPyAide(group):
+    link_grade = 0
+    group['DATE'] = group['measurement_tstamp'].dt.date
+        
+    meta_data = namedtuple('meta_data', 'L1_name L1_tmc state county')
+    meta = meta_data(group.iloc[0]['road'], group.iloc[0]['tmc'], group.iloc[0]['state'], group.iloc[0]['county'])
+    
+    if len(group['MAADT'].unique()) == 1 and np.isnan(group['MAADT'].unique()[0]):
+        return 0
+    
+    else:
+        
+        linkResults = TNMPyAide(group, link_grade, meta, detailed_log=False)
+        toReturn = [None, None, None, None, None, None, None, None]
+        toReturn[0] = linkResults.worst_day.worst_hour_spl
+        toReturn[1] = linkResults.worst_day.LAEQ_24_HR
+        toReturn[2] = linkResults.worst_day.LDN
+        toReturn[3] = linkResults.worst_day.LDEN
+        toReturn[4] = linkResults.average_day.worst_hour_spl
+        toReturn[5] = linkResults.average_day.LAEQ_24_HR
+        toReturn[6] = linkResults.average_day.LDN
+        toReturn[7] = linkResults.average_day.LDEN
+        
+        return toReturn
+
+def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_default_speeds,
            PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, /, 
            PATH_OUTPUT = 'Final Output', AUTO_DETECT_DATES=True, DATE_START=None, DATE_END=None):
-    #!!! INPUT Parameters
-    filepath = PATH_OUTPUT + '/Process1_LinkLevelDataset/'
-    pathlib.Path(filepath).mkdir(exist_ok=True) 
 
     '''
     #SELECT_STATE='CO'
@@ -61,6 +87,8 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     '''
     #PATH_emission='Data Input/MOVES_Rates/nhs lpp rates_'+SELECT_STATE+'_wbt.csv'
     
+    filepath = PATH_OUTPUT
+
     def lapTimer(text,now):
         print('%s%.3f' %(text,time.time()-now))
         return time.time()
@@ -78,8 +106,6 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     'TN':['Tennessee',47],'TX':['Texas',48],'UT':['Utah',49],'VT':['Vermont',50],'VA':['Virginia',51],
     'WA':['Washington',53],'WV':['West Virginia',54],'WI':['Wisconsin',55],'WY':['Wyoming',56]}
     
-    print('')
-    print ('********** Process Raw NPMRDS Data **********')
     ##########################################################################################
     
     # NPMRDS
@@ -1174,10 +1200,41 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
         df_emissions_summary_cols['TotEmissionsPerMile_{}'.format(pol)] = df_emissions_summary_cols['TotEmissionsPerMile_{}'.format(pol)]/df_emissions_summary_cols['tmc_length']                                          
     
     df_emissions_summary = df_emissions_summary_cols.groupby(['tmc', 'road'], dropna=False)
+    noise_data = []
+    df_emissions_groups = df_emissions.groupby(['tmc'])
+    for t, group in df_emissions_groups:    
+        res = runTNMPyAide(group)
+        noise_s = {}
+        noise_s['tmc'] = t
+        if res == 0:
+            noise_s['LAeq_WORST_HOUR'] = None
+            noise_s['LAeq_24hrs_WORST_HOUR_DATE'] = None
+            noise_s['Ldn_WORST_HOUR_DATE'] = None
+            noise_s['Lden_WORST_HOUR_DATE'] = None
+            noise_s['LAeq_WORST_HOUR_AVG'] = None
+            noise_s['LAeq_24hrs_AVG_DAY'] = None
+            noise_s['Ldn_AVG_DAY'] = None
+            noise_s['Lden_AVG_DAY'] = None
+        
+        else: 
+            
+            noise_s['LAeq_WORST_HOUR'] = res[0]
+            noise_s['LAeq_24hrs_WORST_HOUR_DATE'] = res[1]
+            noise_s['Ldn_WORST_HOUR_DATE'] = res[2]
+            noise_s['Lden_WORST_HOUR_DATE'] = res[3]
+            noise_s['LAeq_WORST_HOUR_AVG'] = res[4]
+            noise_s['LAeq_24hrs_AVG_DAY'] = res[5]
+            noise_s['Ldn_AVG_DAY'] = res[6]
+            noise_s['Lden_AVG_DAY'] = res[7]    
+        
+        noise_data.append(noise_s)
+
+    noise_df = pd.DataFrame(data = noise_data)
     df_emissions_summary = df_emissions_summary.agg({'tmc_length':'mean', 'speed_all':'mean', 'aadt':'mean', 'TotEmissionsPerMile_2':'sum', 'TotEmissionsPerMile_3':'sum', 'TotEmissionsPerMile_5':'sum', 'TotEmissionsPerMile_6':'sum', 'TotEmissionsPerMile_87':'sum', 'TotEmissionsPerMile_90':'sum', 'TotEmissionsPerMile_98':'sum', 'TotEmissionsPerMile_100':'sum', 'TotEmissionsPerMile_110':'sum'}).reset_index()
     
     #df_emissions_summary = df_emissions_summary.loc[geo_df['TotEmissions110'] != 0]
     #df_emissions_summary.reset_index(inplace=True)
+    df_emissions_summary = pd.merge(df_emissions_summary, noise_df, how='inner', on=('tmc'))
     df_emissions_summary = pd.merge(df_emissions_summary, geo_tmc[['tmc', 'geometry']], how='inner', on=('tmc'))
     df_emissions_summary['geometry'] = df_emissions_summary['geometry'].astype('string')
     df_emissions_summary.rename(columns = {'speed_all': 'Average_Speed', 'aadt':'Average AADT'}, inplace=True)
@@ -1198,3 +1255,64 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     print('Outputs saved in {}'.format(filepath))
     print('**********Process Completed**********')
     print('')
+
+def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_default_speeds,
+           PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, /, 
+           PATH_OUTPUT = 'Final Output', AUTO_DETECT_DATES=True, DATE_START=None, DATE_END=None):
+    
+    
+    print('')
+    print('********** Process Raw NPMRDS Data **********')
+
+    pathlib.Path(PATH_OUTPUT).mkdir(exist_ok=True)
+    #!!! INPUT Parameters
+    filepath = PATH_OUTPUT + '/Process1_LinkLevelDataset/'
+    pathlib.Path(filepath).mkdir(exist_ok=True)
+
+    tmc = pd.read_csv(PATH_tmc_identification)
+
+    n = len(tmc)
+    chunkSize = math.ceil(n/math.ceil(n/600))
+
+    print(f"{n} tmcs will be processed in {math.ceil(n/600)} chunks")
+    print("")
+
+    Sample_df = pd.DataFrame()
+    Summary_df = pd.DataFrame()
+
+    for i, group in tmc.groupby(np.arange(len(tmc))//chunkSize):
+
+        OUT_PATH = filepath + r'/OUTPUT-chunk{}/'.format(i)
+        pathlib.Path(OUT_PATH).mkdir(exist_ok=True)
+
+        newOutput = filepath
+        pathlib.Path(newOutput).mkdir(exist_ok=True)
+
+        print("------------------------------------------")
+        print(f"Processing Chunk {i} to folder {OUT_PATH}")
+        s_buf = io.StringIO()
+        group.to_csv(s_buf)
+        s_buf.seek(0)
+        PATH_tmc_identification = s_buf
+        print(len(group))
+
+        NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, 
+                      PATH_npmrds_raw_truck, PATH_default_speeds, PATH_emission, PATH_TMAS_STATION, 
+                      PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, PATH_OUTPUT = OUT_PATH)
+        
+        print("------------------------------------------")
+        print(f"Appending chunk {i} to full outputs")
+        Sample_chunk = pd.read_csv(OUT_PATH + r'\{}_Composite_Emissions_SAMPLE.csv'.format(SELECT_STATE))
+        Summary_chunk = pd.read_csv(OUT_PATH + r'\{}_Composite_Emissions_SUMMARY.csv'.format(SELECT_STATE))
+        LinkHourlyChunk = pq.read_table(OUT_PATH + r'\{}_Composite_Emissions.parquet'.format(SELECT_STATE))
+        
+        Sample_df = Sample_df.append(Sample_chunk)
+        Summary_df = Summary_df.append(Summary_chunk)
+
+        if i == 0:
+            pqwriter = pq.ParquetWriter(newOutput+r'\{}_Composite_Emissions.parquet'.format(SELECT_STATE), LinkHourlyChunk.schema)
+        pqwriter.write_table(LinkHourlyChunk)        
+    
+    Sample_df.to_csv(newOutput + r'{}_Composite_Emissions_SAMPLE.csv'.format(SELECT_STATE), index=False)
+    Summary_df.to_csv(newOutput + r'{}_Composite_Emissions_SUMMARY.csv'.format(SELECT_STATE), index=False)    
+
