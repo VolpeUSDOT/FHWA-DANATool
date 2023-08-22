@@ -11,7 +11,7 @@ Author: Cambridge Systematics
 Modified By: Volpe National Transportation Systems Center
 """
 
-versionNum = "2.0"
+versionNum = "2.1"
 
 import pandas as pd
 import numpy as np
@@ -26,16 +26,20 @@ import pathlib
 import tkinter as tk
 from tkinter import *
 from tkinter import Tk,ttk,StringVar,filedialog
+import tkintermapview
 import re
 import multiprocessing as mp
 from tqdm.tk import tqdm
 from tkcalendar import Calendar, DateEntry
+import xml.etree.ElementTree as ET
+import customtkinter
 
 from lib import NTD_00_TMAS
 from lib import NTD_01_NPMRDS
 from lib import NTD_02_MOVES
 from lib import NTD_03_SPEED
 from lib import NTD_04_NOISE
+from lib import load_shapes
 
 import sys
 import traceback
@@ -95,6 +99,8 @@ def PopUpMsg(txt_input):
     label = ttk.Label(popup, text=txt_input)
     label.pack(side="top", pady=5, padx=5)
     popup.mainloop()
+    
+
 
 # Initialization
 fn_output = ''
@@ -119,6 +125,8 @@ step1 = '1. Process Raw NPMRDS Data'
 step2 = '2. Produce MOVES Inputs'
 step3 = '3. Produce Speed Distributions'
 step4 = '4. Produce Noise Inputs'
+
+fn_tmc_config = ''
 
 thread_queue = mp.Queue()
 
@@ -169,11 +177,11 @@ def f_npmrds_tmc():
     fn_npmrds_tmc = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose NPMRDS TMC Configuration',
         filetypes=[('csv file', '.csv')])
     pl_npmrds_tmc.config(text=fn_npmrds_tmc.replace('/','\\'))
-def f_npmrds_shp():
-    global fn_npmrds_shp
-    fn_npmrds_shp = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose NPMRDS TMC shapefile',
-        filetypes=[('shapefile file', '.shp')])
-    pl_npmrds_shp.config(text=fn_npmrds_shp.replace('/','\\'))
+# def f_npmrds_shp():
+#     global fn_npmrds_shp
+#     fn_npmrds_shp = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose NPMRDS TMC shapefile',
+#         filetypes=[('shapefile file', '.shp')])
+#     pl_npmrds_shp.config(text=fn_npmrds_shp.replace('/','\\'))
 def f_emission():
     global fn_emission
     fn_emission = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose Emission Rates File',
@@ -545,10 +553,16 @@ kmlfiles = ['']
 tmc = pd.DataFrame()
 
 def f_tmc_config():
-    global fn_tmc_config, tmc, geo_tmc, counties, roads, directions, kmlfiles
+    global fn_tmc_config
     fn_tmc_config = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose TMC Config File',
         filetypes=[('csv file', '.csv')])
     pl_tmc_config.config(text=fn_tmc_config.replace('/','\\'))
+    try:
+        proc_tmc_file()
+    except Exception as e:
+        print(traceback.format_exc())            
+def proc_tmc_file():
+    global tmc, geo_tmc, counties, roads, directions, kmlfiles
     tmc = pd.read_csv(fn_tmc_config)
     dir_dic = {'EASTBOUND':'EB', 'NORTHBOUND':'NB', 'WESTBOUND':'WB', 'SOUTHBOUND':'SB'}
     tmc['direction'].replace(dir_dic, inplace=True)
@@ -563,6 +577,8 @@ def f_tmc_config():
     crs = {'init' :'epsg:4326'}
     geo_tmc = GeoDataFrame(tmc, crs=crs, geometry='geometry')
 
+    shp = load_shapes.load_shape(fn_npmrds_shp)
+
     # We read the selection attributes from the tmc file
     counties = geo_tmc['county'].unique().tolist()
     counties.sort()
@@ -573,8 +589,8 @@ def f_tmc_config():
     directions.insert(0,'')
     # kmlfiles = os.listdir('KML Polygon/')
     # kmlfiles.insert(0,"")
-    
-    county.config(values=counties)
+
+    countySelect.config(values=counties)
     road.config(values=roads)
     direction.config(values=directions)
     
@@ -622,12 +638,10 @@ def PrintResults(tmc_list, county, road, direction):
     PopUpCompletedSelection(outputpath, filename)
 
 def PopUpNoSelection():
-    popup = tk.Toplevel()
-    popup.wm_title("Warning")
-    label = ttk.Label(popup, text="No selection criteria were defined, all of State TMC links will be used. You may close the tool, or select again.")
-    label.pack(side="top", pady=5, padx=5)
-    popup.mainloop()
-    
+    res = tk.messagebox.askokcancel(title="Warning", message="No selection criteria were defined, all of State TMC links will be used. Press 'OK' to print all TMC ids to the output file. Press 'Cancel' to select more specific options.")
+
+    return res
+
 def PopUpWrongSelection():
     popup = tk.Toplevel()
     popup.wm_title("Error")
@@ -700,10 +714,148 @@ def SelectData():
     if selected_tmc is None:
         PopUpWrongSelection()
     elif len(selected_tmc)==len(tmc['tmc']):
-        PopUpNoSelection()
-        PrintResults(selected_tmc, CountyValue.get(), RoadValue.get(), DirectionValue.get())
+        if PopUpNoSelection():
+            ClearData()
+            for i in selected_tmc:
+                TMCoutput_text.insert(tk.END, i+', ')
+            PrintResults(selected_tmc, CountyValue.get(), RoadValue.get(), DirectionValue.get())
+        else:
+            pass
     else:
+        ClearData()
+        for i in selected_tmc:
+            TMCoutput_text.insert(tk.END, i+', ')
         PrintResults(selected_tmc, CountyValue.get(), RoadValue.get(), DirectionValue.get())
+
+def PrintSelectData():
+    #Read polygon file or pass if none is selected    
+    if fn_kml == '':
+        if tmc.empty:
+            PopUpNoFile()
+            return
+        selected_tmc = tmc['tmc']
+    else:
+        #Read tmcs within polygon
+        tmc_polygon = ReadPolygon()
+        polygon_selection = geo_tmc['geometry'].within(tmc_polygon)
+        selected_tmc = tmc.loc[polygon_selection,'tmc']
+    #Read County name or pass if none is selected
+    if CountyValue.get() == '':
+        pass
+    else:
+        county_select = tmc.loc[tmc['county']==CountyValue.get(), 'tmc']
+        county_tmc = CheckIntersect(county_select, selected_tmc)
+        selected_tmc = county_tmc
+    #Read Road name or pass if none is selected
+    if RoadValue.get() == '':
+        pass
+    elif selected_tmc is None:
+        pass
+    else:
+        road_select = tmc.loc[tmc['road']==RoadValue.get(), 'tmc']
+        road_tmc = CheckIntersect(road_select, selected_tmc)
+        selected_tmc = road_tmc
+    #Read Direction name or pass if none is selected
+    if DirectionValue.get() == '':
+        pass
+    elif selected_tmc is None:
+        pass
+    else:
+        dir_select = tmc.loc[tmc['direction']==DirectionValue.get(), 'tmc']
+        dir_tmc = CheckIntersect(dir_select, selected_tmc)
+        selected_tmc = dir_tmc
+    if selected_tmc is None:
+        PopUpWrongSelection()
+    elif len(selected_tmc)==len(tmc['tmc']):
+        if PopUpNoSelection():
+            ClearData()
+            for i in selected_tmc:
+                TMCoutput_text.insert(tk.END, i+', ')
+        else:
+            pass
+    else:
+        ClearData()
+        for i in selected_tmc:
+            TMCoutput_text.insert(tk.END, i+', ')
+
+def ClearData():
+    TMCoutput_text.delete('@0,0', tk.END)
+
+def MapTMCs():
+    #Read polygon file or pass if none is selected    
+    if fn_kml == '':
+        if tmc.empty:
+            PopUpNoFile()
+            return
+        selected_tmc = tmc['tmc']
+    else:
+        #Read tmcs within polygon
+        tmc_polygon = ReadPolygon()
+        polygon_selection = geo_tmc['geometry'].within(tmc_polygon)
+        selected_tmc = tmc.loc[polygon_selection,'tmc']
+    #Read County name or pass if none is selected
+    if CountyValue.get() == '':
+        pass
+    else:
+        county_select = tmc.loc[tmc['county']==CountyValue.get(), 'tmc']
+        county_tmc = CheckIntersect(county_select, selected_tmc)
+        selected_tmc = county_tmc
+    #Read Road name or pass if none is selected
+    if RoadValue.get() == '':
+        pass
+    elif selected_tmc is None:
+        pass
+    else:
+        road_select = tmc.loc[tmc['road']==RoadValue.get(), 'tmc']
+        road_tmc = CheckIntersect(road_select, selected_tmc)
+        selected_tmc = road_tmc
+    #Read Direction name or pass if none is selected
+    if DirectionValue.get() == '':
+        pass
+    elif selected_tmc is None:
+        pass
+    else:
+        dir_select = tmc.loc[tmc['direction']==DirectionValue.get(), 'tmc']
+        dir_tmc = CheckIntersect(dir_select, selected_tmc)
+        selected_tmc = dir_tmc
+    if selected_tmc is None:
+        PopUpWrongSelection()
+    else:
+        selectedGeoTMC = geo_tmc.loc[geo_tmc['tmc'].isin(selected_tmc)]
+        crs = {'init' :'epsg:4326'}
+        selectedGeoTMC = gpd.GeoDataFrame(selectedGeoTMC, geometry='geometry', crs=crs)
+
+    ClearData()
+    for i in selected_tmc:
+        TMCoutput_text.insert(tk.END, i+', ')
+    popup=tk.Toplevel()
+    popup.wm_title("Selected TMCs")
+    iconPath = resource_path('lib\\dot.png')
+    p1 = tk.PhotoImage(file = iconPath)
+    popup.iconphoto(False, p1)
+
+    global map_widget
+    map_widget = tkintermapview.TkinterMapView(popup, width=800, height=600, corner_radius=0)
+    map_widget.grid(column=0, row=0, columnspan=1,rowspan=1, sticky="news")
+    tmc_paths = []    
+    for t, g in zip(selectedGeoTMC.tmc, selectedGeoTMC.geometry):
+        path = map_widget.set_path([(c[1], c[0]) for c in list(g.coords)], command=path_clicked, data={'tmc': t, 'clicked':False})
+        tmc_paths.append(path)
+    center = selectedGeoTMC.dissolve().centroid[0]
+    map_widget.set_position(center.y, center.x)
+    bounds = selectedGeoTMC.total_bounds
+    map_widget.fit_bounding_box((bounds[3], bounds[0]), (bounds[1], bounds[2]))
+    popup.mainloop()
+
+def path_clicked(path):
+    if not path.data['clicked']:
+        markerPoint = LineString([(p[1], p[0]) for p in path.position_list]).centroid
+        pathMarker = map_widget.set_marker(markerPoint.y, markerPoint.x, text=path.data['tmc'])
+        path.data['marker'] = pathMarker
+        path.data['clicked'] = True
+    elif path.data['clicked']:
+        path.data['marker'].delete()
+        path.data['clicked'] = False
 
 # GUI
    
@@ -727,6 +879,9 @@ def main_mouse_wheel(event):
 def output_mouse_wheel(event):
     output_text.yview_scroll(int(-1*event.delta/120), "units")
 
+def TMCoutput_mouse_wheel(event):
+    TMCoutput_text.yview_scroll(int(-1*event.delta/120), "units")
+
 def tmcselect_mouse_wheel(event):
     TMCSelect_canvas.yview_scroll(int(-1*event.delta/120), "units")
     
@@ -743,6 +898,7 @@ def ctrlEvent(event):
 
 ################################################################################
 if __name__ == "__main__":
+    
     mp.freeze_support()  
     
     root = Tk()
@@ -754,7 +910,7 @@ if __name__ == "__main__":
     iconPath = resource_path('lib\\dot.png')
     p1 = tk.PhotoImage(file = iconPath)
     root.iconphoto(False, p1)
-    
+
     headerFont = ("Ariel", 15, "bold")
     ttk.Label(root, wraplength = 500, text="Welcome to FHWA's DANA Tool", font=headerFont).grid(row=0, column=0, columnspan= 1, sticky="w")
     notebook = ttk.Notebook(root, height=500, width=1200)
@@ -817,12 +973,15 @@ if __name__ == "__main__":
     
     TMCSelect_canvas = tk.Canvas(TMCSelect_container)
     TMCSelect_scrollbar = tk.Scrollbar(TMCSelect_container, orient="vertical", command=TMCSelect_canvas.yview)
-    TMCSelect_scrollbar.grid(row=0, column=1, sticky='ns')
+    TMCSelect_scrollbar.grid(row=0, column=2, sticky='ns')
     TMCSelect_canvas.grid(row=0, column=0, sticky="news")
     TMCSelect_canvas.configure(yscrollcommand = TMCSelect_scrollbar.set)
     
-    TMCSelection_frame = tk.Frame(TMCSelect_canvas)
-    TMCSelect_canvas.create_window((0,0), window=TMCSelection_frame, anchor='nw', )
+    TMCSelection_window = tk.Frame(TMCSelect_canvas)
+    TMCSelect_canvas.create_window((0,0), window=TMCSelection_window, anchor='nw', )
+
+    TMCSelection_frame = tk.Frame(TMCSelection_window)
+    TMCSelection_frame.grid(column=0, row=0, sticky='nw', padx=(0,10))
     
     ttk.Label(TMCSelection_frame, wraplength = 500, text='To select specific data from the National Traffic Dataset, please select the desired features').grid(row=0, column=0, columnspan= 5)
     w_tmc_config = ttk.Button(TMCSelection_frame, text='Select TMC Config File', command=f_tmc_config).grid(column=0, row=1, columnspan=2, sticky="w")
@@ -833,24 +992,43 @@ if __name__ == "__main__":
     pl_kml = ttk.Label(TMCSelection_frame)
     pl_kml.grid(column=2, row=2, columnspan=3, sticky="w")
     
-    ttk.Label(TMCSelection_frame, text='Select with County:').grid(row=3,column=0, columnspan=2, sticky="w")
-    ttk.Label(TMCSelection_frame, text='Select a Specific Road:').grid(row=4,column=0, columnspan=2, sticky="w")
-    ttk.Label(TMCSelection_frame, text='Select a Specific Direction:').grid(row=5,column=0, columnspan=2, sticky="w")
+    ttk.Label(TMCSelection_frame, text='Select with County:').grid(row=4,column=0, columnspan=2, sticky="w")
+    ttk.Label(TMCSelection_frame, text='Select a Specific Road:').grid(row=5,column=0, columnspan=2, sticky="w")
+    ttk.Label(TMCSelection_frame, text='Select a Specific Direction:').grid(row=6,column=0, columnspan=2, sticky="w")
     
     CountyValue = StringVar()
-    county = ttk.Combobox(TMCSelection_frame, textvariable=CountyValue, state='readonly', width=50)
-    county.grid(column=2, row=3, columnspan=3, sticky="w")
+    countySelect = ttk.Combobox(TMCSelection_frame, textvariable=CountyValue, state='readonly', width=50)
+    countySelect.grid(column=2, row=4, columnspan=3, sticky="w")
     
     RoadValue = StringVar()
     road = ttk.Combobox(TMCSelection_frame, textvariable=RoadValue, state='readonly', width=50)
-    road.grid(column=2, row=4, columnspan=3, sticky="w")
+    road.grid(column=2, row=5, columnspan=3, sticky="w")
     
     DirectionValue = StringVar()
     direction = ttk.Combobox(TMCSelection_frame, textvariable=DirectionValue, state='readonly', width=50)
-    direction.grid(column=2, row=5, columnspan=3, sticky="w")
+    direction.grid(column=2, row=6, columnspan=3, sticky="w")
+        
+    mapButton = ttk.Button(TMCSelection_frame, text="Map Selected TMCs", command=MapTMCs).grid(column=0, row=7, columnspan=1, sticky='w')
+
+    tmcButton = ttk.Button(TMCSelection_frame, text="Select TMC IDs", command=PrintSelectData).grid(column=1, row=7, columnspan=1, sticky='w')
+
+    saveButton = ttk.Button(TMCSelection_frame, text="Save Selected TMCs", command=SelectData).grid(column=2, row=7, columnspan=1, sticky='w')
+
+    clearButton = ttk.Button(TMCSelection_frame, text="Clear Selected TMCs", command=ClearData).grid(column=3, row=7, columnspan=1, sticky='w')
+
+    TMCOutput_Container = tk.Frame(TMCSelection_frame)
+    TMCOutput_Container.grid(row=8, column=0, columnspan=5, sticky="news")
+    TMCOutput_Container.grid_rowconfigure(0, weight=1)
+    TMCOutput_Container.grid_columnconfigure(0, weight=1)
     
-    tmcButton = ttk.Button(TMCSelection_frame, text="Select Data", command=SelectData).grid(column=0, row=7, columnspan=5)
-    
+    TMCoutput_text = tk.Text(TMCOutput_Container, height=10, width=80, wrap=WORD)
+    TMCoutput_text.grid(row=0, column=0, sticky="news")
+    TMCoutput_scrollbar = tk.Scrollbar(TMCOutput_Container, orient="vertical", command=TMCoutput_text.yview)
+    TMCoutput_scrollbar.grid(row=0, column=1, sticky='ns')
+    TMCoutput_text.configure(yscrollcommand = TMCoutput_scrollbar.set)
+    TMCoutput_text.bind("<MouseWheel>", TMCoutput_mouse_wheel)
+    TMCoutput_text.bind("<Key>", lambda e: ctrlEvent(e))
+
     for child in TMCSelection_frame.winfo_children(): child.grid_configure(padx=2, pady=4)
     
     # TNM_AID GUI TAB
@@ -1136,23 +1314,119 @@ if __name__ == "__main__":
     else:
         pl_emission.config(text='')
            
-    if True:
-        w_state.current(47)
-        fn_tmas_station = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2021/TMAS_Station_2021.csv'
+    if False:
+        testOption = 4
+
+
+        if testOption == 1:
+            tmas_year = 2021
+            npmrds_year = 2018
+            state  = 'MA'
+            county = 'Middlesex'
+        elif testOption == 2:
+            tmas_year = 2019
+            npmrds_year = 2017
+            state  = 'DC'
+            county = 'District'
+        elif testOption == 3:
+            tmas_year = 2019
+            npmrds_year = 2019
+            state  = 'VA'
+            county = 'Alexandria'
+        elif testOption == 4:
+            tmas_year = 2019
+            npmrds_year = 2018
+            state = 'OR'
+            county = 'Marion'
+        elif testOption == 5:
+            tmas_year = 2019
+            npmrds_year = 2021
+            state = 'LA'
+            county = 'LaSalle'
+        elif testOption == 6:
+            tmas_year = 2019
+            npmrds_year = 2021
+            state = 'VA'
+            county = '3Counties'
+        elif testOption == 7:
+            tmas_year = 2019
+            npmrds_year = 2021
+            state = 'VA'
+            county = 'FairfaxCity'    
+        elif testOption == 8:
+            tmas_year = 2019
+            npmrds_year = 2019
+            state = 'CA'
+            county = 'LosAngeles'    
+        elif testOption == 9:
+            tmas_year = 2019
+            npmrds_year = 2019
+            state = 'IL'
+            county = 'State'
+        elif testOption == 10:
+            tmas_year = 2019
+            npmrds_year = 2019
+            state = 'MD'
+            county = 'State'
+            
+        elif testOption == 11:
+            tmas_year = 2019
+            npmrds_year = 2019
+            state = 'RI'
+            county = 'Providence'
+            
+        elif testOption == 12:
+            tmas_year = 2019
+            npmrds_year = 2019
+            state = 'OK'
+            county = 'Oklahoma'
+            
+        elif testOption == 13:
+            tmas_year = 2020
+            npmrds_year = 2020
+            state = 'VA'
+            county = 'Richmond'
+            
+        elif testOption == 14:
+            tmas_year = 2019
+            npmrds_year = 2020
+            state = 'NJ'
+            county = 'Morris'
+        elif testOption == 15:
+            tmas_year = 2020
+            npmrds_year = 2020
+            state = 'MA'
+            county = '1TMC'
+            dateStart = dt.date(2020, 3, 20)
+            dateEnd = dt.date(2020, 3, 22)
+            
+        elif testOption == 16:
+            tmas_year = 2017
+            npmrds_year = 2017
+            state = 'AK'
+            county = 'Anchorage'
+        
+        
+        w_state.set(state)
+        fn_tmas_station = f'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS {tmas_year}/TMAS_Station_{tmas_year}.csv'
         pl_tmas_station_state_1.config(text=fn_tmas_station.replace('/','\\'))
-        fn_tmas_class_clean = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS 2021/TMAS_Class_Clean_2021.csv'
+        fn_tmas_class_clean = f'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS {tmas_year}/TMAS_Class_Clean_{tmas_year}.csv'
         pl_tmas_class_clean_1.config(text=fn_tmas_class_clean.replace('/','\\'))
-        fn_npmrds_all = 'H:/TestData/Providence_RI/NPMRDS Data/RI_Providence_2019_ALL.csv'
+        fn_npmrds_all = f'H:/TestData/{county}_{state}/NPMRDS Data/{state}_{county}_{npmrds_year}_ALL.csv'
         pl_npmrds_all.config(text=fn_npmrds_all.replace('/','\\'))
-        fn_npmrds_pass = 'H:/TestData/Providence_RI/NPMRDS Data/RI_Providence_2019_PASSENGER.csv'
+        fn_npmrds_pass = f'H:/TestData/{county}_{state}/NPMRDS Data/{state}_{county}_{npmrds_year}_PASSENGER.csv'
         pl_npmrds_pass.config(text=fn_npmrds_pass.replace('/','\\'))
-        fn_npmrds_truck = 'H:/TestData/Providence_RI/NPMRDS Data/RI_Providence_2019_TRUCKS.csv'
+        fn_npmrds_truck = f'H:/TestData/{county}_{state}/NPMRDS Data/{state}_{county}_{npmrds_year}_TRUCKS.csv'
         pl_npmrds_truck.config(text=fn_npmrds_truck.replace('/','\\'))
-        fn_npmrds_tmc = 'H:/TestData/Providence_RI/NPMRDS Data/TMC_Identification.csv'
+        fn_npmrds_tmc = f'H:/TestData/{county}_{state}/NPMRDS Data/TMC_Identification.csv'
         pl_npmrds_tmc.config(text=fn_npmrds_tmc.replace('/','\\'))
-        fn_output = 'H:/DANATool/Outputs/TestPVD_20230818'
+        fn_output = f'H:/DANATool/Outputs/TestNew_20230821_1'
         pl_output_folder.config(text=fn_output.replace('/','\\'))
-    
+
+        fn_tmc_config = fn_npmrds_tmc
+        pl_tmc_config.config(text=fn_tmc_config.replace('/','\\'))
+        proc_tmc_file()
+
         #fn_npmrds_shp = 'C:/Users/William.Chupp/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/National TMC Shapefile/NationalMerge.shp'
         #pl_npmrds_shp.config(text=fn_npmrds_shp.replace('/','\\'))
     
