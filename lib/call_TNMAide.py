@@ -1,104 +1,61 @@
-# -*- coding: utf-8 -*-
-"""
-Created By: Volpe National Transportation Systems Center
 
-@author: Aaron.Hastings
-"""
 
-from TNMAide import TNMAide
 import pandas as pd
-import datetime
-import copy
+import pyarrow.parquet as pq
+import dask
+import dask.dataframe as dd
+from dask.diagnostics import progress
+from dask.diagnostics import profile
+from collections import namedtuple
+import numpy as np
+import time
 
-t1 = datetime.datetime.now()
+from .TNMPyAide.TNMPyAide import TNMPyAide
 
-filePath = 'D:/Project/DANA/Data/TNMAide Input Samples/'
-#fileName = 'Sample Data - Required Inputs - Leap Year.csv'
-fileName = 'Sample Data - Required Inputs - Non-Leap Year.csv'
-#fileName = 'Sample Data - Required Inputs - One Month Two Links.csv'
-#fileName = 'Sample Data - Required Inputs - Missing Speeds - 1 month.csv'
-#fileName = 'Sample Data - Required Inputs - Missing Volumes - 1 month.csv'
-#fileName = 'Sample Data - 101+05209 No average worst hour.csv'
-#fileName = 'test_csv_20220623.csv'
-#fileName = 'Sample Data - Required Inputs - Missing Speeds.csv'
+def get_TNMPyAide_inputs(PATH_NPMRDS, TMC1, TMC2):
 
-df = pd.read_csv(filePath + fileName)
+    def lapTimer(text,now):
+        print('%s%.3f' %(text,time.time()-now))
+        return time.time()
+    
+    now=time.time()
 
-linkResults = TNMAide(df, 6, 50.0, 0.0, do_two_lanes = False, robust_speeds = True)
+    print("Reading NPMRDS Clean Link Data")
+    #fullLinkLevel = pq.read_table(PATH_NPMRDS, memory_map=True)
+    fullLinkLevel = dd.read_parquet(PATH_NPMRDS)
 
+    print("Processing Data. This may take a while.")
+    #fullLinkLevel = fullLinkLevel.to_pandas()
+    TMC1group = fullLinkLevel.loc[fullLinkLevel['tmc']==TMC1]
+    TMC2group = fullLinkLevel.loc[fullLinkLevel['tmc']==TMC2]
+    TMC1group, TMC2group = dask.compute(TMC1group, TMC2group)
+    now=lapTimer('  took: ',now)
+    group = pd.concat([TMC1group, TMC2group], axis=0, ignore_index=True).reset_index(drop=True)
+    return group
 
-print("SUMMARY TABLES")
-print("-------------------------------------")
-print("df_day_WORST_HOUR_DATE = ")
-print(linkResults.df_day_WORST_HOUR_DATE)
-print(" ")
+def call_TNMAide(group, link_grade, median_width, number_of_lanes):
+    print("setting up TNMAide Inputs")
+    group.columns = group.columns.str.upper()
 
-print("df_day_AVG_DAY = ")
-print(linkResults.df_day_AVG_DAY)
-print(" ")
+    TMC1 = group['TMC'].unique()[0]
+    if len(group['TMC'].unique()) > 1:
+        TMC2 = group['TMC'].unique()[1]
+    
+    road1 = group['ROAD'].unique()[0]
+    if len(group['ROAD'].unique()) > 1:
+        road2 = group['ROAD'].unique()[1]
+    else: road2 = road1
+    state = group['STATE'].unique()[0]
+    county = group['COUNTY'].unique()[0]
 
-
-print("TRAFFIC VOLUMES")
-print("-------------------------------------")
-print("AADT = " + str(linkResults.AADT))
-print("Auto_Overall_Fraction = " + str(round(linkResults.Auto_Overall_Fraction,3)))
-print("MT_Overall_Fraction = " + str(round(linkResults.MT_Overall_Fraction,3)))
-print("HT_Overall_Fraction = " + str(round(linkResults.HT_Overall_Fraction,3)))
-print("BUS_Overall_Fraction = " + str(round(linkResults.BUS_Overall_Fraction,3)))
-print("MC_Overall_Fraction = " + str(round(linkResults.MC_Overall_Fraction,3)))
-Total_Fraction = linkResults.Auto_Overall_Fraction + linkResults.MT_Overall_Fraction + \
-    linkResults.HT_Overall_Fraction + linkResults.BUS_Overall_Fraction + \
-    linkResults.MC_Overall_Fraction
-print("Total of Overall Fractions = " + str(round(Total_Fraction,3)))
-print(" ")
-
-
-print("WORST HOUR")
-print("-------------------------------------")
-print("WORST_HOUR_DATE = " + str(linkResults.WORST_HOUR_DATE))
-print("WORST_HOUR = " + str(round(linkResults.WORST_HOUR,2)))
-print("LAeq_WORST_HOUR = " + str(round(linkResults.LAeq_WORST_HOUR,2)))
-print("LAeq_24hrs_WORST_HOUR_DATE = " + str(round(linkResults.LAeq_24hrs_WORST_HOUR_DATE,2)))
-print("Ldn_WORST_HOUR_DATE = " + str(round(linkResults.Ldn_WORST_HOUR_DATE,2)))
-print("Lden_WORST_HOUR_DATE = " + str(round(linkResults.Lden_WORST_HOUR_DATE,2)))
-print(" ")
-
-
-print("WORST HOUR AVG DAY")
-print("-------------------------------------")
-print("WORST_HOUR_AVG = " + str(round(linkResults.WORST_HOUR_AVG,2)))
-print("LAeq_WORST_HOUR_AVG = " + str(round(linkResults.LAeq_WORST_HOUR_AVG,2)))
-print("LAeq_24hrs_AVG_DAY = " + str(round(linkResults.LAeq_24hrs_AVG_DAY,2)))
-print("Ldn_AVG_DAY = " + str(round(linkResults.Ldn_AVG_DAY,2)))
-print("Lden_AVG_DAY = " + str(round(linkResults.Lden_AVG_DAY,2)))
-print(" ")
-
-print("PERCENT MISSING SPEED DATA")
-print("-------------------------------------")
-print("AUTOS: " + str(linkResults.percent_missing_auto_speeds) + " %")
-print("MTS: " + str(linkResults.percent_missing_mt_speeds) + " %")
-print("HTS: " + str(linkResults.percent_missing_ht_speeds) + " %")
-print("BUSES: " + str(linkResults.percent_missing_bus_speeds) + " %")
-print("MCS: " + str(linkResults.percent_missing_mc_speeds) + " %")
-
-
-t2 = datetime.datetime.now()    
-tdiff = t2-t1
-print("Time Elapsed: " + str(round(tdiff.total_seconds(),2)) + " seconds")   
-
-# linkResults.Compute_Future_Metrics()
-# df1 =  copy.deepcopy(linkResults)
-
-# linkResults.Compute_Future_Metrics(Auto_Fractions = [0.50, 0.15], \
-#                                                     MT_Fractions = [0.25, 0.10], \
-#                                                     HT_Fractions = [0.00, 0.00], \
-#                                                     BUS_Fractions = [0.0, 0.0], \
-#                                                     MC_Fractions = [0.0, 0.0])
-# df2 = copy.deepcopy(linkResults)
-
-# linkResults.Compute_Future_Metrics(Auto_Fractions = [0.50, 0.05, 0.10], \
-#                                                     MT_Fractions = [0.05, 0.02, 0.03], \
-#                                                     HT_Fractions = [0.10, 0.05, 0.10], \
-#                                                     BUS_Fractions = [0.0, 0.0, 0.0], \
-#                                                     MC_Fractions = [0.0, 0.0, 0.0])
-# df3 = copy.deepcopy(linkResults)
+    group['DATE'] = group['MEASUREMENT_TSTAMP'].dt.date
+        
+    meta_data = namedtuple('meta_data', 'L1_name L2_name L1_tmc L2_tmc state county')
+    meta = meta_data(road1, road2, TMC1, TMC2, state, county)
+    print("Calculating TNMAide")
+    if len(group['MAADT'].unique()) == 1 and np.isnan(group['MAADT'].unique()[0]):
+        raise(ValueError("MAADT values are NaN in the link level dataset. Please check the input data and try again."))
+    else:
+        
+        result =  TNMPyAide(group, link_grade, meta, median_width, number_of_lanes, detailed_log = False)   
+        return result

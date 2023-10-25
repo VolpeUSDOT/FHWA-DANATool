@@ -12,10 +12,10 @@ from collections import namedtuple
 from TNMPyAide import TNMPyAide
 
 
-filePath = r"Z:\FHWA-AQ\DANA Tool Development\Metro and US Studies\Full US Analysis\TNMPyAide\UnitTests/"
+filePath = 'C:/Users/aaron.hastings/OneDrive - DOT OST/Code/Python/FHWA-DANATool/lib/UnitTests/'
 detailed_log = False
 
-Test_Case_To_Run = 4
+Test_Case_To_Run = 1
 ###############################################################################
 # TEST 1 to 4
 # TESTING THAT ONE AND TWO LINKS FOR LEAP AND NON-LEAP YEARS RUN

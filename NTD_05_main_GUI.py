@@ -18,6 +18,7 @@ import numpy as np
 import geopandas as gpd
 from geopandas import GeoDataFrame
 from shapely.geometry import Polygon, LineString, Point
+from shapely import get_type_id
 import os
 import io
 import time
@@ -25,20 +26,25 @@ import datetime as dt
 import pathlib
 import tkinter as tk
 from tkinter import *
-from tkinter import Tk,ttk,StringVar,filedialog
+from tkinter import Tk,ttk,StringVar,filedialog,font
+from ttkwidgets import Table
 import tkintermapview
 import re
 import multiprocessing as mp
 from tqdm.tk import tqdm
 from tkcalendar import Calendar, DateEntry
 import xml.etree.ElementTree as ET
-import customtkinter
+import tkinter.font as tkFont
+from matplotlib.figure import Figure
+import pkg_resources
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
+import importlib
 
 from lib import NTD_00_TMAS
 from lib import NTD_01_NPMRDS
 from lib import NTD_02_MOVES
 from lib import NTD_03_SPEED
-from lib import NTD_04_NOISE
+from lib import call_TNMAide
 from lib import load_shapes
 
 import sys
@@ -67,6 +73,12 @@ class RedirectText(object):
         
     def flush(self):
         pass        
+
+# Function for converting string percent to float
+def p2f(x):
+    if x == "":
+        return 0.0
+    return float(x.strip('%'))/100
 
 #Function for creating path to the icon        
 def resource_path(relative_path):
@@ -99,8 +111,6 @@ def PopUpMsg(txt_input):
     label = ttk.Label(popup, text=txt_input)
     label.pack(side="top", pady=5, padx=5)
     popup.mainloop()
-    
-
 
 # Initialization
 fn_output = ''
@@ -128,12 +138,20 @@ step4 = '4. Produce Noise Inputs'
 
 fn_tmc_config = ''
 
+crs = 'epsg:4326'
+PATH_tmc_shp = pkg_resources.resource_filename('lib', 'ShapeFilesCSV/')
+usashp = load_shapes.load_shape_csv(PATH_tmc_shp, crs)
+
 thread_queue = mp.Queue()
+tnmaide_queue = mp.Queue()
+tnmaide_result = None
+tnmaide_group = None
+afterids = []
 
 # Func - File dialogs    
 def f_output():
     global fn_output
-    fn_output = filedialog.askdirectory(parent=root, title='Choose Output Folder', initialdir='/')
+    fn_output = filedialog.askdirectory(parent=root, title='Choose Output Folder', initialdir='/',)
     pl_output_folder.config(text=fn_output.replace('/','\\'))
     pathlib.Path(fn_output).mkdir(exist_ok=True)
     with open(fn_output + '/progress_log.txt', 'a') as file:
@@ -199,6 +217,7 @@ def f_npmrds_clean():
     pl_npmrds_clean_1.config(text=fn_npmrds_clean.replace('/','\\'))
     pl_npmrds_clean_2.config(text=fn_npmrds_clean.replace('/','\\'))
     pl_npmrds_clean_3.config(text=fn_npmrds_clean.replace('/','\\'))
+
 def f_tmas_station_state():
     global fn_tmas_station
     fn_tmas_station = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose Processed TMAS Station File',
@@ -281,11 +300,11 @@ def checkProgress():
     global thread_queue
     global fn_npmrds_clean
     while not thread_queue.empty():
-        line = thread_queue.get()
+        line = thread_queue.get(block=False)
         output_text.insert(tk.END, line)
-        with open(fn_output + '/progress_log.txt', 'a') as file:
-            file.write(line)
-        
+        if fn_output != '':
+            with open(fn_output + '/progress_log.txt', 'a') as file:
+                file.write(line)
     root.update_idletasks()
     canvasScrollRegion = (0, 0, 
                           max(canvas.winfo_width()-4, canvas.bbox('all')[2]),
@@ -295,9 +314,23 @@ def checkProgress():
                           max(TMCSelect_canvas.winfo_width()-4, TMCSelect_canvas.bbox('all')[2]-1),
                           max(TMCSelect_canvas.winfo_height()-4, TMCSelect_canvas.bbox('all')[3]-1))
     TMCSelect_canvas.configure(scrollregion=TMCcanvasScrollRegion)
-    
+    tnmaide_canvasScrollRegion = (0, 0, 
+                          max(tnmaide_canvas.winfo_width()-4, tnmaide_canvas.bbox('all')[2]-1),
+                          max(tnmaide_canvas.winfo_height()-4, tnmaide_canvas.bbox('all')[3]-1))
+    tnmaide_canvas.configure(scrollregion=tnmaide_canvasScrollRegion)
+    vis_canvasScrollRegion = (0, 0, 
+                          max(vis_canvas.winfo_width()-4, vis_canvas.bbox('all')[2]-1),
+                          max(vis_canvas.winfo_height()-4, vis_canvas.bbox('all')[3]-1))
+    vis_canvas.configure(scrollregion=vis_canvasScrollRegion)
+    TNMAide_statusLabel.grid_remove()
     #There will only every be one process running at a time, but we look at all
     #running threads to make sure it is working cleanly
+    if fn_output != '':
+        if os.path.exists(fn_output+'/Process1_linkLevelDataset') and f'{StateValue.get()}_Composite_Emissions.parquet' in os.listdir(fn_output+'/Process1_linkLevelDataset'):
+            fn_npmrds_clean = fn_output + '/Process1_LinkLevelDataset/' + f'{StateValue.get()}_Composite_Emissions.parquet'
+            pl_npmrds_clean_1.config(text=fn_npmrds_clean.replace('/','\\'))
+            pl_npmrds_clean_2.config(text=fn_npmrds_clean.replace('/','\\'))
+            pl_npmrds_clean_3.config(text=fn_npmrds_clean.replace('/','\\'))
     removeList = []
     for i in range(len(runningThreads)):
         if not runningThreads[i].is_alive():
@@ -310,19 +343,40 @@ def checkProgress():
         enable_buttons()
         del runningThreads[i]
     
+    #Update TNMAide Total Percents
+    sumLDNInputs = 0
+    for r in ldnInTable:
+        for c in r:
+            sumLDNInputs = sumLDNInputs + p2f(c.get())
+    
+    totLDNInput.set(f"{round(100*sumLDNInputs, 2)} %")
+
+    sumLDENInputs = 0
+    for r in ldenInTable:
+        for c in r:
+            sumLDENInputs = sumLDENInputs + p2f(c.get())
+    
+    totLDENInput.set(f"{round(100*sumLDENInputs, 2)} %")
+
     global afterids
-    afterids = []
     afterids.append(root.after(100, checkProgress))
         
 
-def process_handler(proc_target, thread_queue, args):
+def process_handler(proc_target, thread_queue, args, return_queue = None):
     redir = RedirectText(thread_queue)
     sys.stdout = redir
-    #sys.stderr = sys.stdout
-    try:
-        proc_target(*args)
-    except Exception as e:
-        print(traceback.format_exc())            
+    sys.stderr = sys.stdout
+    if return_queue is None:
+        try:
+            proc_target(*args)
+        except Exception as e:
+            print(traceback.format_exc())
+    else:
+        try:
+            result = proc_target(*args)
+            return_queue.put(result)
+        except Exception as e:
+            print(traceback.format_exc())          
     
 # Func - ProcessData Function
 def ProcessData(procNum):
@@ -330,12 +384,13 @@ def ProcessData(procNum):
     #output_text.delete('1.0', END)
     tmc_chars = set('0123456789+-PN, ')
     
-    if StateValue.get() == '':
-        PopUp_Selection("State")
-        return
-    if fn_output == '':
-        PopUp_Selection("Output Folder Location")
-        return
+    if procNum != 'tnmaide':
+        if StateValue.get() == '':
+            PopUp_Selection("State")
+            return
+        if fn_output == '':
+            PopUp_Selection("Output Folder Location")
+            return
     
     progBar.start()
     if procNum == step0:
@@ -424,7 +479,7 @@ def ProcessData(procNum):
             runningThreads.append(MOVES_Proc)
             notebook.select('.!notebook.!frame2')
             
-    elif procNum == step3:    # needs update
+    elif procNum == step3:
         SELECT_STATE = StateValue.get()
         if fn_npmrds_clean == '':
             PopUpCleanNPMRDSSelection()
@@ -440,29 +495,21 @@ def ProcessData(procNum):
             SPEED_Proc.start()
             runningThreads.append(SPEED_Proc)
             notebook.select('.!notebook.!frame2')
-
-    elif procNum == step4:    # needs update
-        SELECT_STATE = StateValue.get()
+    
+    elif procNum == 'tnmaide':
         if fn_npmrds_clean == '':
             PopUpCleanNPMRDSSelection()
-        elif any((c not in tmc_chars) for c in tmcEntry.get()):
-            PopUpMsg('Incorrect TMC name, please enter again.')
         else:
-            SELECT_STATE = StateValue.get()
-            SELECT_TMC = re.split(',\s+',tmcEntry.get())
-            #PrintTMCinput(SELECT_TMC)
-            PATH_NPMRDS = fn_npmrds_clean
-            PATH_OUTPUT = fn_output
-            AUTO_DETECT_DATES = autoDetectDatesVar.get()==1
-            DATE_START = calStart.get_date()
-            DATE_END = calEnd.get_date()
-            NOISE_Proc = mp.Process(target=process_handler, name=step4, args=(NTD_04_NOISE.NOISE, thread_queue, 
-                                                                              (SELECT_STATE, SELECT_TMC, PATH_NPMRDS, PATH_OUTPUT)))
-            disable_buttons(step4)
-            NOISE_Proc.start()
-            runningThreads.append(NOISE_Proc)
+            TNMAIDE_Proc = mp.Process(target=process_handler, name='tnmaide', 
+                args = (call_TNMAide.get_TNMPyAide_inputs, thread_queue, 
+                            (fn_npmrds_clean, TMC_1Entry.get(), TMC_2Entry.get()),
+                            tnmaide_queue)
+                    )
+            disable_buttons('tnmaide')
+            TNMAIDE_Proc.start()
+            runningThreads.append(TNMAIDE_Proc)
             notebook.select('.!notebook.!frame2')
-            
+
     else:
         PopUp_Selection("Step")
     
@@ -480,14 +527,15 @@ def disable_buttons(step):
     p1startButton['state'] = DISABLED
     p2startButton['state'] = DISABLED
     p3startButton['state'] = DISABLED
-    p4startButton['state'] = DISABLED
+    calcButton["state"] = DISABLED
+
 
     p0cancelButton["state"] = DISABLED
     p1cancelButton["state"] = DISABLED
     p2cancelButton["state"] = DISABLED
     p3cancelButton["state"] = DISABLED
-    p4cancelButton["state"] = DISABLED
-    
+    TNMAIDE_cancelButton["state"] = DISABLED
+
     if step == step0:
         p0cancelButton["state"] = NORMAL
         p0statusLabel.grid()
@@ -500,9 +548,9 @@ def disable_buttons(step):
     elif step == step3:
         p3cancelButton["state"] = NORMAL
         p3statusLabel.grid()
-    elif step == step4:
-        p4cancelButton["state"] = NORMAL
-        p4statusLabel.grid()
+    elif step == "tnmaide":
+        TNMAIDE_cancelButton["state"] = NORMAL
+        TNMAide_statusLabel.grid()
 
 def enable_buttons():
     
@@ -517,19 +565,19 @@ def enable_buttons():
     p1startButton['state'] = NORMAL
     p2startButton['state'] = NORMAL
     p3startButton['state'] = NORMAL
-    p4startButton['state'] = NORMAL
+    calcButton['state'] = NORMAL
 
     p0cancelButton["state"] = NORMAL
     p1cancelButton["state"] = NORMAL
     p2cancelButton["state"] = NORMAL
     p3cancelButton["state"] = NORMAL
-    p4cancelButton["state"] = NORMAL
-    
+    TNMAIDE_cancelButton["state"] = NORMAL
+     
     p0statusLabel.grid_remove()
     p1statusLabel.grid_remove()
     p2statusLabel.grid_remove()
     p3statusLabel.grid_remove()
-    p4statusLabel.grid_remove()
+    TNMAide_statusLabel.grid_remove()
     
 def CancelProcess():
     global runningThreads
@@ -539,7 +587,29 @@ def CancelProcess():
         
         if not proc.is_alive():
             print("************* Canceled Step {} **************".format(proc.name))
-    
+
+def fitLabel(event): # not used for now
+    label = event.widget
+    print(tk.Label())
+    if not hasattr(label, "original_text"):
+        # preserve the original text so we can restore
+        # it if the widget grows.
+        label.original_text = label.cget("text")
+
+    font = tkFont.nametofont(label.cget("font"))
+    text = label.original_text
+    max_width = event.width
+    actual_width = font.measure(text)
+    if actual_width <= max_width:
+        # the original text fits; no need to add ellipsis
+        label.configure(text=text)
+    else:
+        # the original text won't fit. Keep shrinking
+        # until it does
+        while actual_width > max_width and len(text) > 1:
+            text = text[:-1]
+            actual_width = font.measure(text + "...")
+        label.configure(text=text+"...")
 
 # TMC Selection Functions
 ################################################################################
@@ -556,6 +626,8 @@ def f_tmc_config():
     global fn_tmc_config
     fn_tmc_config = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose TMC Config File',
         filetypes=[('csv file', '.csv')])
+    if fn_tmc_config == '':
+        return
     pl_tmc_config.config(text=fn_tmc_config.replace('/','\\'))
     try:
         proc_tmc_file()
@@ -577,8 +649,6 @@ def proc_tmc_file():
     crs = {'init' :'epsg:4326'}
     geo_tmc = GeoDataFrame(tmc, crs=crs, geometry='geometry')
 
-    shp = load_shapes.load_shape(fn_npmrds_shp)
-
     # We read the selection attributes from the tmc file
     counties = geo_tmc['county'].unique().tolist()
     counties.sort()
@@ -599,7 +669,13 @@ def f_kml():
     fn_kml = filedialog.askopenfilename(parent=root, initialdir=os.getcwd(),title='Choose KML File',
         filetypes=[('kml file', '.kml')])
     pl_kml.config(text=fn_kml.replace('/','\\'))
-    
+    if fn_kml == '':
+        return
+    pl_kml.config(text=fn_kml.replace('/','\\'))
+    try:
+        ReadPolygon()
+    except Exception as e:
+        print(traceback.format_exc())      
 
 #We create a function to crop tmc using kml polygon
 def ReadPolygon():
@@ -711,7 +787,7 @@ def SelectData():
         dir_select = tmc.loc[tmc['direction']==DirectionValue.get(), 'tmc']
         dir_tmc = CheckIntersect(dir_select, selected_tmc)
         selected_tmc = dir_tmc
-    if selected_tmc is None:
+    if selected_tmc is None or len(selected_tmc)==0:
         PopUpWrongSelection()
     elif len(selected_tmc)==len(tmc['tmc']):
         if PopUpNoSelection():
@@ -739,6 +815,7 @@ def PrintSelectData():
         tmc_polygon = ReadPolygon()
         polygon_selection = geo_tmc['geometry'].within(tmc_polygon)
         selected_tmc = tmc.loc[polygon_selection,'tmc']
+        print(selected_tmc)
     #Read County name or pass if none is selected
     if CountyValue.get() == '':
         pass
@@ -764,7 +841,7 @@ def PrintSelectData():
         dir_select = tmc.loc[tmc['direction']==DirectionValue.get(), 'tmc']
         dir_tmc = CheckIntersect(dir_select, selected_tmc)
         selected_tmc = dir_tmc
-    if selected_tmc is None:
+    if selected_tmc is None or len(selected_tmc)==0:
         PopUpWrongSelection()
     elif len(selected_tmc)==len(tmc['tmc']):
         if PopUpNoSelection():
@@ -781,7 +858,19 @@ def PrintSelectData():
 def ClearData():
     TMCoutput_text.delete('@0,0', tk.END)
 
-def MapTMCs():
+def ClearFilters():
+    global fn_kml
+    fn_kml = ''
+    pl_kml.config(text='')
+    CountyValue.set('')
+    RoadValue.set('')
+    DirectionValue.set('')
+
+def updateMapSize(popup):
+    w = popup.winfo_width
+    h = popup.winfo_height
+
+def MapTMCs():    
     #Read polygon file or pass if none is selected    
     if fn_kml == '':
         if tmc.empty:
@@ -818,45 +907,237 @@ def MapTMCs():
         dir_select = tmc.loc[tmc['direction']==DirectionValue.get(), 'tmc']
         dir_tmc = CheckIntersect(dir_select, selected_tmc)
         selected_tmc = dir_tmc
-    if selected_tmc is None:
+    if selected_tmc is None or len(selected_tmc)==0:
         PopUpWrongSelection()
     else:
-        selectedGeoTMC = geo_tmc.loc[geo_tmc['tmc'].isin(selected_tmc)]
+        selectedGeoTMC = usashp.loc[usashp['Tmc'].isin(selected_tmc)]
         crs = {'init' :'epsg:4326'}
         selectedGeoTMC = gpd.GeoDataFrame(selectedGeoTMC, geometry='geometry', crs=crs)
 
+    
     ClearData()
     for i in selected_tmc:
         TMCoutput_text.insert(tk.END, i+', ')
-    popup=tk.Toplevel()
-    popup.wm_title("Selected TMCs")
+    mappopup=tk.Toplevel(root)
+    mappopup.wm_title("Selected TMCs")
     iconPath = resource_path('lib\\dot.png')
     p1 = tk.PhotoImage(file = iconPath)
-    popup.iconphoto(False, p1)
+    mappopup.iconphoto(False, p1)
+    mappopup.wm_resizable(width=False, height=False)
 
     global map_widget
-    map_widget = tkintermapview.TkinterMapView(popup, width=800, height=600, corner_radius=0)
+    map_widget = tkintermapview.TkinterMapView(mappopup, width=1000, height=750, corner_radius=0)
     map_widget.grid(column=0, row=0, columnspan=1,rowspan=1, sticky="news")
-    tmc_paths = []    
-    for t, g in zip(selectedGeoTMC.tmc, selectedGeoTMC.geometry):
-        path = map_widget.set_path([(c[1], c[0]) for c in list(g.coords)], command=path_clicked, data={'tmc': t, 'clicked':False})
+    tmc_paths = []
+    for t, g in zip(selectedGeoTMC.Tmc, selectedGeoTMC.geometry):
+        if get_type_id(g) == 1:
+            path = map_widget.set_path([(c[1], c[0]) for c in list(g.coords)], data={'tmc': t, 'clicked':False})
+        if get_type_id(g) == 5:
+            pathList = []
+            for geom in g.geoms:
+                for c in list(geom.coords):
+                    pathList.append((c[1], c[0]))
+            path = map_widget.set_path(pathList, data={'tmc': t, 'clicked':False})
+        path.map_widget.canvas.tag_bind(path.canvas_line, "<Enter>", path.mouse_enter)
+        path.map_widget.canvas.tag_bind(path.canvas_line, "<Leave>", path.mouse_leave)
+        path.map_widget.canvas.tag_bind(path.canvas_line, "<Button-1>", lambda e: path_clicked(e, e.widget.find_withtag('current')[0], tmc_paths))
         tmc_paths.append(path)
     center = selectedGeoTMC.dissolve().centroid[0]
     map_widget.set_position(center.y, center.x)
     bounds = selectedGeoTMC.total_bounds
     map_widget.fit_bounding_box((bounds[3], bounds[0]), (bounds[1], bounds[2]))
-    popup.mainloop()
+    tmcselectedtext = tk.Text(mappopup, height=1, width=80, wrap=WORD)
+    tmcselectedtext.grid(row=1, column=0, sticky="news")
+    mapButton['state'] = DISABLED
+    root.wait_window(mappopup)
+    mapButton['state'] = NORMAL
 
-def path_clicked(path):
-    if not path.data['clicked']:
-        markerPoint = LineString([(p[1], p[0]) for p in path.position_list]).centroid
-        pathMarker = map_widget.set_marker(markerPoint.y, markerPoint.x, text=path.data['tmc'])
-        path.data['marker'] = pathMarker
-        path.data['clicked'] = True
-    elif path.data['clicked']:
-        path.data['marker'].delete()
-        path.data['clicked'] = False
+def path_clicked(event, pathnum, tmc_paths):
+    for path in tmc_paths:
+        if pathnum==path.canvas_line and not path.data['clicked']:
+            markerPoint = map_widget.convert_canvas_coords_to_decimal_coords(event.x, event.y)
+            pathMarker = map_widget.set_marker(markerPoint[0], markerPoint[1], text=path.data['tmc'])
+            map_widget.canvas.itemconfigure(path.canvas_line, fill="red")
+            path.data['marker'] = pathMarker
+            path.data['clicked'] = True
+        elif pathnum==path.canvas_line and path.data['clicked']:
+            map_widget.canvas.itemconfigure(path.canvas_line, fill="#3E69CB")
+            path.data['marker'].delete()
+            path.data['clicked'] = False
 
+def calc_tnmaide(start=False):
+    global tnmaide_result
+    global tnmaide_group
+    if start:
+        ProcessData('tnmaide')
+    if tnmaide_queue.empty():
+        global afterids
+        afterids.append(root.after(100, lambda: calc_tnmaide(False)))
+    else:
+        tnmaide_group = tnmaide_queue.get(block=False)
+        tnmaide_group.columns = tnmaide_group.columns.str.upper()
+        tnmaide_result = call_TNMAide.call_TNMAide(tnmaide_group.copy(), (roadgrade1.get(), roadgrade2.get()), medwidth.get(), (NumLanes1.get(), NumLanes2.get()))
+        LAeqOutput.set(str(round(tnmaide_result.average_day.LAEQ_24_HR, 2)))
+        LdnOutput.set(str(round(tnmaide_result.average_day.LDN, 2)))
+        LdenOutput.set(str(round(tnmaide_result.average_day.LDEN, 2)))
+        WorstHourOut.set(str(tnmaide_result.average_day.worst_hour))
+        WorstDayOut.set(str(tnmaide_result.worst_day.day))
+
+        CurrentAADTOut.set(str(sum(tnmaide_group.AADT.unique())))
+
+        CarsOut.set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_AUTO*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")        
+        MedTrucksOut.set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_MED_TRUCK*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")
+        HeavyTrucksOut.set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_HVY_TRUCK*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")
+        BusesOut.set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_BUS*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")
+        MotoOut.set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_MC*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")
+        tot =  round( \
+        100*sum(list(tnmaide_group.PCT_NOISE_AUTO*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24) + \
+        100*sum(list(tnmaide_group.PCT_NOISE_MED_TRUCK*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24) + \
+        100*sum(list(tnmaide_group.PCT_NOISE_HVY_TRUCK*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24) + \
+        100*sum(list(tnmaide_group.PCT_NOISE_BUS*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24) + \
+        100*sum(list(tnmaide_group.PCT_NOISE_MC*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24),
+        2)
+        TotalOut.set(f'{tot} %')
+
+        traffic_df = tnmaide_result.df_Traffic_Noise
+        traffic_df['VOL_L1'] = traffic_df['VOL_AT_L1'] + traffic_df['VOL_MT_L1'] + traffic_df['VOL_HT_L1'] + traffic_df['VOL_BUS_L1'] + traffic_df['VOL_MC_L1']
+        traffic_df['VOL_L2'] = traffic_df['VOL_AT_L2'] + traffic_df['VOL_MT_L2'] + traffic_df['VOL_HT_L2'] + traffic_df['VOL_BUS_L2'] + traffic_df['VOL_MC_L2']
+
+        # LDN
+        traffic_df_day = traffic_df[traffic_df['HOUR'].between(7, 21)]
+        traffic_df_night = traffic_df[~traffic_df['HOUR'].between(7, 21)]
+
+        ldnOutTable[0][0].set(f"{round(100*(traffic_df_day['VOL_AT_L1'].sum() + traffic_df_day['VOL_AT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldnOutTable[1][0].set(f"{round(100*(traffic_df_night['VOL_AT_L1'].sum() + traffic_df_night['VOL_AT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldnOutTable[0][1].set(f"{round(100*(traffic_df_day['VOL_MT_L1'].sum() + traffic_df_day['VOL_MT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldnOutTable[1][1].set(f"{round(100*(traffic_df_night['VOL_MT_L1'].sum() + traffic_df_night['VOL_MT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldnOutTable[0][2].set(f"{round(100*(traffic_df_day['VOL_HT_L1'].sum() + traffic_df_day['VOL_HT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldnOutTable[1][2].set(f"{round(100*(traffic_df_night['VOL_HT_L1'].sum() + traffic_df_night['VOL_HT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldnOutTable[0][3].set(f"{round(100*(traffic_df_day['VOL_BUS_L1'].sum() + traffic_df_day['VOL_BUS_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldnOutTable[1][3].set(f"{round(100*(traffic_df_night['VOL_BUS_L1'].sum() + traffic_df_night['VOL_BUS_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldnOutTable[0][4].set(f"{round(100*(traffic_df_day['VOL_MC_L1'].sum() + traffic_df_day['VOL_MC_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldnOutTable[1][4].set(f"{round(100*(traffic_df_night['VOL_MC_L1'].sum() + traffic_df_night['VOL_MC_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+
+        del traffic_df_day
+        del traffic_df_night
+
+        # LDEN
+        traffic_df_day = traffic_df[traffic_df['HOUR'].between(7, 18)]
+        traffic_df_eve = traffic_df[traffic_df['HOUR'].between(19, 21)]
+        traffic_df_night = traffic_df[~traffic_df['HOUR'].between(7, 21)]
+
+        ldenOutTable[0][0].set(f"{round(100*(traffic_df_day['VOL_AT_L1'].sum() + traffic_df_day['VOL_AT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldenOutTable[1][0].set(f"{round(100*(traffic_df_eve['VOL_AT_L1'].sum() + traffic_df_eve['VOL_AT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldenOutTable[2][0].set(f"{round(100*(traffic_df_night['VOL_AT_L1'].sum() + traffic_df_night['VOL_AT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldenOutTable[0][1].set(f"{round(100*(traffic_df_day['VOL_MT_L1'].sum() + traffic_df_day['VOL_MT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldenOutTable[1][1].set(f"{round(100*(traffic_df_eve['VOL_MT_L1'].sum() + traffic_df_eve['VOL_MT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldenOutTable[2][1].set(f"{round(100*(traffic_df_night['VOL_MT_L1'].sum() + traffic_df_night['VOL_MT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldenOutTable[0][2].set(f"{round(100*(traffic_df_day['VOL_HT_L1'].sum() + traffic_df_day['VOL_HT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldenOutTable[1][2].set(f"{round(100*(traffic_df_eve['VOL_HT_L1'].sum() + traffic_df_eve['VOL_HT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldenOutTable[2][2].set(f"{round(100*(traffic_df_night['VOL_HT_L1'].sum() + traffic_df_night['VOL_HT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldenOutTable[0][3].set(f"{round(100*(traffic_df_day['VOL_BUS_L1'].sum() + traffic_df_day['VOL_BUS_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldenOutTable[1][3].set(f"{round(100*(traffic_df_eve['VOL_BUS_L1'].sum() + traffic_df_eve['VOL_BUS_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldenOutTable[2][3].set(f"{round(100*(traffic_df_night['VOL_BUS_L1'].sum() + traffic_df_night['VOL_BUS_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldenOutTable[0][4].set(f"{round(100*(traffic_df_day['VOL_MC_L1'].sum() + traffic_df_day['VOL_MC_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldenOutTable[1][4].set(f"{round(100*(traffic_df_eve['VOL_MC_L1'].sum() + traffic_df_eve['VOL_MC_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+        ldenOutTable[2][4].set(f"{round(100*(traffic_df_night['VOL_MC_L1'].sum() + traffic_df_night['VOL_MC_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+
+def calc_future_noise_LDN():
+    print("*** Calculate Future Noise Metrics ***")
+    if CurrentAADTOut.get() == '' or futureAADT.get() == '':
+        PopUpMsg('Calculate current noise metrics and fill in future AADT before calculating future noise metrics.')
+        return
+    traffic_df_day = tnmaide_group[tnmaide_group['HOUR'].between(7, 21)]
+    traffic_df_night = tnmaide_group[~tnmaide_group['HOUR'].between(7, 21)]
+    cols = ['PCT_NOISE_AUTO', 'PCT_NOISE_MED_TRUCK', 'PCT_NOISE_HVY_TRUCK', 'PCT_NOISE_BUS', 'PCT_NOISE_MC']
+
+    print(" Calculating")
+    for i in range(len(cols)):
+        traffic_df_day[cols[i]] = .01*float(ldnInTable[0][i].get())/15
+    for i in range(len(cols)):
+        traffic_df_night[cols[i]] = .01*float(ldnInTable[1][i].get())/9
+
+    group_future_ldn = pd.concat([traffic_df_day, traffic_df_night])
+    group_future_ldn['MAADT'] = float(futureAADT.get())
+    future_result_ldn = call_TNMAide.call_TNMAide(group_future_ldn, (roadgrade1.get(), roadgrade2.get()), medwidth.get(), (NumLanes1.get(), NumLanes2.get()))
+    print(" Setting")
+    FleetBreakdownUsed.set('LDN Time Period Distribution')
+    LAeqFutureOutput.set(str(round(future_result_ldn.average_day.LAEQ_24_HR, 2)))
+    LdnFutureOutput.set(str(round(future_result_ldn.average_day.LDN, 2)))
+    LdenFutureOutput.set(str(round(future_result_ldn.average_day.LDEN, 2)))
+
+def calc_future_noise_LDEN():
+    print("*** Calculate Future Noise Metrics ***")
+    if CurrentAADTOut.get() == '' or futureAADT.get() == '':
+        PopUpMsg('Calculate current noise metrics and fill in future AADT before calculating future noise metrics.')
+        return
+    traffic_df_day = tnmaide_group[tnmaide_group['HOUR'].between(7, 18)]
+    traffic_df_eve = tnmaide_group[~tnmaide_group['HOUR'].between(19, 21)]
+    traffic_df_night = tnmaide_group[~tnmaide_group['HOUR'].between(7, 21)]
+    cols = ['PCT_NOISE_AUTO', 'PCT_NOISE_MED_TRUCK', 'PCT_NOISE_HVY_TRUCK', 'PCT_NOISE_BUS', 'PCT_NOISE_MC']
+
+    print(" Calculating")
+    for i in range(len(cols)):
+        traffic_df_day[cols[i]] = .01*float(ldenInTable[0][i].get())/12
+    for i in range(len(cols)):
+        traffic_df_eve[cols[i]] = .01*float(ldenInTable[1][i].get())/3
+    for i in range(len(cols)):
+        traffic_df_night[cols[i]] = .01*float(ldenInTable[2][i].get())/9
+
+    print(len(traffic_df_day), len(traffic_df_eve), len(traffic_df_night))
+    group_future_lden = pd.concat([traffic_df_day, traffic_df_eve, traffic_df_night])
+    group_future_lden['MAADT'] = float(futureAADT.get())
+    future_result_lden = call_TNMAide.call_TNMAide(group_future_lden, (roadgrade1.get(), roadgrade2.get()), medwidth.get(), (NumLanes1.get(), NumLanes2.get()))
+    print(" Outputting Results")
+    FleetBreakdownUsed.set('LDEN Time Period Distribution')
+    LAeqFutureOutput.set(str(round(future_result_lden.average_day.LAEQ_24_HR, 2)))
+    LdnFutureOutput.set(str(round(future_result_lden.average_day.LDN, 2)))
+    LdenFutureOutput.set(str(round(future_result_lden.average_day.LDEN, 2)))
+
+def fill_current_year():
+    futureAADT.set(CurrentAADTOut.get())
+
+    for r in range(len(ldnOutTable)):
+        for c in range(len(ldnOutTable[r])):
+            ldnInTable[r][c].set(round(100*p2f(ldnOutTable[r][c].get()), 2))
+    
+    for r in range(len(ldenOutTable)):
+        for c in range(len(ldenOutTable[r])):
+            ldenInTable[r][c].set(round(100*p2f(ldenOutTable[r][c].get()), 2))
+
+def vis_plot():
+    if tnmaide_result is None:
+        PopUpMsg('Please Calculate TNMAide results succesfully before attempting to plot noise results.')
+        return
+    
+    plotOptions = ['Avgerage Day Hourly SPL', 'Average Day Hourly Speed', 
+                   'Hourly Speed Histograms', 'Hourly SPL Histograms']
+    if plotChoice.get() == 'Avgerage Day Hourly SPL':
+        figs, axs = tnmaide_result.Plot_Avg_Day_Hourly_SPL()
+    if plotChoice.get() == 'Average Day Hourly Speed':
+        figs, axs = tnmaide_result.Plot_Avg_Day_Hourly_Speed()
+    if plotChoice.get() == 'Hourly Speed Histograms':
+        figs, axs = tnmaide_result.Plot_Hourly_Speed_Histograms()
+    if plotChoice.get() == 'Hourly SPL Histograms':
+        figs, axs = tnmaide_result.Plot_Hourly_SPL_Histograms()
+    
+    #Show the Plot
+    for child in plotFrame.winfo_children():
+        child.destroy()
+
+    i = 0
+    for fig in figs:
+        canvas = FigureCanvasTkAgg(fig, master = plotFrame)  
+        canvas.draw()
+        # placing the canvas on the Tkinter window
+        canvas.get_tk_widget().grid(row=i, column = 0, pady=(5, 0), padx=(5, 0))
+        i+=1
+        toolbar = NavigationToolbar2Tk(canvas, plotFrame, pack_toolbar=False)
+        toolbar.update()
+        # placing the toolbar on the Tkinter window
+        toolbar.grid(row=i, column = 0, pady=(5, 0))
+        i+=1
+    bind_tree(vis, "<MouseWheel>", vis_mouse_wheel)
 # GUI
    
 ################################################################################
@@ -864,13 +1145,21 @@ def path_clicked(path):
 
 # Bind Mouse Wheel to GUI
 
-def bind_tree(widget, event, callback):
+def bind_tree(widget, event, callback, filter=None):
     "Binds an event to a widget and all its descendants."
 
-    widget.bind(event, callback)
+    if filter is not None:        
+        if isinstance(widget, filter):
+            
+            widget.bind(event, callback)
 
-    for child in widget.children.values():
-        bind_tree(child, event, callback)
+            for child in widget.children.values():
+                bind_tree(child, event, callback, filter = filter)
+    else:
+        widget.bind(event, callback)
+
+        for child in widget.children.values():
+            bind_tree(child, event, callback)
 
 def main_mouse_wheel(event):
     #if main_container.winfo_height() 
@@ -884,6 +1173,12 @@ def TMCoutput_mouse_wheel(event):
 
 def tmcselect_mouse_wheel(event):
     TMCSelect_canvas.yview_scroll(int(-1*event.delta/120), "units")
+
+def tnmaide_mouse_wheel(event):
+    tnmaide_canvas.yview_scroll(int(-1*event.delta/120), "units")
+
+def vis_mouse_wheel(event):
+    vis_canvas.yview_scroll(int(-1*event.delta/120), "units")
     
 # bind ctrl events so the text can be coppied
 def ctrlEvent(event):
@@ -898,7 +1193,6 @@ def ctrlEvent(event):
 
 ################################################################################
 if __name__ == "__main__":
-    
     mp.freeze_support()  
     
     root = Tk()
@@ -906,7 +1200,8 @@ if __name__ == "__main__":
     root.grid_rowconfigure(0, weight=0)
     root.grid_rowconfigure(1, weight=1)
     root.grid_columnconfigure(0, weight=1)
-    
+    style = ttk.Style()
+
     iconPath = resource_path('lib\\dot.png')
     p1 = tk.PhotoImage(file = iconPath)
     root.iconphoto(False, p1)
@@ -986,7 +1281,7 @@ if __name__ == "__main__":
     ttk.Label(TMCSelection_frame, wraplength = 500, text='To select specific data from the National Traffic Dataset, please select the desired features').grid(row=0, column=0, columnspan= 5)
     w_tmc_config = ttk.Button(TMCSelection_frame, text='Select TMC Config File', command=f_tmc_config).grid(column=0, row=1, columnspan=2, sticky="w")
     pl_tmc_config = ttk.Label(TMCSelection_frame)
-    pl_tmc_config.grid(column=2, row=1, columnspan=3, sticky="w")
+    pl_tmc_config.grid(column=2, row=1, columnspan=4, sticky="w")
     
     w_kml = ttk.Button(TMCSelection_frame, text='Select KML File', command=f_kml).grid(column=0, row=2, columnspan=2, sticky="w")
     pl_kml = ttk.Label(TMCSelection_frame)
@@ -1007,14 +1302,24 @@ if __name__ == "__main__":
     DirectionValue = StringVar()
     direction = ttk.Combobox(TMCSelection_frame, textvariable=DirectionValue, state='readonly', width=50)
     direction.grid(column=2, row=6, columnspan=3, sticky="w")
-        
-    mapButton = ttk.Button(TMCSelection_frame, text="Map Selected TMCs", command=MapTMCs).grid(column=0, row=7, columnspan=1, sticky='w')
+    
+    tmcbuttoncanvas = tk.Canvas(TMCSelection_frame)
+    tmcbuttoncanvas.grid(column=0, row=7, sticky="W", columnspan=5)
 
-    tmcButton = ttk.Button(TMCSelection_frame, text="Select TMC IDs", command=PrintSelectData).grid(column=1, row=7, columnspan=1, sticky='w')
+    mapButton = ttk.Button(tmcbuttoncanvas, text="Map Selected TMCs", command=MapTMCs)
+    mapButton.grid(column=0, row=0, columnspan=1, sticky='w', padx=(0, 5))
 
-    saveButton = ttk.Button(TMCSelection_frame, text="Save Selected TMCs", command=SelectData).grid(column=2, row=7, columnspan=1, sticky='w')
+    tmcButton = ttk.Button(tmcbuttoncanvas, text="Select TMC IDs", command=PrintSelectData)
+    tmcButton.grid(column=1, row=0, columnspan=1, sticky='w', padx=(0, 5))
 
-    clearButton = ttk.Button(TMCSelection_frame, text="Clear Selected TMCs", command=ClearData).grid(column=3, row=7, columnspan=1, sticky='w')
+    saveButton = ttk.Button(tmcbuttoncanvas, text="Save Selected TMCs", command=SelectData)
+    saveButton.grid(column=2, row=0, columnspan=1, sticky='w', padx=(0, 5))
+
+    clearButton = ttk.Button(tmcbuttoncanvas, text="Clear Selected TMCs", command=ClearData)
+    clearButton.grid(column=3, row=0, columnspan=1, sticky='w', padx=(0, 5))
+
+    clearButton = ttk.Button(tmcbuttoncanvas, text="Clear Filters", command=ClearFilters)
+    clearButton.grid(column=4, row=0, columnspan=1, sticky='w', padx=(0, 5))
 
     TMCOutput_Container = tk.Frame(TMCSelection_frame)
     TMCOutput_Container.grid(row=8, column=0, columnspan=5, sticky="news")
@@ -1031,20 +1336,282 @@ if __name__ == "__main__":
 
     for child in TMCSelection_frame.winfo_children(): child.grid_configure(padx=2, pady=4)
     
-    # TNM_AID GUI TAB
-    tnmaid = tk.Frame(notebook)
-    tnmaid.grid(row=0, column=0, sticky="news")
-    tnmaid.grid_rowconfigure(0, weight=1)
-    tnmaid.grid_columnconfigure(0, weight=1)
-    notebook.add(tnmaid, text='TNMAid')
+    ########################
+    ###### TNM_AID GUI TAB
     
-    # Vizualization Tab
+    tnmaide = tk.Frame(notebook)
+    tnmaide.grid(row=0, column=0, sticky="news")
+    tnmaide.grid_rowconfigure(0, weight=1)
+    tnmaide.grid_columnconfigure(0, weight=1)
+    notebook.add(tnmaide, text='TNMAide')
+
+    tnmaide_canvas = tk.Canvas(tnmaide)
+    tnmaide_scrollbar = tk.Scrollbar(tnmaide, orient="vertical", command=tnmaide_canvas.yview)
+    tnmaide_scrollbar.grid(row=0, column=1, sticky='ns')
+    tnmaide_canvas.grid(row=0, column=0, sticky="news")
+    tnmaide_canvas.configure(yscrollcommand = tnmaide_scrollbar.set)
+    
+    tnmaideframe = tk.Frame(tnmaide_canvas)
+    tnmaide_canvas.create_window((0,0), window=tnmaideframe, anchor='nw')
+
+    # Choose TMCs
+    tnmaide_headerFont = ("Ariel", 13, "bold")
+    ttk.Label(tnmaideframe, text='TNMAide - Estimate characteristic noise metrics near the roadway.', font=tnmaide_headerFont).grid(row=0, column=0, columnspan=2, sticky="w")
+    ttk.Separator(tnmaideframe, orient=HORIZONTAL).grid(row=1,column=0, columnspan=5, sticky="ew")
+
+    tmc_selection_button = ttk.Button(tnmaideframe, text = 'TMC Selection Tool', command=lambda: notebook.select('.!notebook.!frame3')).grid(column=0, row=2, columnspan=1, sticky="w")
+    w_npmrds_clean_3 = ttk.Button(tnmaideframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=3, columnspan=1, sticky="w")
+    pl_npmrds_clean_3 = ttk.Label(tnmaideframe)
+    pl_npmrds_clean_3.grid(column=1, row=3, columnspan=1, sticky="w")
+
+    medwidthentry = ttk.Label(tnmaideframe, text='Median Width (ft): ').grid(column = 0, row=4, sticky="w")
+    medwidth = DoubleVar()
+    ttk.Entry(tnmaideframe, textvariable=medwidth).grid(column=1, row=4, sticky="w")
+    
+    ttk.Label(tnmaideframe, text='Enter TMC Information').grid(row=5, column=0, columnspan=2, sticky="ew")
+    tmcentercanvas = tk.Canvas(tnmaideframe)
+    tmcentercanvas.grid(column=0, row=6, columnspan=2, sticky="w")
+
+    # Entry
+    tmc1entrylabel = ttk.Label(tmcentercanvas, text='TMC 1: ').grid(row=0, column=1)
+    tmc2entrylabel = ttk.Label(tmcentercanvas, text='TMC 2: ').grid(row=0, column=2)
+    TMC_1Entry = StringVar()
+    TMC_2Entry = StringVar()
+    tmcIDLabel = ttk.Label(tmcentercanvas, text='Enter TMC IDs: ').grid(row=1, column=0, sticky='w', padx=(0, 5))
+    ttk.Entry(tmcentercanvas, textvariable=TMC_1Entry).grid(column=1, row=1, sticky="w", padx=(5, 5))
+    ttk.Entry(tmcentercanvas, textvariable=TMC_2Entry).grid(column=2, row=1, sticky="w", padx=(5, 0))
+
+    lanesentry = ttk.Label(tmcentercanvas, text='Number of Lanes in Each Direction: ').grid(column = 0, row=2, sticky="w", padx=(0, 5))
+    NumLanes1 = IntVar()
+    ttk.Entry(tmcentercanvas, textvariable=NumLanes1).grid(column=1, row = 2, sticky="w", padx=(5, 5))
+    NumLanes2 = IntVar()
+    ttk.Entry(tmcentercanvas, textvariable=NumLanes2).grid(column=2, row = 2, sticky="w", padx=(5, 0))
+
+    gradeentry = ttk.Label(tmcentercanvas, text='Roadway Grade: ').grid(column = 0, row=3, sticky="w", padx=(0, 5))
+    roadgrade1 = DoubleVar()
+    ttk.Entry(tmcentercanvas, textvariable=roadgrade1).grid(column=1, row=3, sticky="w", padx=(5, 5))
+    roadgrade2 = DoubleVar()
+    ttk.Entry(tmcentercanvas, textvariable=roadgrade2).grid(column=2, row=3, sticky="w", padx=(5, 5))
+    helpgrade = ttk.Label(tmcentercanvas, text='in direction of near lanes, include - or +').grid(column = 3, row=3, sticky="w", padx=(5, 0))
+
+    ########## Calculate and Outputs ###############
+    ttk.Separator(tnmaideframe, orient=HORIZONTAL).grid(row=9,column=0, columnspan=5, sticky="ew")
+    calcButton = ttk.Button(tnmaideframe, text='Calculate TNMAide Outputs', command=lambda: calc_tnmaide(True), style='h2.TButton')
+    style.configure('h2.TButton', font=tnmaide_headerFont)
+
+    calcButton.grid(column=0, row=10, columnspan=1, sticky='w', padx=(0, 5))
+    TNMAIDE_cancelButton = ttk.Button(tnmaideframe, text="Cancel TNMAide Calculation ", command=CancelProcess)
+    TNMAIDE_cancelButton.grid(column=1, row=10, columnspan=1, sticky='w', padx=(5, 5))
+    TNMAide_statusLabel = ttk.Label(tnmaideframe, text="TNMAide Calculating", relief=SUNKEN)
+    TNMAide_statusLabel.grid(column=2, row=10, columnspan=1, padx=(5, 0), sticky="W")
+    TNMAide_statusLabel.grid_remove()
+    
+    tnmaide_headerFont2 = ("Ariel", 11, "bold")
+    ttk.Label(tnmaideframe, text='Worst Hour Noise Metrics at Reference Location: ', font=tnmaide_headerFont2).grid(row=11, column=0, columnspan=2, sticky="w")
+    
+    #Output Labels
+    ttk.Label(tnmaideframe, text='LAeq: ').grid(row=12, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Ldn: ').grid(row=13, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Lden: ').grid(row=14, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Worst Hour: ').grid(row=15, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Worst Day: ').grid(row=16, column=0, columnspan=1, sticky="w")
+    
+    # Outputs
+    LAeqOutput = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=LAeqOutput, state="readonly").grid(row=12, column=1, sticky="w")
+    LdnOutput = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=LdnOutput, state="readonly").grid(row=13, column=1, sticky="w")
+    LdenOutput = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=LdenOutput, state="readonly").grid(row=14, column=1, sticky="w")
+    WorstHourOut = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=WorstHourOut, state="readonly").grid(row=15, column=1, sticky="w")
+    WorstDayOut = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=WorstDayOut, state="readonly").grid(row=16, column=1, sticky="w") 
+    
+    ttk.Label(tnmaideframe, text="Traffic Information", font=tnmaide_headerFont2).grid(row=17, column=0, columnspan=2, sticky="w")   
+    ttk.Label(tnmaideframe, text='Current AADT: ').grid(row=18, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text="Yearly Vehicle Mix (%): ", font='Ariel 10 bold').grid(row=19, column=0, columnspan = 2, sticky="W")
+    ttk.Label(tnmaideframe, text='Cars: ').grid(row=20, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Medium Trucks: ').grid(row=21, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Heavy Trucks: ').grid(row=22, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Buses: ').grid(row=23, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Motorcycles: ').grid(row=24, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Total: ').grid(row=25, column=0, columnspan=1, sticky="w")
+    
+    CurrentAADTOut = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=CurrentAADTOut, state="readonly").grid(row=18, column=1, sticky="w")
+    CarsOut = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=CarsOut, state="readonly").grid(row=20, column=1, sticky="w")
+    MedTrucksOut = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=MedTrucksOut, state="readonly").grid(row=21, column=1, sticky="w")
+    HeavyTrucksOut = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=HeavyTrucksOut, state="readonly").grid(row=22, column=1, sticky="w")
+    BusesOut = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=BusesOut, state="readonly").grid(row=23, column=1, sticky="w")
+    MotoOut = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=MotoOut, state="readonly").grid(row=24, column=1, sticky="w")
+    TotalOut = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=TotalOut, state="readonly").grid(row=25, column=1, sticky="w")
+
+    ttk.Label(tnmaideframe, text='LDN Time Period Distribution', font='Ariel 10 bold').grid(row=26, column=0, columnspan=2, sticky="w")
+
+    daybreakdown = tk.Canvas(tnmaideframe)
+    daybreakdown.grid(column=0, row=27, columnspan=5, rowspan=3, sticky="w")
+    ttk.Label(daybreakdown, text='Percent Vehicles in the Current YEAR, DAYTIME: ').grid(row=1, column=0, columnspan=1, sticky="w")
+    ttk.Label(daybreakdown, text='Percent Vehicles in the Current YEAR, NIGHTTIME: ').grid(row=2, column=0, columnspan=1, sticky="w")
+    ttk.Label(daybreakdown, text = "Auto").grid(column=1, row=0, sticky="w")
+    ttk.Label(daybreakdown, text = "Medium Trucks").grid(column=2, row=0, sticky="w")
+    ttk.Label(daybreakdown, text = "Heavy Trucks").grid(column=3, row=0, sticky="w")
+    ttk.Label(daybreakdown, text = "Buses").grid(column=4, row=0, sticky="w")
+    ttk.Label(daybreakdown, text = "Motor Cycles").grid(column=5, row=0, sticky="w")
+
+    ldnOutTable = []
+    for r in range(2):
+        ldnOutRow = []
+        for c in range(5):
+            strvar = tk.StringVar()
+            ldnOutRow.append(strvar)
+            ttk.Entry(daybreakdown, textvariable=strvar, state="readonly").grid(row=1+r, column=1+c, sticky="w")
+        ldnOutTable.append(ldnOutRow)
+
+    ttk.Label(tnmaideframe, text='LDEN Time Period Distribution', font='Ariel 10 bold').grid(row=30, column=0, columnspan=2, sticky="w")
+
+    denbreakdown = tk.Canvas(tnmaideframe)
+    denbreakdown.grid(column=0, row=31, columnspan=5, rowspan=4, sticky="w")
+    ttk.Label(denbreakdown, text='Percent Vehicles in the Current YEAR, DAYTIME: ').grid(row=1, column=0, columnspan=1, sticky="w")
+    ttk.Label(denbreakdown, text='Percent Vehicles in the Current YEAR, EVENING: ').grid(row=2, column=0, columnspan=1, sticky="w")
+    ttk.Label(denbreakdown, text='Percent Vehicles in the Current YEAR, NIGHTTIME: ').grid(row=3, column=0, columnspan=1, sticky="w")
+    ttk.Label(denbreakdown, text = "Auto").grid(column=1, row=0, sticky="w")
+    ttk.Label(denbreakdown, text = "Medium Trucks").grid(column=2, row=0, sticky="w")
+    ttk.Label(denbreakdown, text = "Heavy Trucks").grid(column=3, row=0, sticky="w")
+    ttk.Label(denbreakdown, text = "Buses").grid(column=4, row=0, sticky="w")
+    ttk.Label(denbreakdown, text = "Motor Cycles").grid(column=5, row=0, sticky="w")
+
+    ldenOutTable = []
+    for r in range(3):
+        ldenOutRow = []
+        for c in range(5):
+            strvar = tk.StringVar()
+            ldenOutRow.append(strvar)
+            ttk.Entry(denbreakdown, textvariable=strvar, state="readonly").grid(row=1+r, column=1+c, sticky="w")
+        ldenOutTable.append(ldenOutRow)
+
+    ########## Calculate Future Metrics ###############
+    ttk.Separator(tnmaideframe, orient=HORIZONTAL).grid(row=35,column=0, columnspan=5, sticky="ew")
+    ttk.Label(tnmaideframe, text='Estimate noise levels with future AADT breakdown', font=tnmaide_headerFont).grid(row=36, column=0, columnspan=2, sticky="w")
+    fillCurrentButton = ttk.Button(tnmaideframe, text='Fill from current year', command=fill_current_year)
+    fillCurrentButton.grid(column=1, row=37, columnspan=1, sticky='w', padx=(5, 5))
+    ttk.Label(tnmaideframe, text='Future Year AADT: ').grid(row=38, column=0, columnspan=2, sticky="w")
+    futureAADT = tk.StringVar()
+    ttk.Entry(tnmaideframe, textvariable=futureAADT).grid(row=38, column=1, sticky="w")
+    
+    ttk.Label(tnmaideframe, text='LDN Time Period Distribution', font='Ariel 10 bold').grid(row=39, column=0, columnspan=2, sticky="w")
+    futureLDNInput = tk.Canvas(tnmaideframe)
+    futureLDNInput.grid(column=0, row=40, columnspan=5, rowspan=3, sticky="w")
+    ttk.Label(futureLDNInput, text='Percent Vehicles in the Future YEAR, DAYTIME: ').grid(row=1, column=0, columnspan=1, sticky="w")
+    ttk.Label(futureLDNInput, text='Percent Vehicles in the Future YEAR, NIGHTTIME: ').grid(row=2, column=0, columnspan=1, sticky="w")
+    ttk.Label(futureLDNInput, text = "Auto").grid(column=1, row=0, sticky="w")
+    ttk.Label(futureLDNInput, text = "Medium Trucks").grid(column=2, row=0, sticky="w")
+    ttk.Label(futureLDNInput, text = "Heavy Trucks").grid(column=3, row=0, sticky="w")
+    ttk.Label(futureLDNInput, text = "Buses").grid(column=4, row=0, sticky="w")
+    ttk.Label(futureLDNInput, text = "Motor Cycles").grid(column=5, row=0, sticky="w")
+
+    ldnInTable = []
+    for r in range(2):
+        ldnInRow = []
+        for c in range(5):
+            strvar = tk.StringVar()
+            ldnInRow.append(strvar)
+            ttk.Entry(futureLDNInput, textvariable=strvar).grid(row=1+r, column=1+c, sticky="w")
+        ldnInTable.append(ldnInRow)
+
+    totLDNInput = tk.StringVar()
+    ttk.Label(tnmaideframe, text='Total Percent: ').grid(row=44, column=0, columnspan=1, sticky="w")
+    ttk.Entry(tnmaideframe, textvariable=totLDNInput, state="readonly").grid(row=44, column=1, sticky="w")
+
+    ttk.Label(tnmaideframe, text='LDEN Time Period Distribution', font='Ariel 10 bold').grid(row=45, column=0, columnspan=2, sticky="w")
+    futureLDENInput = tk.Canvas(tnmaideframe)
+    futureLDENInput.grid(column=0, row=46, columnspan=5, rowspan=4, sticky="w")
+    ttk.Label(futureLDENInput, text='Percent Vehicles in the Future YEAR, DAYTIME: ').grid(row=1, column=0, columnspan=1, sticky="w")
+    ttk.Label(futureLDENInput, text='Percent Vehicles in the Future YEAR, EVENING: ').grid(row=2, column=0, columnspan=1, sticky="w")
+    ttk.Label(futureLDENInput, text='Percent Vehicles in the Future YEAR, NIGHTTIME: ').grid(row=3, column=0, columnspan=1, sticky="w")
+    ttk.Label(futureLDENInput, text = "Auto").grid(column=1, row=0, sticky="w")
+    ttk.Label(futureLDENInput, text = "Medium Trucks").grid(column=2, row=0, sticky="w")
+    ttk.Label(futureLDENInput, text = "Heavy Trucks").grid(column=3, row=0, sticky="w")
+    ttk.Label(futureLDENInput, text = "Buses").grid(column=4, row=0, sticky="w")
+    ttk.Label(futureLDENInput, text = "Motor Cycles").grid(column=5, row=0, sticky="w")
+
+    ldenInTable = []
+    for r in range(3):
+        ldenInRow = []
+        for c in range(5):
+            strvar = tk.StringVar()
+            ldenInRow.append(strvar)
+            ttk.Entry(futureLDENInput, textvariable=strvar).grid(row=1+r, column=1+c, sticky="w")
+        ldenInTable.append(ldenInRow)
+    
+    totLDENInput = tk.StringVar()
+    ttk.Label(tnmaideframe, text='Total Percent: ').grid(row=50, column=0, columnspan=1, sticky="w")
+    ttk.Entry(tnmaideframe, textvariable=totLDENInput, state="readonly").grid(row=50, column=1, sticky="w")
+
+    calcFutureLDNButton = ttk.Button(tnmaideframe, text='Calculate with LDN Distributions', command=lambda: calc_future_noise_LDN(), style='h2.TButton')
+    calcFutureLDNButton.grid(column=0, row=51, columnspan=1, sticky='w', padx=(0, 5))
+
+    calcFutureLDENButton = ttk.Button(tnmaideframe, text='Calculate with LDEN Distributions', command=lambda: calc_future_noise_LDEN(), style='h2.TButton')
+    calcFutureLDENButton.grid(column=1, row=51, columnspan=1, sticky='w', padx=(0, 5))
+    
+    ttk.Label(tnmaideframe, text='Worst Hour Noise Metrics at Reference Location: ', font=tnmaide_headerFont2).grid(row=52, column=0, columnspan=2, sticky="w")
+
+    #Output Labels
+    ttk.Label(tnmaideframe, text='Future Fleet Distribution Based On: ').grid(row=53, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='LAeq: ').grid(row=54, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Ldn: ').grid(row=55, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Lden: ').grid(row=56, column=0, columnspan=1, sticky="w")
+
+    # Outputs
+    FleetBreakdownUsed = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=FleetBreakdownUsed, state="readonly").grid(row=53, column=1, sticky="w", columnspan=2)
+    LAeqFutureOutput = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=LAeqFutureOutput, state="readonly").grid(row=54, column=1, sticky="w")
+    LdnFutureOutput = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=LdnFutureOutput, state="readonly").grid(row=55, column=1, sticky="w")
+    LdenFutureOutput = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=LdenFutureOutput, state="readonly").grid(row=56, column=1, sticky="w")
+
+    for child in tnmaideframe.winfo_children(): child.grid_configure(padx=2, pady=4)
+    ##################################################
+    
+    ###### Vizualization Tab
     vis = tk.Frame(notebook)
     vis.grid(row=0, column=0, sticky="news")
     vis.grid_rowconfigure(0, weight=1)
     vis.grid_columnconfigure(0, weight=1)
     notebook.add(vis, text='Data Vizualization')
+
+    vis_canvas = tk.Canvas(vis)
+    vis_scrollbar = tk.Scrollbar(vis, orient="vertical", command=vis_canvas.yview)
+    vis_scrollbar.grid(row=0, column=1, sticky='ns')
+    vis_canvas.grid(row=0, column=0, sticky="news")
+    vis_canvas.configure(yscrollcommand = vis_scrollbar.set)
     
+    visframe = tk.Frame(vis_canvas)
+    vis_canvas.create_window((0,0), window=visframe, anchor='nw')
+
+    plotOptions = ['Avgerage Day Hourly SPL', 'Average Day Hourly Speed', 
+                   'Hourly Speed Histograms', 'Hourly SPL Histograms']
+
+    ttk.Label(visframe, text='What would you like to plot? ').grid(row=0, column=0, columnspan=1, sticky="w")
+    plotChoice = StringVar()
+    plot_dropdown = ttk.Combobox(visframe, textvariable=plotChoice, values=plotOptions)
+    plot_dropdown.grid(row=0, column=1, sticky='w')
+
+    plotButton = ttk.Button(visframe, text='Create Plot', command=lambda: vis_plot(), style='h2.TButton')
+    plotButton.grid(column=0, row=1, columnspan=1, sticky='w', padx=(0, 5))
+    plotFrame = tk.Frame(visframe)
+    plotFrame.grid(column=0, row=2, columnspan=2, sticky="ns")
+
+    for child in visframe.winfo_children(): child.grid_configure(padx=2, pady=4)
+
     #print(notebook.tabs())
     
     ##################################################
@@ -1059,8 +1626,6 @@ if __name__ == "__main__":
     
     ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=3,column=0, columnspan=5, sticky="ew")
     
-    
-    
     #ttk.Label(mainframe, text='Select inputs under the desired process and press the “Run Process” button.').grid(row=6,column=0, columnspan=3, sticky="w")
     
     #ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=4,column=0, columnspan=5, sticky="ew")
@@ -1071,11 +1636,6 @@ if __name__ == "__main__":
     ttk.Label(mainframe, text=step2).grid(row=26,column=0, columnspan=1, sticky="w")
     ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=31,column=0, columnspan=5, sticky="ew")
     ttk.Label(mainframe, text=step3).grid(row=32,column=0, columnspan=1, sticky="w")
-    ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=34,column=0, columnspan=5, sticky="ew")
-    ttk.Label(mainframe, text=step4).grid(row=35,column=0, columnspan=1, sticky="w")
-    
-    ttk.Label(mainframe, text=' Enter TMC Codes (separate by comma)').grid(row=38, column=0, columnspan=1, sticky="w")
-    ttk.Label(mainframe, text='          ').grid(row=39, column=0, columnspan=1, sticky="w")
     
     ##################################################
     
@@ -1197,23 +1757,7 @@ if __name__ == "__main__":
     
     w_npmrds_clean_2 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=33, columnspan=1, sticky="w")
     
-    # script 4
-    p4Canvas = tk.Canvas(mainframe)
-    p4Canvas.grid(column=1, row=35, sticky='W')
-    p4startButton = ttk.Button(p4Canvas, text="Run Process 4", command=lambda: ProcessData(step4))
-    p4startButton.grid(column=0, row=0, columnspan=1 ,sticky="W", padx=(0, 5))
-    p4cancelButton = ttk.Button(p4Canvas, text="Cancel Process 4", command=CancelProcess)
-    p4cancelButton.grid(column=1, row=0, columnspan=1, padx=(5, 5), sticky="W")
-    p4statusLabel = ttk.Label(p4Canvas, text="Process 4 Running", relief=SUNKEN)
-    p4statusLabel.grid(column=2, row=0, columnspan=1, padx=(5, 0), sticky="W")
-    p4statusLabel.grid_remove()
     
-    tmc_selection_button = ttk.Button(mainframe, text = 'TMC Selection Tool', command=lambda: notebook.select('.!notebook.!frame3')).grid(column=0, row=36, columnspan=1, sticky="w")
-    w_npmrds_clean_3 = ttk.Button(mainframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=37, columnspan=1, sticky="w")
-    # Entry
-    tmcEntry = StringVar()
-    ttk.Entry(mainframe, textvariable=tmcEntry).grid(column=1, row=38, columnspan=1, sticky="ew")
-    ##################################################
     
     # 4. Pathlabels
     # output folder
@@ -1265,9 +1809,6 @@ if __name__ == "__main__":
     # script 3
     pl_npmrds_clean_2 = ttk.Label(mainframe)
     pl_npmrds_clean_2.grid(column=1, row=33, columnspan=1, sticky="w")
-    # script 4
-    pl_npmrds_clean_3 = ttk.Label(mainframe)
-    pl_npmrds_clean_3.grid(column=1, row=37, columnspan=1, sticky="w")
     ##################################################
     
     # 5. Check available pre-processed files
@@ -1314,15 +1855,24 @@ if __name__ == "__main__":
     else:
         pl_emission.config(text='')
            
-    if False:
+    if True:
         testOption = 4
 
+        roadgrade1.set(0)
+        roadgrade2.set(0)
+        medwidthentry = 6
+        NumLanes1.set(3)
+        NumLanes2.set(3)
 
         if testOption == 1:
             tmas_year = 2021
             npmrds_year = 2018
             state  = 'MA'
             county = 'Middlesex'
+
+            TMC_1Entry.set('129-04136')
+            TMC_2Entry.set('129+04137')
+  
         elif testOption == 2:
             tmas_year = 2019
             npmrds_year = 2017
@@ -1338,6 +1888,9 @@ if __name__ == "__main__":
             npmrds_year = 2018
             state = 'OR'
             county = 'Marion'
+
+            TMC_1Entry.set('114-04428')
+            TMC_2Entry.set('114+04429')
         elif testOption == 5:
             tmas_year = 2019
             npmrds_year = 2021
@@ -1420,10 +1973,11 @@ if __name__ == "__main__":
         pl_npmrds_truck.config(text=fn_npmrds_truck.replace('/','\\'))
         fn_npmrds_tmc = f'H:/TestData/{county}_{state}/NPMRDS Data/TMC_Identification.csv'
         pl_npmrds_tmc.config(text=fn_npmrds_tmc.replace('/','\\'))
-        fn_output = f'H:/DANATool/Outputs/TestNew_20230821_1'
+        fn_output = f'H:/DANATool/Outputs/TESTNEW_20230927'
         pl_output_folder.config(text=fn_output.replace('/','\\'))
 
         fn_tmc_config = fn_npmrds_tmc
+        medwidth.set(6)
         pl_tmc_config.config(text=fn_tmc_config.replace('/','\\'))
         proc_tmc_file()
 
@@ -1450,6 +2004,8 @@ if __name__ == "__main__":
     root.update_idletasks()
     bind_tree(main_container, "<MouseWheel>", main_mouse_wheel)
     bind_tree(TMCSelect_container, "<MouseWheel>", tmcselect_mouse_wheel)
+    bind_tree(tnmaide, "<MouseWheel>", tnmaide_mouse_wheel)
+    bind_tree(vis, "<MouseWheel>", vis_mouse_wheel)
     canvasScrollRegion = (0, 0, 
                           max(canvas.winfo_width()-4, canvas.bbox('all')[2]),
                           max(canvas.winfo_height()-4, canvas.bbox('all')[3]))
@@ -1457,8 +2013,21 @@ if __name__ == "__main__":
     TMCcanvasScrollRegion = (0, 0, 
                           max(TMCSelect_canvas.winfo_width()-4, TMCSelect_canvas.bbox('all')[2]-1),
                           max(TMCSelect_canvas.winfo_height()-4, TMCSelect_canvas.bbox('all')[3]-1))
+    TMCSelect_canvas.configure(scrollregion=TMCcanvasScrollRegion)
+    tnmaide_canvasScrollRegion = (0, 0, 
+                          max(tnmaide_canvas.winfo_width()-4, tnmaide_canvas.bbox('all')[2]-1),
+                          max(tnmaide_canvas.winfo_height()-4, tnmaide_canvas.bbox('all')[3]-1))
+    tnmaide_canvas.configure(scrollregion=tnmaide_canvasScrollRegion)
+    vis_canvasScrollRegion = (0, 0, 
+                          max(vis_canvas.winfo_width()-4, vis_canvas.bbox('all')[2]-1),
+                          max(vis_canvas.winfo_height()-4, vis_canvas.bbox('all')[3]-1))
+    vis_canvas.configure(scrollregion=vis_canvasScrollRegion)
     runningThreads = []
     checkProgress()
+    if '_PYIBoot_SPLASH' in os.environ and importlib.util.find_spec("pyi_splash"):
+        import pyi_splash
+        pyi_splash.update_text('UI Loaded ...')
+        pyi_splash.close()
     root.mainloop()
     sys.stdout = old_stdout
     for afterid in afterids:

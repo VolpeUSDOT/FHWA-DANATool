@@ -21,7 +21,7 @@ filePath = 'C:/Users/aaron.hastings/OneDrive - DOT OST/Code/Python/FHWA-DANATool
 #fileName = 'Sample Data - Required Inputs - Missing Speeds.csv'
 #fileName = 'Sample Data - 111+04600 - Fails on DATE 24 hour metrics.csv'
 
-Test_Case_To_Run = 1
+Test_Case_To_Run = 4
 ###############################################################################
 # SHOULD PASS
 

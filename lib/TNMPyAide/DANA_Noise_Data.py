@@ -473,7 +473,7 @@ class DANA_Noise_Data:
         
         # Regrouping data by TMC
         df_merged = pd.DataFrame() 
-        df_grouped  = df_Min_Data_Needed.groupby(['TMC'])
+        df_grouped  = df_Min_Data_Needed.groupby(['TMC'], sort=False)
         cnt = 0
         for name, group in df_grouped:
             cnt = cnt + 1

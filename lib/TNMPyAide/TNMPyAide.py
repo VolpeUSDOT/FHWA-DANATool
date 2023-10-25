@@ -16,6 +16,7 @@ from collections import namedtuple
 from .DANA_Noise_Data import DANA_Noise_Data as DND
 from .Sound_Pressure_Level_Metrics import Sound_Pressure_Level_Metrics as SPL_Metrics
 from inspect import currentframe, getframeinfo
+from .DANAPlot import DANAPlot as dp
 
 
 
@@ -157,14 +158,14 @@ class TNMPyAide:
         
         # Remove any links not included in the meta data
         df_selected_tmcs = pd.DataFrame() 
-        df_grouped  = df_DANA.groupby(['TMC'])
+        df_grouped  = df_DANA.groupby(['TMC'], sort=False)
         for tmc, group in df_grouped:
             if tmc == meta.L1_tmc:
                 df_selected_tmcs = df_selected_tmcs.append(group) # Should consider concat instead of append
         if self.number_of_links == 2:
             for tmc, group in df_grouped:
                 if tmc == meta.L2_tmc:
-                    df_selected_tmcs = df_selected_tmcs.append(group) 
+                    df_selected_tmcs = df_selected_tmcs.append(group)
                 
         # Should now have only the correct TMCs and they should be in order        
         df_DANA = df_selected_tmcs  
@@ -315,6 +316,8 @@ class TNMPyAide:
                 SPL_Log_Avgs = 10*np.log10(np.mean(np.power(10,group.loc[:,['SPL_AT_L2', 'SPL_MT_L2', 'SPL_HT_L2', 'SPL_BUS_L2', 'SPL_MC_L2','SPL_Total_L2','SPL_Total']]/10)))                                    
                 df_avg.loc[hour,['SPL_AT_L2', 'SPL_MT_L2', 'SPL_HT_L2', 'SPL_BUS_L2', 'SPL_MC_L2','SPL_Total_L2','SPL_Total']] = SPL_Log_Avgs
 
+        self.df_avg_day = df_avg # Save data for "average day"
+
         # Summary Data
         self.df_Traffic_Noise = dnd_obj.df_Traffic_Noise
         day_summary = namedtuple('day_summary', 'day df_hourly_spl worst_hour_idx worst_hour worst_hour_spl LAEQ_24_HR LDN LDEN')
@@ -346,6 +349,8 @@ class TNMPyAide:
         day = self.df_Traffic_Noise.loc[worst_hour_idx, 'DATE']                
         df_hourly_spl = self.df_Traffic_Noise[self.df_Traffic_Noise['DATE']==day]
         
+        self.df_worst_day = df_hourly_spl
+        
         metrics = self.Compute_Daily_Metrics(df_hourly_spl)
         self.worst_day = day_summary(day, df_hourly_spl, worst_hour_idx, worst_hour, worst_hour_spl, metrics[0], metrics[1], metrics[2])
         if detailed_log:
@@ -367,16 +372,100 @@ class TNMPyAide:
         LDEN = SPL_Metrics.LDEN(df_day['SPL_Total'])
         return [LAEQ_24_HR, LDN, LDEN]
        
-    def Plot_Hourly_SPL():
-        pass
+    def Plot_Avg_Day_Hourly_SPL(self):
+        figs = []
+        axs = []
+        
+        # ALL DATA LINK 1
+        x = np.array([self.df_avg_day.HOUR, self.df_avg_day.HOUR, self.df_avg_day.HOUR, 
+                      self.df_avg_day.HOUR, self.df_avg_day.HOUR, self.df_avg_day.HOUR])
+        y = np.array([self.df_avg_day.SPL_AT_L1, self.df_avg_day.SPL_MT_L1, 
+                      self.df_avg_day.SPL_HT_L1, self.df_avg_day.SPL_BUS_L1, 
+                      self.df_avg_day.SPL_MC_L1, self.df_avg_day.SPL_Total_L1]) 
+        fig, ax = dp.Line_Plot(x, y, 'Hour', 'Hourly LAeq, dB(A)', 'Average Day SPL, Link 1')
+        labels = ['AT(L1)','MT(L1)','HT(L1)','Bus(L1)','MC(L1)','Total(L1)']
+        dp.Add_Legend(fig, ax, labels)
+        figs.append(fig)
+        axs.append(ax)
     
-    def Plot_Daily_Metrics():
-        pass
-    
-    def Plot_Hourly_Traffic_Histograms():
-        pass
+        # ALL DATA LINK 2
+        y = np.array([self.df_avg_day.SPL_AT_L2, self.df_avg_day.SPL_MT_L2, 
+                      self.df_avg_day.SPL_HT_L2, self.df_avg_day.SPL_BUS_L2, 
+                      self.df_avg_day.SPL_MC_L2, self.df_avg_day.SPL_Total_L2]) 
+        fig, ax = dp.Line_Plot(x, y, 'Hour', 'Hourly LAeq, dB(A)', 'Average Day SPL, Link 2')
+        labels = ['AT(L2)','MT(L2)','HT(L2)','Bus(L2)','MC(L2)','Total(L2)']
+        dp.Add_Legend(fig, ax, labels)
+        figs.append(fig)
+        axs.append(ax)
 
-    def Plot_Daily_Traffic_Histograms():
-        pass
+        # JUST TOTAL SPL
+        x = np.array([self.df_avg_day.HOUR])
+        y = np.array([self.df_avg_day.SPL_Total]) 
+        fig, ax = dp.Line_Plot(x, y, 'Hour', 'Hourly LAeq, dB(A)', 'Average Day Total SPL')
+        figs.append(fig)
+        axs.append(ax)
+        return figs, axs
+
+    def Plot_Avg_Day_Hourly_Speed(self):
+        figs = []
+        axs = []
+        
+        x = np.array([self.df_avg_day.HOUR, self.df_avg_day.HOUR, self.df_avg_day.HOUR, 
+                      self.df_avg_day.HOUR, self.df_avg_day.HOUR, self.df_avg_day.HOUR])
+        y = np.array([self.df_avg_day.SPD_ALL_L1, self.df_avg_day.SPD_AT_L1, 
+                      self.df_avg_day.SPD_HT_L1, self.df_avg_day.SPD_ALL_L2, 
+                      self.df_avg_day.SPD_AT_L2, self.df_avg_day.SPD_HT_L2]) 
+        fig, ax = dp.Line_Plot(x, y, 'Hour', 'Speed, MPH', 'Average Hourly Speed')
+        labels = ['All(L1)','AT(L1)','HT(L1)','All(L2)','AT(L2)','HT(L2)']
+        dp.Add_Legend(fig, ax, labels)
+        figs.append(fig)
+        axs.append(ax)
+        return figs, axs
     
+    def Plot_Hourly_Speed_Histograms(self):
+        figs = []
+        axs = []
+
+        bin_centers = np.array(range(0,105,5))
+        
+        data = np.array([self.df_Traffic_Noise.SPD_ALL_L1])
+        fig, ax = dp.Histogram(data, bin_centers, xlabel = 'Speed, MPH', title = 'Speed Distribution (All, L1)')
+        figs.append(fig)
+        axs.append(ax)
+
+        data = np.array([self.df_Traffic_Noise.SPD_AT_L1])
+        fig, ax = dp.Histogram(data, bin_centers, xlabel = 'Speed, MPH', title = 'Speed Distribution (AT, L1)')
+        figs.append(fig)
+        axs.append(ax)
+
+        data = np.array([self.df_Traffic_Noise.SPD_HT_L1])
+        fig, ax = dp.Histogram(data, bin_centers, xlabel = 'Speed, MPH', title = 'Speed Distribution (HT, L1)')
+        figs.append(fig)
+        axs.append(ax)
+
+        data = np.array([self.df_Traffic_Noise.SPD_ALL_L1])
+        fig, ax = dp.Histogram(data, bin_centers, xlabel = 'Speed, MPH', title = 'Speed Distribution (All, L2)')
+        figs.append(fig)
+        axs.append(ax)
+
+        data = np.array([self.df_Traffic_Noise.SPD_AT_L2])
+        fig, ax = dp.Histogram(data, bin_centers, xlabel = 'Speed, MPH', title = 'Speed Distribution (AT, L2)')
+        figs.append(fig)
+        axs.append(ax)
+
+        data = np.array([self.df_Traffic_Noise.SPD_HT_L2])
+        fig, ax = dp.Histogram(data, bin_centers, xlabel = 'Speed, MPH', title = 'Speed Distribution (HT, L2)')
+        figs.append(fig)
+        axs.append(ax)
+
+        return [figs, axs]
+    
+    def Plot_Hourly_SPL_Histograms(self):
+        bin_centers = np.array(range(65,95,1))
+        
+        data = np.array([self.df_Traffic_Noise.SPL_Total])
+        fig, ax = dp.Histogram(data, bin_centers, xlabel = 'Hourly LAeq, dB(A)', title = 'Total SPL', xtickstep=2, width = 1)
+
+        return [[fig], ax]
+   
  

@@ -8,7 +8,8 @@ from lib import NTD_00_TMAS
 from lib import NTD_01_NPMRDS
 from lib import NTD_02_MOVES
 from lib import NTD_03_SPEED
-from lib import NTD_04_NOISE
+from lib import call_TNMAide
+from lib import load_shapes
 import os
 import sys
 import datetime as dt
@@ -16,7 +17,7 @@ import datetime as dt
 # Basic Input Parameters
 step = 1
 
-testOption = 5
+testOption = 4
 
 
 if testOption == 1:
@@ -24,6 +25,12 @@ if testOption == 1:
     npmrds_year = 2018
     state  = 'MA'
     county = 'Middlesex'
+
+    TMC_1Entry = '129-04136'
+    TMC_2Entry = '129+04137'
+    gradeentry = (0, 0)
+    medwidthentry = 6
+    lanesentry = (3, 3)
 elif testOption == 2:
     tmas_year = 2019
     npmrds_year = 2017
@@ -39,6 +46,12 @@ elif testOption == 4:
     npmrds_year = 2018
     state = 'OR'
     county = 'Marion'
+
+    TMC_1Entry = '114-04428'
+    TMC_2Entry = '114+04429'
+    gradeentry = (0, 0)
+    medwidthentry = 6
+    lanesentry = (3, 3)
 elif testOption == 5:
     tmas_year = 2019
     npmrds_year = 2021
@@ -131,9 +144,10 @@ elif computerName in ('TSCPDBOS-05790'):
 elif computerName in ('VOLSLBOS-06756'):
     pathPrefix1 = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files'
     pathPrefix2 = 'H:/TestData/{}_{}'.format(county, state)
-    pathPrefix3 = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Final Output'
+    pathPrefix3 = 'H:/DANATool/Outputs/TestNew_20230821_1'
 
 # Set File Paths for Calling DANA Scripts
+PATH_OUTPUT=pathPrefix3
 PATH_TMAS_STATION = pathPrefix1 + '/TMAS Data/TMAS {}/tmas_station_{}.csv'.format(tmas_year, tmas_year)
 PATH_TMAS_CLASS_CLEAN = pathPrefix1 + '/TMAS Data/TMAS {}/tmas_class_clean_{}.csv'.format(tmas_year, tmas_year)
 PATH_FIPS = pathPrefix1 + '/FIPS_County_Codes.csv'
@@ -165,12 +179,15 @@ if __name__ == '__main__':
         NTD_00_TMAS.TMAS(SELECT_STATE, r'H:\DANATool\TMAS 2019\TMAS_Station_2020.csv', 
                          r'H:\DANATool\TMAS 2019\TMAS_CLASS_2020.dat', PATH_FIPS, PATH_NEI, PREREADSTATION = True, PATH_OUTPUT = r'H:\DANATool\TMAS 2019\00Output_2020')
     if step == 1:
-        NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_default_speeds, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, AUTO_DETECT_DATES=True)
+        NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_default_speeds, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, PATH_OUTPUT=PATH_OUTPUT, AUTO_DETECT_DATES=True)
     elif step == 2:
         NTD_02_MOVES.MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE)
     elif step == 3:
         NTD_03_SPEED.SPEED(SELECT_STATE, PATH_NPMRDS)  
     elif step == 4:
-        NTD_04_NOISE.NOISE(SELECT_STATE, SELECT_TMC, PATH_NPMRDS)
-
+        group = call_TNMAide.get_TNMPyAide_inputs(PATH_NPMRDS, TMC_1Entry, TMC_2Entry)
+        result = call_TNMAide.call_TNMAide(group, gradeentry, medwidthentry, lanesentry)
     
+        result.Plot_Avg_Day_Hourly_Speed()
+
+        

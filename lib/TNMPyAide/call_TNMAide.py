@@ -5,7 +5,7 @@ Created By: Volpe National Transportation Systems Center
 @author: Aaron.Hastings
 """
 
-from TNMPyAide import TNMPyAide
+from TNMAide import TNMAide
 import pandas as pd
 import datetime
 

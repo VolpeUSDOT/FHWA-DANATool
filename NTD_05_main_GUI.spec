@@ -1,16 +1,28 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 block_cipher = None
-from PyInstaller.utils.hooks import collect_dynamic_libs
+from PyInstaller.utils.hooks import collect_dynamic_libs, collect_data_files
 
 # pyinstaller --distpath . NTD_05_main_GUI.spec
+import certifi
+import pyproj
+import pyarrow
+import pyarrow.vendored
+from pathlib import Path
+
+datalist = [('lib\dot.png', 'lib'), ('lib\ShapeFiles', 'lib\ShapeFiles'), ('lib\ShapeFilesCSV', 'lib\ShapeFilesCSV'), ('lib\pyzmq.libs', 'pyzmq.libs'), ('lib\pyproj.libs', 'pyproj.libs'), ('lib\shapely.libs', 'shapely.libs')]
+datalist.extend(collect_data_files("certifi"))
+datalist.extend(collect_data_files("pyproj"))
+datalist.extend(collect_data_files("pyarrow"))
+datalist.extend(collect_data_files("pyarrow.vendored", include_py_files=True))
+print(datalist)
 
 a = Analysis(['NTD_05_main_GUI.py'],
              pathex=['C:\\Users\\William.Chupp\\OneDrive - DOT OST\\Documents\\DANAToolTesting\\FHWA-DANATool',
                      'C:\\Users\\William.Chupp\\Anaconda3\\envs\\geo_env\\Lib\\site-packages'],
-             binaries=collect_dynamic_libs("zmq") + collect_dynamic_libs("rtree"),
-             datas=[('lib\dot.png', 'lib'), ('lib\ShapeFiles', 'lib\ShapeFiles'), ('lib\pyzmq.libs', 'pyzmq.libs')],
-             hiddenimports=['fiona._shim', 'fiona.schema', 'babel.numbers'],
+             binaries=collect_dynamic_libs("pyarrow", search_patterns=['*.dll', '*.dylib', 'lib*.so', '*.pyd']) + collect_dynamic_libs("zmq") + collect_dynamic_libs("rtree") + collect_dynamic_libs("pyproj") + collect_dynamic_libs("shapely"),
+             datas=datalist,
+             hiddenimports=['fiona._shim', 'fiona.schema', 'babel.numbers', 'shapely._geos'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -20,7 +32,16 @@ a = Analysis(['NTD_05_main_GUI.py'],
              noarchive=False)
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
+
+splash = Splash('SpashScreen.jpg', 
+                binaries=a.binaries,
+                datas=a.datas,
+                text_pos=(7, 300),
+                text_color='white',
+                always_on_top=False)
 exe = EXE(pyz,
+          splash,
+          splash.binaries,
           a.scripts,
           a.binaries,
           a.zipfiles,

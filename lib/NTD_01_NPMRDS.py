@@ -15,7 +15,7 @@ import sys
 from geopandas import GeoDataFrame
 from shapely.geometry import Point
 import pathlib
-from load_shapes import *
+from .load_shapes import *
 import pkg_resources
 from tqdm.tk import tqdm
 import dask
@@ -26,8 +26,9 @@ import math
 import io
 from .TNMPyAide.TNMPyAide import TNMPyAide
 from collections import namedtuple
+import gc
 
-PATH_tmc_shp = pkg_resources.resource_filename('lib', 'ShapeFiles/')
+PATH_tmc_shp = pkg_resources.resource_filename('lib', 'ShapeFilesCSV/')
 
 def runTNMPyAide(group):
     link_grade = 0
@@ -390,7 +391,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
     #b1. Preparing TMC data for geoprocessing
     #Read the TMC shapefile
     print('Geoprocessing TMC data')
-    shp = load_shape(PATH_tmc_shp)
+    shp = load_shape_csv(PATH_tmc_shp, crs)
     #b2. Merge the TMC shapefile with the tmc identification dataset
     tmc_new = pd.merge(tmc, shp, left_on='tmc', right_on='Tmc', how='inner')
     tmc_new.drop('Tmc', axis=1,inplace=True)
@@ -583,7 +584,8 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
         tier3_annual_average_class = tier3_annual_average_class[tier3_annual_average_class['count']>=3].drop('count', axis=1)
         tier3_annual_average_class.to_csv(filepath+'tier3_annualaverage_class.csv',index=False)
 
-    
+        del tmas_class_state
+
     ##################################################
     #f. Creating Classification for Tier 4
     #Cross-classification variables are: URB_RURAL, F_SYSTEM, DOW, PEAKING, HOUR.  Note:  This distribution uses data from the entire country in the TMAS dataset.
@@ -618,7 +620,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
     #tier4_class = pd.concat([tier4_hpms_classification,tier4_noise_classification], axis=1, sort=False)
     tier4_class.rename(index=str, columns={'HPMS_TYPE10':'PCT_TYPE10','HPMS_TYPE25':'PCT_TYPE25','HPMS_TYPE40':'PCT_TYPE40','HPMS_TYPE50':'PCT_TYPE50','HPMS_TYPE60':'PCT_TYPE60','NOISE_AUTO':'PCT_NOISE_AUTO','NOISE_MED_TRUCK':'PCT_NOISE_MED_TRUCK','NOISE_HVY_TRUCK':'PCT_NOISE_HVY_TRUCK','NOISE_BUS':'PCT_NOISE_BUS','NOISE_MC':'PCT_NOISE_MC'},inplace=True)
     tier4_class.to_csv(filepath+'tier4_class.csv',index=False)
-    del tmas_class
+    del tmas_class, daily_volume, tier4_hpms, tier4_noise
     now=lapTimer('  took: ',now)
          
     ##########################################################################################
@@ -1136,22 +1138,24 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
     emissions_state = emissions_state.rename(columns={'repcty_1':'repcty', 'monthid':'monthid3'})
         
     #Sort by: MONTHID HOURID ROADTYPEID HPMSTYPEID POLLUTANTID AVGSPEEDBINID 
-    emissions_state = emissions_state.sort_values(['repcty','monthid3','hourid','roadtypeid','hpmsvtypeid','pollutantid','avgspeedbinid'])
+    #emissions_state = emissions_state.sort_values(['repcty','monthid3','hourid','roadtypeid','hpmsvtypeid','pollutantid','avgspeedbinid'])
     emissions_pass = emissions_state.loc[emissions_state['hpmsvtypeid'].isin(['10', '25'])]
     emissions_truck = emissions_state.loc[emissions_state['hpmsvtypeid'].isin(['40', '50', '60'])]
     #b. Create grams per mile values for vehicletype/pollutant combinations. They will be in this order from the sort:
     
     del emissions_state
-    
+
     now=lapTimer('  took: ',now)
     print('Waiting for Memory to Clear')
-    time.sleep(10)
+    gc.collect()
+    time.sleep(5)
     print('RAM memory % used:', psutil.virtual_memory()[2])
     # Getting usage of virtual_memory in GB ( 4th field)
     print('RAM Used (GB):', psutil.virtual_memory()[3]/1000000000)
     
     print('Processing Passenger Emission Rates')
     emissions_pass = emissions_pass.compute()
+    emissions_pass.sort_values(['repcty','monthid3','hourid','roadtypeid','hpmsvtypeid','pollutantid','avgspeedbinid'], inplace=True)
     emissions_pass=emissions_pass.pivot_table(index=['repcty','monthid3','hourid','roadtypeid','avgspeedbinid'], 
                                      columns=['hpmsvtypeid','pollutantid'], values='grams_per_mile')    
     emissions_pass.columns = emissions_pass.columns.map('_'.join)
@@ -1167,6 +1171,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
     
     print('Processing Truck Emission Rates')
     emissions_truck = emissions_truck.compute()
+    emissions_truck.sort_values(['repcty','monthid3','hourid','roadtypeid','hpmsvtypeid','pollutantid','avgspeedbinid'], inplace=True)
     emissions_truck=emissions_truck.pivot_table(index=['repcty','monthid3','hourid','roadtypeid','avgspeedbinid'], 
                                      columns=['hpmsvtypeid','pollutantid'], values='grams_per_mile')
     emissions_truck.columns = emissions_truck.columns.map('_'.join)
@@ -1174,7 +1179,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
     emissions_truck = emissions_truck.rename(columns = {'avgspeedbinid': 'avgspeedbinid_truck'})
     
     #d. Merge the emission rates with the NPMRDS dataset
-    print('Merging Passenger Emission Rates to NPMRDS data')
+    print('Merging Truck Emission Rates to NPMRDS data')
     df_emissions = df_emissions.merge(emissions_truck, how='left', on=['repcty','monthid3','hourid','roadtypeid','avgspeedbinid_truck'])
     del emissions_truck
     now=lapTimer('  took: ',now)
@@ -1274,7 +1279,7 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     n = len(tmc)
     chunkSize = math.ceil(n/math.ceil(n/600))
 
-    print(f"{n} tmcs will be processed in {math.ceil(n/600)} chunks")
+    print(f"{n} tmcs will be processed in {math.ceil(n/400)} chunks")
     print("")
 
     Sample_df = pd.DataFrame()
