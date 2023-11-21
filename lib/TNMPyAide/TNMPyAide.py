@@ -158,18 +158,17 @@ class TNMPyAide:
         
         # Remove any links not included in the meta data
         df_selected_tmcs = pd.DataFrame() 
-        df_grouped  = df_DANA.groupby(['TMC'], sort=False)
+        df_grouped  = df_DANA.groupby('TMC', sort=False)
         for tmc, group in df_grouped:
             if tmc == meta.L1_tmc:
-                df_selected_tmcs = df_selected_tmcs.append(group) # Should consider concat instead of append
+                df_selected_tmcs = pd.concat([df_selected_tmcs, group], ignore_index=True) # Should consider concat instead of append
         if self.number_of_links == 2:
             for tmc, group in df_grouped:
                 if tmc == meta.L2_tmc:
-                    df_selected_tmcs = df_selected_tmcs.append(group)
-                
+                    df_selected_tmcs = pd.concat([df_selected_tmcs, group], ignore_index=True)
+
         # Should now have only the correct TMCs and they should be in order        
-        df_DANA = df_selected_tmcs  
-        
+        df_DANA = df_selected_tmcs
         # Compute LAeq at Ref Distance and Reorganize df_DANA for easier analysis
         dnd_obj = DND(df_DANA, link_grade)   
         
@@ -316,6 +315,9 @@ class TNMPyAide:
                 SPL_Log_Avgs = 10*np.log10(np.mean(np.power(10,group.loc[:,['SPL_AT_L2', 'SPL_MT_L2', 'SPL_HT_L2', 'SPL_BUS_L2', 'SPL_MC_L2','SPL_Total_L2','SPL_Total']]/10)))                                    
                 df_avg.loc[hour,['SPL_AT_L2', 'SPL_MT_L2', 'SPL_HT_L2', 'SPL_BUS_L2', 'SPL_MC_L2','SPL_Total_L2','SPL_Total']] = SPL_Log_Avgs
 
+        for col in df_avg.columns:
+            df_avg[col] = pd.to_numeric(df_avg[col])
+        
         self.df_avg_day = df_avg # Save data for "average day"
 
         # Summary Data

@@ -187,7 +187,7 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
             tmas_station = pd.DataFrame()
             print("    starting processing")
             for sta in tqdm(p.imap(f, tmas_station_locs.iterrows(), chunksize=30), total=n):
-                tmas_station = tmas_station.append(sta)   
+                tmas_station = pd.concat([tmas_station, sta])   
         
         tmas_station.drop_duplicates(subset=['FIPS','STATION_ID','DIR'],inplace=True)
         

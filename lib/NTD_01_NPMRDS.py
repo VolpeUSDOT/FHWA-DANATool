@@ -1189,7 +1189,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
     #df_emissions.to_csv(outputpath+SELECT_STATE+'_Composite_Emission.csv', index=False)
     sample_df_nonulls = df_emissions.loc[df_emissions['travel_time_all'].notnull()].reset_index(drop=True).copy()
     df_emissions_sample = sample_df_nonulls[0:1000]
-    df_emissions_sample = df_emissions_sample.append(sample_df_nonulls[-1000:-1])
+    df_emissions_sample = pd.concat([df_emissions_sample, sample_df_nonulls[-1000:-1]])
     df_emissions_sample.to_csv(filepath+SELECT_STATE+'_Composite_Emissions_SAMPLE.csv', index=False) 
     
     df_emissions_summary_cols = df_emissions[['tmc', 'road', 'tmc_length', 'speed_all', 'aadt']]
@@ -1232,7 +1232,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
             noise_s['Ldn_AVG_DAY'] = res[6]
             noise_s['Lden_AVG_DAY'] = res[7]    
         
-        noise_data.append(noise_s)
+        noise_data = pd.concat([noise_data, noise_s])
 
     noise_df = pd.DataFrame(data = noise_data)
     df_emissions_summary = df_emissions_summary.agg({'tmc_length':'mean', 'speed_all':'mean', 'aadt':'mean', 'TotEmissionsPerMile_2':'sum', 'TotEmissionsPerMile_3':'sum', 'TotEmissionsPerMile_5':'sum', 'TotEmissionsPerMile_6':'sum', 'TotEmissionsPerMile_87':'sum', 'TotEmissionsPerMile_90':'sum', 'TotEmissionsPerMile_98':'sum', 'TotEmissionsPerMile_100':'sum', 'TotEmissionsPerMile_110':'sum'}).reset_index()
@@ -1311,8 +1311,8 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
         Summary_chunk = pd.read_csv(OUT_PATH + r'\{}_Composite_Emissions_SUMMARY.csv'.format(SELECT_STATE))
         LinkHourlyChunk = pq.read_table(OUT_PATH + r'\{}_Composite_Emissions.parquet'.format(SELECT_STATE))
         
-        Sample_df = Sample_df.append(Sample_chunk)
-        Summary_df = Summary_df.append(Summary_chunk)
+        Sample_df = pd.concat([Sample_df, Sample_chunk])
+        Summary_df = pd.concat([Summary_df, Summary_chunk])
 
         if i == 0:
             pqwriter = pq.ParquetWriter(newOutput+r'\{}_Composite_Emissions.parquet'.format(SELECT_STATE), LinkHourlyChunk.schema)

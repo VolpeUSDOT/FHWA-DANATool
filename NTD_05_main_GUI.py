@@ -984,20 +984,26 @@ def calc_tnmaide(start=False):
         WorstDayOut.set(str(tnmaide_result.worst_day.day))
 
         CurrentAADTOut.set(str(sum(tnmaide_group.AADT.unique())))
+        # Average day worst hour traffic 
+        
+        wh_data = tnmaide_result.df_Traffic_Noise.loc[tnmaide_result.average_day.worst_hour_idx]
+        whOutTable[0][0].set(f"{round((wh_data['VOL_AT_L1'] + wh_data['VOL_AT_L2'])/2)}")
+        whOutTable[0][1].set(f"{round((wh_data['VOL_MT_L1'] + wh_data['VOL_MT_L2'])/2)}")
+        whOutTable[0][2].set(f"{round((wh_data['VOL_HT_L1'] + wh_data['VOL_HT_L2'])/2)}")
+        whOutTable[0][3].set(f"{round((wh_data['VOL_BUS_L1'] + wh_data['VOL_BUS_L2'])/2)}")
+        whOutTable[0][4].set(f"{round((wh_data['VOL_MC_L1'] + wh_data['VOL_MC_L2'])/2)}")
+        whOutTable[1][0].set(f"{round((wh_data['SPD_AT_L1'] + wh_data['SPD_AT_L2'])/2)}")
+        whOutTable[1][1].set(f"{round((wh_data['SPD_HT_L1'] + wh_data['SPD_HT_L2'])/2)}")
+        whOutTable[1][2].set(f"{round((wh_data['SPD_HT_L1'] + wh_data['SPD_HT_L2'])/2)}")
+        whOutTable[1][3].set(f"{round((wh_data['SPD_ALL_L1'] + wh_data['SPD_ALL_L2'])/2)}")
+        whOutTable[1][4].set(f"{round((wh_data['SPD_ALL_L1'] + wh_data['SPD_ALL_L2'])/2)}")
 
-        CarsOut.set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_AUTO*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")        
-        MedTrucksOut.set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_MED_TRUCK*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")
-        HeavyTrucksOut.set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_HVY_TRUCK*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")
-        BusesOut.set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_BUS*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")
-        MotoOut.set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_MC*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")
-        tot =  round( \
-        100*sum(list(tnmaide_group.PCT_NOISE_AUTO*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24) + \
-        100*sum(list(tnmaide_group.PCT_NOISE_MED_TRUCK*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24) + \
-        100*sum(list(tnmaide_group.PCT_NOISE_HVY_TRUCK*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24) + \
-        100*sum(list(tnmaide_group.PCT_NOISE_BUS*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24) + \
-        100*sum(list(tnmaide_group.PCT_NOISE_MC*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24),
-        2)
-        TotalOut.set(f'{tot} %')
+        # Year Breakdown
+        yrOutTable[0][0].set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_AUTO*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")        
+        yrOutTable[0][1].set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_MED_TRUCK*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")
+        yrOutTable[0][2].set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_HVY_TRUCK*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")
+        yrOutTable[0][3].set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_BUS*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")
+        yrOutTable[0][4].set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_MC*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")
 
         traffic_df = tnmaide_result.df_Traffic_Noise
         traffic_df['VOL_L1'] = traffic_df['VOL_AT_L1'] + traffic_df['VOL_MT_L1'] + traffic_df['VOL_HT_L1'] + traffic_df['VOL_BUS_L1'] + traffic_df['VOL_MC_L1']
@@ -1430,35 +1436,76 @@ if __name__ == "__main__":
     
     ttk.Label(tnmaideframe, text="Traffic Information", font=tnmaide_headerFont2).grid(row=17, column=0, columnspan=2, sticky="w")   
     ttk.Label(tnmaideframe, text='Current AADT: ').grid(row=18, column=0, columnspan=1, sticky="w")
-    ttk.Label(tnmaideframe, text="Yearly Vehicle Mix (%): ", font='Ariel 10 bold').grid(row=19, column=0, columnspan = 2, sticky="W")
-    ttk.Label(tnmaideframe, text='Cars: ').grid(row=20, column=0, columnspan=1, sticky="w")
-    ttk.Label(tnmaideframe, text='Medium Trucks: ').grid(row=21, column=0, columnspan=1, sticky="w")
-    ttk.Label(tnmaideframe, text='Heavy Trucks: ').grid(row=22, column=0, columnspan=1, sticky="w")
-    ttk.Label(tnmaideframe, text='Buses: ').grid(row=23, column=0, columnspan=1, sticky="w")
-    ttk.Label(tnmaideframe, text='Motorcycles: ').grid(row=24, column=0, columnspan=1, sticky="w")
-    ttk.Label(tnmaideframe, text='Total: ').grid(row=25, column=0, columnspan=1, sticky="w")
-    
     CurrentAADTOut = StringVar()
     ttk.Entry(tnmaideframe, textvariable=CurrentAADTOut, state="readonly").grid(row=18, column=1, sticky="w")
-    CarsOut = StringVar()
-    ttk.Entry(tnmaideframe, textvariable=CarsOut, state="readonly").grid(row=20, column=1, sticky="w")
-    MedTrucksOut = StringVar()
-    ttk.Entry(tnmaideframe, textvariable=MedTrucksOut, state="readonly").grid(row=21, column=1, sticky="w")
-    HeavyTrucksOut = StringVar()
-    ttk.Entry(tnmaideframe, textvariable=HeavyTrucksOut, state="readonly").grid(row=22, column=1, sticky="w")
-    BusesOut = StringVar()
-    ttk.Entry(tnmaideframe, textvariable=BusesOut, state="readonly").grid(row=23, column=1, sticky="w")
-    MotoOut = StringVar()
-    ttk.Entry(tnmaideframe, textvariable=MotoOut, state="readonly").grid(row=24, column=1, sticky="w")
-    TotalOut = StringVar()
-    ttk.Entry(tnmaideframe, textvariable=TotalOut, state="readonly").grid(row=25, column=1, sticky="w")
+
+    ttk.Label(tnmaideframe, text="Average Day Worst Hour Traffic Conditions: ", font='Ariel 10 bold').grid(row=19, column=0, columnspan = 2, sticky="W")
+
+    wh = tk.Canvas(tnmaideframe)
+    wh.grid(column=0, row=20, columnspan=5, rowspan=3, sticky="w")
+    ttk.Label(wh, text='Average Day Worst Hour Volume: ').grid(row=1, column=0, columnspan=1, sticky="w")
+    ttk.Label(wh, text='Average Day Worst Hour Average Speed: ').grid(row=2, column=0, columnspan=1, sticky="w")
+    ttk.Label(wh, text = "Auto").grid(column=1, row=0, sticky="w")
+    ttk.Label(wh, text = "Medium Trucks").grid(column=2, row=0, sticky="w")
+    ttk.Label(wh, text = "Heavy Trucks").grid(column=3, row=0, sticky="w")
+    ttk.Label(wh, text = "Buses").grid(column=4, row=0, sticky="w")
+    ttk.Label(wh, text = "Motor Cycles").grid(column=5, row=0, sticky="w")
+
+    whOutTable = []
+    for r in range(2):
+        whOutRow = []
+        for c in range(5):
+            strvar = tk.StringVar()
+            whOutRow.append(strvar)
+            ttk.Entry(wh, textvariable=strvar, state="readonly").grid(row=1+r, column=1+c, sticky="w")
+        whOutTable.append(whOutRow)
+
+    ttk.Label(tnmaideframe, text="Yearly Vehicle Mix (%): ", font='Ariel 10 bold').grid(row=23, column=0, columnspan = 2, sticky="W")
+    
+    yearbreakdown = tk.Canvas(tnmaideframe)
+    yearbreakdown.grid(column=0, row=24, columnspan=5, rowspan=2, sticky="w")
+    ttk.Label(yearbreakdown, text='Percent Vehicles in the Current Year: ').grid(row=1, column=0, columnspan=1, sticky="w")
+    ttk.Label(yearbreakdown, text = "Auto").grid(column=1, row=0, sticky="w")
+    ttk.Label(yearbreakdown, text = "Medium Trucks").grid(column=2, row=0, sticky="w")
+    ttk.Label(yearbreakdown, text = "Heavy Trucks").grid(column=3, row=0, sticky="w")
+    ttk.Label(yearbreakdown, text = "Buses").grid(column=4, row=0, sticky="w")
+    ttk.Label(yearbreakdown, text = "Motor Cycles").grid(column=5, row=0, sticky="w")
+
+    yrOutTable = []
+    for r in range(1):
+        yrOutRow = []
+        for c in range(5):
+            strvar = tk.StringVar()
+            yrOutRow.append(strvar)
+            ttk.Entry(yearbreakdown, textvariable=strvar, state="readonly").grid(row=1+r, column=1+c, sticky="w")
+        yrOutTable.append(yrOutRow)
+    
+    # ttk.Label(tnmaideframe, text='Cars: ').grid(row=20, column=0, columnspan=1, sticky="w")
+    # ttk.Label(tnmaideframe, text='Medium Trucks: ').grid(row=21, column=0, columnspan=1, sticky="w")
+    # ttk.Label(tnmaideframe, text='Heavy Trucks: ').grid(row=22, column=0, columnspan=1, sticky="w")
+    # ttk.Label(tnmaideframe, text='Buses: ').grid(row=23, column=0, columnspan=1, sticky="w")
+    # ttk.Label(tnmaideframe, text='Motorcycles: ').grid(row=24, column=0, columnspan=1, sticky="w")
+    # ttk.Label(tnmaideframe, text='Total: ').grid(row=25, column=0, columnspan=1, sticky="w")
+    
+    # CarsOut = StringVar()
+    # ttk.Entry(tnmaideframe, textvariable=CarsOut, state="readonly").grid(row=20, column=1, sticky="w")
+    # MedTrucksOut = StringVar()
+    # ttk.Entry(tnmaideframe, textvariable=MedTrucksOut, state="readonly").grid(row=21, column=1, sticky="w")
+    # HeavyTrucksOut = StringVar()
+    # ttk.Entry(tnmaideframe, textvariable=HeavyTrucksOut, state="readonly").grid(row=22, column=1, sticky="w")
+    # BusesOut = StringVar()
+    # ttk.Entry(tnmaideframe, textvariable=BusesOut, state="readonly").grid(row=23, column=1, sticky="w")
+    # MotoOut = StringVar()
+    # ttk.Entry(tnmaideframe, textvariable=MotoOut, state="readonly").grid(row=24, column=1, sticky="w")
+    # TotalOut = StringVar()
+    # ttk.Entry(tnmaideframe, textvariable=TotalOut, state="readonly").grid(row=25, column=1, sticky="w")
 
     ttk.Label(tnmaideframe, text='LDN Time Period Distribution', font='Ariel 10 bold').grid(row=26, column=0, columnspan=2, sticky="w")
 
     daybreakdown = tk.Canvas(tnmaideframe)
     daybreakdown.grid(column=0, row=27, columnspan=5, rowspan=3, sticky="w")
-    ttk.Label(daybreakdown, text='Percent Vehicles in the Current YEAR, DAYTIME: ').grid(row=1, column=0, columnspan=1, sticky="w")
-    ttk.Label(daybreakdown, text='Percent Vehicles in the Current YEAR, NIGHTTIME: ').grid(row=2, column=0, columnspan=1, sticky="w")
+    ttk.Label(daybreakdown, text='Percent Vehicles in the Current Year, DAYTIME: ').grid(row=1, column=0, columnspan=1, sticky="w")
+    ttk.Label(daybreakdown, text='Percent Vehicles in the Current Year, NIGHTTIME: ').grid(row=2, column=0, columnspan=1, sticky="w")
     ttk.Label(daybreakdown, text = "Auto").grid(column=1, row=0, sticky="w")
     ttk.Label(daybreakdown, text = "Medium Trucks").grid(column=2, row=0, sticky="w")
     ttk.Label(daybreakdown, text = "Heavy Trucks").grid(column=3, row=0, sticky="w")
@@ -1478,9 +1525,9 @@ if __name__ == "__main__":
 
     denbreakdown = tk.Canvas(tnmaideframe)
     denbreakdown.grid(column=0, row=31, columnspan=5, rowspan=4, sticky="w")
-    ttk.Label(denbreakdown, text='Percent Vehicles in the Current YEAR, DAYTIME: ').grid(row=1, column=0, columnspan=1, sticky="w")
-    ttk.Label(denbreakdown, text='Percent Vehicles in the Current YEAR, EVENING: ').grid(row=2, column=0, columnspan=1, sticky="w")
-    ttk.Label(denbreakdown, text='Percent Vehicles in the Current YEAR, NIGHTTIME: ').grid(row=3, column=0, columnspan=1, sticky="w")
+    ttk.Label(denbreakdown, text='Percent Vehicles in the Current Year, DAYTIME: ').grid(row=1, column=0, columnspan=1, sticky="w")
+    ttk.Label(denbreakdown, text='Percent Vehicles in the Current Year, EVENING: ').grid(row=2, column=0, columnspan=1, sticky="w")
+    ttk.Label(denbreakdown, text='Percent Vehicles in the Current Year, NIGHTTIME: ').grid(row=3, column=0, columnspan=1, sticky="w")
     ttk.Label(denbreakdown, text = "Auto").grid(column=1, row=0, sticky="w")
     ttk.Label(denbreakdown, text = "Medium Trucks").grid(column=2, row=0, sticky="w")
     ttk.Label(denbreakdown, text = "Heavy Trucks").grid(column=3, row=0, sticky="w")
@@ -1508,8 +1555,8 @@ if __name__ == "__main__":
     ttk.Label(tnmaideframe, text='LDN Time Period Distribution', font='Ariel 10 bold').grid(row=39, column=0, columnspan=2, sticky="w")
     futureLDNInput = tk.Canvas(tnmaideframe)
     futureLDNInput.grid(column=0, row=40, columnspan=5, rowspan=3, sticky="w")
-    ttk.Label(futureLDNInput, text='Percent Vehicles in the Future YEAR, DAYTIME: ').grid(row=1, column=0, columnspan=1, sticky="w")
-    ttk.Label(futureLDNInput, text='Percent Vehicles in the Future YEAR, NIGHTTIME: ').grid(row=2, column=0, columnspan=1, sticky="w")
+    ttk.Label(futureLDNInput, text='Percent Vehicles in the Future Year, DAYTIME: ').grid(row=1, column=0, columnspan=1, sticky="w")
+    ttk.Label(futureLDNInput, text='Percent Vehicles in the Future Year, NIGHTTIME: ').grid(row=2, column=0, columnspan=1, sticky="w")
     ttk.Label(futureLDNInput, text = "Auto").grid(column=1, row=0, sticky="w")
     ttk.Label(futureLDNInput, text = "Medium Trucks").grid(column=2, row=0, sticky="w")
     ttk.Label(futureLDNInput, text = "Heavy Trucks").grid(column=3, row=0, sticky="w")
@@ -1532,9 +1579,9 @@ if __name__ == "__main__":
     ttk.Label(tnmaideframe, text='LDEN Time Period Distribution', font='Ariel 10 bold').grid(row=45, column=0, columnspan=2, sticky="w")
     futureLDENInput = tk.Canvas(tnmaideframe)
     futureLDENInput.grid(column=0, row=46, columnspan=5, rowspan=4, sticky="w")
-    ttk.Label(futureLDENInput, text='Percent Vehicles in the Future YEAR, DAYTIME: ').grid(row=1, column=0, columnspan=1, sticky="w")
-    ttk.Label(futureLDENInput, text='Percent Vehicles in the Future YEAR, EVENING: ').grid(row=2, column=0, columnspan=1, sticky="w")
-    ttk.Label(futureLDENInput, text='Percent Vehicles in the Future YEAR, NIGHTTIME: ').grid(row=3, column=0, columnspan=1, sticky="w")
+    ttk.Label(futureLDENInput, text='Percent Vehicles in the Future Year, DAYTIME: ').grid(row=1, column=0, columnspan=1, sticky="w")
+    ttk.Label(futureLDENInput, text='Percent Vehicles in the Future Year, EVENING: ').grid(row=2, column=0, columnspan=1, sticky="w")
+    ttk.Label(futureLDENInput, text='Percent Vehicles in the Future Year, NIGHTTIME: ').grid(row=3, column=0, columnspan=1, sticky="w")
     ttk.Label(futureLDENInput, text = "Auto").grid(column=1, row=0, sticky="w")
     ttk.Label(futureLDENInput, text = "Medium Trucks").grid(column=2, row=0, sticky="w")
     ttk.Label(futureLDENInput, text = "Heavy Trucks").grid(column=3, row=0, sticky="w")

@@ -15,7 +15,7 @@ import sys
 import datetime as dt
 
 # Basic Input Parameters
-step = 1
+step = 4
 
 testOption = 4
 
@@ -144,7 +144,7 @@ elif computerName in ('TSCPDBOS-05790'):
 elif computerName in ('VOLSLBOS-06756'):
     pathPrefix1 = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files'
     pathPrefix2 = 'H:/TestData/{}_{}'.format(county, state)
-    pathPrefix3 = 'H:/DANATool/Outputs/TestNew_20230821_1'
+    pathPrefix3 = 'H:/DANATool/Outputs/TESTNEW_20230927'
 
 # Set File Paths for Calling DANA Scripts
 PATH_OUTPUT=pathPrefix3
@@ -186,8 +186,8 @@ if __name__ == '__main__':
         NTD_03_SPEED.SPEED(SELECT_STATE, PATH_NPMRDS)  
     elif step == 4:
         group = call_TNMAide.get_TNMPyAide_inputs(PATH_NPMRDS, TMC_1Entry, TMC_2Entry)
+
         result = call_TNMAide.call_TNMAide(group, gradeentry, medwidthentry, lanesentry)
-    
         result.Plot_Avg_Day_Hourly_Speed()
 
         

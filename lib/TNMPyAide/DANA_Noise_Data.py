@@ -479,7 +479,7 @@ class DANA_Noise_Data:
             cnt = cnt + 1
             if df_merged.empty: 
                 # This is the first TMC/Roadway, Link L = L1
-                df_merged = df_merged.append(group) 
+                df_merged = pd.concat([df_merged, group]) 
             else: 
                 # This is the "cnt" TMC Roadway, Link L = L"cnt"
                 df_merged = pd.merge(df_merged, group, on=['DATE', 'HOUR'], suffixes=(None, '_L' + str(cnt))) 
