@@ -10,7 +10,10 @@ import pyarrow
 import pyarrow.vendored
 from pathlib import Path
 
-datalist = [('lib\dot.png', 'lib'), ('lib\ShapeFiles', 'lib\ShapeFiles'), ('lib\ShapeFilesCSV', 'lib\ShapeFilesCSV'), ('lib\pyzmq.libs', 'pyzmq.libs'), ('lib\pyproj.libs', 'pyproj.libs'), ('lib\shapely.libs', 'shapely.libs')]
+datalist = [('lib\dot.png', 'lib'), ('lib\ShapeFiles', 'lib\ShapeFiles'), 
+                ('lib\ShapeFilesCSV', 'lib\ShapeFilesCSV'), ('lib\pyzmq.libs', 'pyzmq.libs'), 
+                ('lib\pyproj.libs', 'pyproj.libs'), ('lib\shapely.libs', 'shapely.libs'),
+                ('lib\\pandas.libs', 'pandas.libs'), ('lib\\numpy.libs', 'numpy.libs')]
 datalist.extend(collect_data_files("certifi"))
 datalist.extend(collect_data_files("pyproj"))
 datalist.extend(collect_data_files("pyarrow"))
@@ -19,10 +22,18 @@ print(datalist)
 
 a = Analysis(['NTD_05_main_GUI.py'],
              pathex=['C:\\Users\\William.Chupp\\OneDrive - DOT OST\\Documents\\DANAToolTesting\\FHWA-DANATool',
-                     'C:\\Users\\William.Chupp\\Anaconda3\\envs\\geo_env\\Lib\\site-packages'],
-             binaries=collect_dynamic_libs("pyarrow", search_patterns=['*.dll', '*.dylib', 'lib*.so', '*.pyd']) + collect_dynamic_libs("zmq") + collect_dynamic_libs("rtree") + collect_dynamic_libs("pyproj") + collect_dynamic_libs("shapely"),
+                     'C:\\Users\\William.Chupp\\Anaconda3\\envs\\dana_env\\Lib\\site-packages'],
+             binaries=collect_dynamic_libs("pyarrow", search_patterns=['*.dll', '*.dylib', 'lib*.so', '*.pyd', '*.lib', '*.pyi']) 
+                + collect_dynamic_libs("regex", search_patterns=['*.dll', '*.dylib', 'lib*.so', '*.pyd', '*.lib']) 
+                + collect_dynamic_libs("zmq", search_patterns=['*.dll', '*.dylib', 'lib*.so', '*.pyd', '*.lib']) 
+                + collect_dynamic_libs("rtree", search_patterns=['*.dll', '*.dylib', 'lib*.so', '*.pyd', '*.lib']) 
+                + collect_dynamic_libs("pyproj", search_patterns=['*.dll', '*.dylib', 'lib*.so', '*.pyd', '*.lib']) 
+                + collect_dynamic_libs("shapely", search_patterns=['*.dll', '*.dylib', 'lib*.so', '*.pyd', '*.lib'])
+                + collect_dynamic_libs("sklearn", search_patterns=['*.dll', '*.dylib', 'lib*.so', '*.pyd', '*.lib'])
+                + collect_dynamic_libs("numpy", search_patterns=['*.dll', '*.dylib', 'lib*.so', '*.pyd', '*.lib'])
+                + collect_dynamic_libs("pandas", search_patterns=['*.dll', '*.dylib', 'lib*.so', '*.pyd', '*.lib']),
              datas=datalist,
-             hiddenimports=['fiona._shim', 'fiona.schema', 'babel.numbers', 'shapely._geos'],
+             hiddenimports=['fiona._shim', 'fiona.schema', 'babel.numbers', 'shapely._geos', 'appdirs'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],

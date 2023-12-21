@@ -17,10 +17,11 @@ class DANAPlot:
     # plt.style.available
     style = 'tableau-colorblind10'
     
-    backend_options = ['module://ipykernel.pylab.backend_inline', 'module://ipykernel.pylab.backend_inline', 'Qt5Agg', 'TkAgg']
-    backend =  backend_options[0]
+    backend_options = ['module://ipykernel.pylab.backend_inline', 'Qt5Agg', 'TkAgg']
+    backend =  backend_options[2]
     # See also https://matplotlib.org/stable/users/explain/backends.html
-    # useage = plt.switch_backend(cls.backend)
+    # useage = 
+    plt.switch_backend(backend)
     
     axis_params = {'visible' : True, 
                    'which' : 'major', 
@@ -91,6 +92,7 @@ class DANAPlot:
                  linewidth=cls.axis_params['linewidth'],
                  alpha=cls.axis_params['alpha'])
         
+        fig.set_tight_layout(True)
         plt.show() # Needed for some backends, creates a new instance of same figure (not a new figure) with updated information
         return fig, ax
     
@@ -124,6 +126,7 @@ class DANAPlot:
             ylims = (0, 1.1 * math.ceil(np.amax(counts)))
         
         fig, ax = DANAPlot.Bar_Plot(bin_centers, counts, xlabel = xlabel, ylabel = ylabel, title = title, width = width, xlims = xlims, ylims = ylims, xtickstep = xtickstep, ytickstep = ytickstep)
+        fig.set_tight_layout(True)
         return [fig, ax]
 
     @classmethod # Want access to class variables
@@ -151,7 +154,19 @@ class DANAPlot:
 
         plt.style.use(cls.style)
         plt.switch_backend(cls.backend)
+        styles = [('solid', 'solid'),
+                ('densely dotted',        (0, (1, 1))),
+                ('long dash with offset', (5, (10, 3))),
+                ('loosely dashed',        (0, (5, 10))),
+                ('densely dashed',        (0, (5, 1))),
 
+                ('loosely dashdotted',    (0, (3, 10, 1, 10))),
+                ('dashdotted',            (0, (3, 5, 1, 5))),
+                ('densely dashdotted',    (0, (3, 1, 1, 1))),
+
+                ('dashdotdotted',         (0, (3, 5, 1, 5, 1, 5))),
+                ('densely dashdotdotted', (0, (3, 1, 1, 1, 1, 1)))]
+        
         fig, ax = DANAPlot.Set_Ax(fig = fig, ax = ax)
         if x.ndim == 1:
             ax.plot(x, y, 
@@ -160,7 +175,7 @@ class DANAPlot:
         
         else:
             for row in range(0,len(y),1):
-                ax.plot(x[row], y[row], 
+                ax.plot(x[row], y[row], linestyle=styles[row][1],
                         linewidth=cls.line_plot_params['linewidth'],
                         zorder=cls.line_plot_params['zorder'])
                 
@@ -178,7 +193,7 @@ class DANAPlot:
                  linewidth=cls.axis_params['linewidth'],
                  alpha=cls.axis_params['alpha'])
         
-        plt.show() # Needed for some backends, creates a new instance of same figure (not a new figure) with updated information
+        fig.set_tight_layout(True)
         return fig, ax
     
     @staticmethod 
@@ -193,8 +208,7 @@ class DANAPlot:
                 line.set_label(labels[idx])
         
             idx = idx + 1
-        ax.legend()
-        plt.show() # Needed for some backends, creates a new instance of same figure (not a new figure) with updated information
+        ax.legend(bbox_to_anchor=(1.04, 1), borderaxespad=0)
         
     @staticmethod 
     # Create / set appropriate figure and axes

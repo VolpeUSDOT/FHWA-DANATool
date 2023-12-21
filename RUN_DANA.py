@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 """
 Created By: Volpe National Transportation Systems Center
@@ -13,12 +14,12 @@ from lib import load_shapes
 import os
 import sys
 import datetime as dt
+import matplotlib.pyplot as plt
 
 # Basic Input Parameters
 step = 4
 
-testOption = 4
-
+testOption = 12
 
 if testOption == 1:
     tmas_year = 2021
@@ -47,11 +48,11 @@ elif testOption == 4:
     state = 'OR'
     county = 'Marion'
 
-    TMC_1Entry = '114-04428'
-    TMC_2Entry = '114+04429'
-    gradeentry = (0, 0)
+    TMC_1Entry = '114-04429'
+    #TMC_2Entry = '114-04429'
+    gradeentry = 0
     medwidthentry = 6
-    lanesentry = (3, 3)
+    lanesentry = 3
 elif testOption == 5:
     tmas_year = 2019
     npmrds_year = 2021
@@ -94,6 +95,12 @@ elif testOption == 12:
     npmrds_year = 2019
     state = 'OK'
     county = 'Oklahoma'
+
+    TMC_1Entry = '111+04911'
+    TMC_2Entry = '111+04912'
+    gradeentry = (0, 0)
+    medwidthentry = 6
+    lanesentry = (3, 3)
     
 elif testOption == 13:
     tmas_year = 2020
@@ -120,6 +127,12 @@ elif testOption == 16:
     state = 'AK'
     county = 'Anchorage'
 
+elif testOption == 17:
+    tmas_year = 2020
+    npmrds_year = 2020
+    state = 'VA'
+    county = 'RingRoads'
+
 SELECT_TMC = ['129+04132']
 SELECT_STATE = state
 
@@ -144,7 +157,7 @@ elif computerName in ('TSCPDBOS-05790'):
 elif computerName in ('VOLSLBOS-06756'):
     pathPrefix1 = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files'
     pathPrefix2 = 'H:/TestData/{}_{}'.format(county, state)
-    pathPrefix3 = 'H:/DANATool/Outputs/TESTNEW_20230927'
+    pathPrefix3 = 'H:/DANATool/Outputs/TESTNEW_20231211'
 
 # Set File Paths for Calling DANA Scripts
 PATH_OUTPUT=pathPrefix3
@@ -159,14 +172,15 @@ PATH_npmrds_raw_truck = pathPrefix2 + '/NPMRDS Data/{}_{}_{}_TRUCKS.csv'.format(
 PATH_default_speeds = pathPrefix1 + '/National_Default_Roadway_Operating_Speed.csv'
 PATH_tmc_identification = pathPrefix2 + '/NPMRDS Data/TMC_Identification.csv'
 
-PATH_tmc_shp = 'lib/ShapeFiles/'
+PATH_tmc_shp = 'lib/ShapeFilesCSV/'
 PATH_emission = pathPrefix1 + '/NEI2017_RepresentativeEmissionsRates.parquet'
 
 PATH_HPMS  = pathPrefix2 + '/HPMS Data/{}_HPMS_{}.csv'.format(state.upper(), npmrds_year) # Need to confirm - ALH
 PATH_VM2 = pathPrefix1 + '/Statewide Functional Class VMT/State_VMT_by_Class_{}.csv'.format(tmas_year) # Need to confirm - ALH
 PATH_COUNTY_MILEAGE = pathPrefix1 + '/HPMS County Road Mileage/County_Road_Mileage_{}.csv'.format(tmas_year) # Need to confirm - ALH
 
-PATH_NPMRDS = pathPrefix3 + '/Process1_LinkLevelDataset/{}_Composite_Emissions.parquet'.format(state) # Need to confirm - ALH
+PATH_NPMRDS = 'C:/Users/William.Chupp/OneDrive - DOT OST/Desktop/OK_Composite_Emissions.parquet'
+#pathPrefix3 + '/Process1_LinkLevelDataset/{}_Composite_Emissions.parquet'.format(state) # Need to confirm - ALH
 
 if __name__ == '__main__':
     if step == 0:
@@ -188,6 +202,5 @@ if __name__ == '__main__':
         group = call_TNMAide.get_TNMPyAide_inputs(PATH_NPMRDS, TMC_1Entry, TMC_2Entry)
 
         result = call_TNMAide.call_TNMAide(group, gradeentry, medwidthentry, lanesentry)
-        result.Plot_Avg_Day_Hourly_Speed()
-
-        
+        result.Plot_Avg_Day_Hourly_SPL()
+        plt.show()

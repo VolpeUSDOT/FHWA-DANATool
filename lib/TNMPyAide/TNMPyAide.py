@@ -272,7 +272,7 @@ class TNMPyAide:
                                              'SPL_AT_L2', 'SPL_MT_L2', 'SPL_HT_L2', 'SPL_BUS_L2', 'SPL_MC_L2', \
                                              'SPL_Total_L2', 'SPL_Total'])
 
-        df_grouped = dnd_obj.df_Traffic_Noise.groupby(['HOUR'])
+        df_grouped = dnd_obj.df_Traffic_Noise.groupby('HOUR')
         
         if self.number_of_links == 1:
             for hour, group in df_grouped:
@@ -288,7 +288,8 @@ class TNMPyAide:
                                             df_avg.loc[hour,'VOL_MC_L1']
                 
                 # Do log average for SPL data - if not can end up with -inf from original linear averge fron group.mean()
-                SPL_Log_Avgs = 10*np.log10(np.mean(np.power(10,group.loc[:,['SPL_AT_L1', 'SPL_MT_L1', 'SPL_HT_L1', 'SPL_BUS_L1', 'SPL_MC_L1','SPL_Total_L1','SPL_Total']]/10)))                                    
+                SPL_Log_Avgs = 10*np.log10(np.mean(np.power(10,group.loc[:,['SPL_AT_L1', 'SPL_MT_L1', 'SPL_HT_L1', 'SPL_BUS_L1', 'SPL_MC_L1','SPL_Total_L1','SPL_Total']]/10), axis=0))                                    
+                
                 df_avg.loc[hour,['SPL_AT_L1', 'SPL_MT_L1', 'SPL_HT_L1', 'SPL_BUS_L1', 'SPL_MC_L1','SPL_Total_L1','SPL_Total']] = SPL_Log_Avgs
 
 
@@ -309,15 +310,16 @@ class TNMPyAide:
                                             df_avg.loc[hour,'VOL_MC_L2']
 
                 # Do log average for SPL data
-                SPL_Log_Avgs = 10*np.log10(np.mean(np.power(10,group.loc[:,['SPL_AT_L1', 'SPL_MT_L1', 'SPL_HT_L1', 'SPL_BUS_L1', 'SPL_MC_L1','SPL_Total_L1']]/10)))                                    
+                SPL_Log_Avgs = 10*np.log10(np.mean(np.power(10,group.loc[:,['SPL_AT_L1', 'SPL_MT_L1', 'SPL_HT_L1', 'SPL_BUS_L1', 'SPL_MC_L1','SPL_Total_L1']]/10),axis=0))                                    
                 df_avg.loc[hour,['SPL_AT_L1', 'SPL_MT_L1', 'SPL_HT_L1', 'SPL_BUS_L1', 'SPL_MC_L1','SPL_Total_L1']] = SPL_Log_Avgs
 
-                SPL_Log_Avgs = 10*np.log10(np.mean(np.power(10,group.loc[:,['SPL_AT_L2', 'SPL_MT_L2', 'SPL_HT_L2', 'SPL_BUS_L2', 'SPL_MC_L2','SPL_Total_L2','SPL_Total']]/10)))                                    
+                SPL_Log_Avgs = 10*np.log10(np.mean(np.power(10,group.loc[:,['SPL_AT_L2', 'SPL_MT_L2', 'SPL_HT_L2', 'SPL_BUS_L2', 'SPL_MC_L2','SPL_Total_L2','SPL_Total']]/10),axis=0))                                    
                 df_avg.loc[hour,['SPL_AT_L2', 'SPL_MT_L2', 'SPL_HT_L2', 'SPL_BUS_L2', 'SPL_MC_L2','SPL_Total_L2','SPL_Total']] = SPL_Log_Avgs
 
         for col in df_avg.columns:
             df_avg[col] = pd.to_numeric(df_avg[col])
-        
+
+
         self.df_avg_day = df_avg # Save data for "average day"
 
         # Summary Data
@@ -385,7 +387,7 @@ class TNMPyAide:
                       self.df_avg_day.SPL_HT_L1, self.df_avg_day.SPL_BUS_L1, 
                       self.df_avg_day.SPL_MC_L1, self.df_avg_day.SPL_Total_L1]) 
         fig, ax = dp.Line_Plot(x, y, 'Hour', 'Hourly LAeq, dB(A)', 'Average Day SPL, Link 1')
-        labels = ['AT(L1)','MT(L1)','HT(L1)','Bus(L1)','MC(L1)','Total(L1)']
+        labels = ['Autos','Medium Trucks','Heavy Trucks','Buses','Motorcycles','Total']
         dp.Add_Legend(fig, ax, labels)
         figs.append(fig)
         axs.append(ax)
@@ -395,7 +397,7 @@ class TNMPyAide:
                       self.df_avg_day.SPL_HT_L2, self.df_avg_day.SPL_BUS_L2, 
                       self.df_avg_day.SPL_MC_L2, self.df_avg_day.SPL_Total_L2]) 
         fig, ax = dp.Line_Plot(x, y, 'Hour', 'Hourly LAeq, dB(A)', 'Average Day SPL, Link 2')
-        labels = ['AT(L2)','MT(L2)','HT(L2)','Bus(L2)','MC(L2)','Total(L2)']
+        labels = ['Autos','Medium Trucks','Heavy Trucks','Buses','Motorcycles','Total']
         dp.Add_Legend(fig, ax, labels)
         figs.append(fig)
         axs.append(ax)
@@ -418,7 +420,7 @@ class TNMPyAide:
                       self.df_avg_day.SPD_HT_L1, self.df_avg_day.SPD_ALL_L2, 
                       self.df_avg_day.SPD_AT_L2, self.df_avg_day.SPD_HT_L2]) 
         fig, ax = dp.Line_Plot(x, y, 'Hour', 'Speed, MPH', 'Average Hourly Speed')
-        labels = ['All(L1)','AT(L1)','HT(L1)','All(L2)','AT(L2)','HT(L2)']
+        labels = ['All(Link 1)','Autos (Link 1)','Heavy Trucks (Link 1)','All (Link 2)','Autos (Link 2)','Heavy Trucks (Link 2)']
         dp.Add_Legend(fig, ax, labels)
         figs.append(fig)
         axs.append(ax)
@@ -431,32 +433,32 @@ class TNMPyAide:
         bin_centers = np.array(range(0,105,5))
         
         data = np.array([self.df_Traffic_Noise.SPD_ALL_L1])
-        fig, ax = dp.Histogram(data, bin_centers, xlabel = 'Speed, MPH', title = 'Speed Distribution (All, L1)')
+        fig, ax = dp.Histogram(data, bin_centers, xlabel = 'Speed, MPH', title = 'Speed Distribution (All, Link 1)')
         figs.append(fig)
         axs.append(ax)
 
         data = np.array([self.df_Traffic_Noise.SPD_AT_L1])
-        fig, ax = dp.Histogram(data, bin_centers, xlabel = 'Speed, MPH', title = 'Speed Distribution (AT, L1)')
+        fig, ax = dp.Histogram(data, bin_centers, xlabel = 'Speed, MPH', title = 'Speed Distribution (Autos, Link 1)')
         figs.append(fig)
         axs.append(ax)
 
         data = np.array([self.df_Traffic_Noise.SPD_HT_L1])
-        fig, ax = dp.Histogram(data, bin_centers, xlabel = 'Speed, MPH', title = 'Speed Distribution (HT, L1)')
+        fig, ax = dp.Histogram(data, bin_centers, xlabel = 'Speed, MPH', title = 'Speed Distribution (Heavy Trucks, Link 1)')
         figs.append(fig)
         axs.append(ax)
 
         data = np.array([self.df_Traffic_Noise.SPD_ALL_L1])
-        fig, ax = dp.Histogram(data, bin_centers, xlabel = 'Speed, MPH', title = 'Speed Distribution (All, L2)')
+        fig, ax = dp.Histogram(data, bin_centers, xlabel = 'Speed, MPH', title = 'Speed Distribution (All, Link 2)')
         figs.append(fig)
         axs.append(ax)
 
         data = np.array([self.df_Traffic_Noise.SPD_AT_L2])
-        fig, ax = dp.Histogram(data, bin_centers, xlabel = 'Speed, MPH', title = 'Speed Distribution (AT, L2)')
+        fig, ax = dp.Histogram(data, bin_centers, xlabel = 'Speed, MPH', title = 'Speed Distribution (Autos, Link 2)')
         figs.append(fig)
         axs.append(ax)
 
         data = np.array([self.df_Traffic_Noise.SPD_HT_L2])
-        fig, ax = dp.Histogram(data, bin_centers, xlabel = 'Speed, MPH', title = 'Speed Distribution (HT, L2)')
+        fig, ax = dp.Histogram(data, bin_centers, xlabel = 'Speed, MPH', title = 'Speed Distribution (Heavy Trucks, Link 2)')
         figs.append(fig)
         axs.append(ax)
 

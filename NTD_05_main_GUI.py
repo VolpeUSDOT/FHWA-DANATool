@@ -946,8 +946,6 @@ def MapTMCs():
     map_widget.set_position(center.y, center.x)
     bounds = selectedGeoTMC.total_bounds
     map_widget.fit_bounding_box((bounds[3], bounds[0]), (bounds[1], bounds[2]))
-    tmcselectedtext = tk.Text(mappopup, height=1, width=80, wrap=WORD)
-    tmcselectedtext.grid(row=1, column=0, sticky="news")
     mapButton['state'] = DISABLED
     root.wait_window(mappopup)
     mapButton['state'] = NORMAL
@@ -1133,6 +1131,7 @@ def vis_plot():
 
     i = 0
     for fig in figs:
+        fig.set_tight_layout(True)
         canvas = FigureCanvasTkAgg(fig, master = plotFrame)  
         canvas.draw()
         # placing the canvas on the Tkinter window
@@ -1144,6 +1143,8 @@ def vis_plot():
         toolbar.grid(row=i, column = 0, pady=(5, 0))
         i+=1
     bind_tree(vis, "<MouseWheel>", vis_mouse_wheel)
+
+
 # GUI
    
 ################################################################################
@@ -1902,7 +1903,7 @@ if __name__ == "__main__":
     else:
         pl_emission.config(text='')
            
-    if True:
+    if False:
         testOption = 4
 
         roadgrade1.set(0)
@@ -2005,7 +2006,13 @@ if __name__ == "__main__":
             npmrds_year = 2017
             state = 'AK'
             county = 'Anchorage'
-        
+
+        elif testOption == 17:
+            tmas_year = 2020
+            npmrds_year = 2020
+            state = 'VA'
+            county = 'RingRoads'
+                
         
         w_state.set(state)
         fn_tmas_station = f'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files/TMAS Data/TMAS {tmas_year}/TMAS_Station_{tmas_year}.csv'

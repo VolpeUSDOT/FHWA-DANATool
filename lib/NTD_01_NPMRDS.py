@@ -131,13 +131,13 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
     dir_dic = {'EASTBOUND':'EB', 'NORTHBOUND':'NB', 'WESTBOUND':'WB', 'SOUTHBOUND':'SB'}
     tmc['direction'].replace(dir_dic, inplace=True)                     ## 1st pass
     tmc['direction']=tmc['direction'].str.extract('(EB|NB|SB|WB)')      ## 2nd pass
-    tmc['dir_num']=np.nan
+    tmc['dir_num']=-1                                                    # if it is still -1, it means we don't have direction information
     tmc.loc[tmc['direction']=='NB','dir_num']=1
     tmc.loc[tmc['direction']=='EB','dir_num']=3
     tmc.loc[tmc['direction']=='SB','dir_num']=5
     tmc.loc[tmc['direction']=='WB','dir_num']=7
     tmc.drop(tmc[tmc['f_system'].isnull()].index, axis=0, inplace=True)
-    tmc.drop(tmc[tmc['direction'].isnull()].index, axis=0, inplace=True)
+    # tmc.drop(tmc[tmc['direction'].isnull()].index, axis=0, inplace=True)
     tmc.drop(['intersection','zip','timezone_name','type','country','tmclinear','frc','border_set','structype','route_qual',
               'altrtename','nhs_pct','strhnt_typ','strhnt_pct','truck'], inplace=True, axis=1)
     
@@ -194,7 +194,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
     print ('Reading NPMRDS speeds for all vehicles')
     npmrds_raw = pd.read_csv(PATH_npmrds_raw_all, parse_dates=['measurement_tstamp'], 
                              usecols=['measurement_tstamp', 'tmc_code', 'speed', 'travel_time_seconds', 'average_speed', 'reference_speed'],
-                             dtype={'tmc_code':str, 'speed':np.float, 'travel_time_seconds':np.float})
+                             dtype={'tmc_code':str, 'speed':float, 'travel_time_seconds':float})
     
     print ('Creating NPMRDS Dataset Template')
     print ('  Autodetect date range: {}'.format(AUTO_DETECT_DATES))
@@ -214,7 +214,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
     if startDate.year != (endDate-pd.Timedelta(days=1)).year:
         raise ValueError("This tool can only process data in one year. The start and end dates currently span multiple years.")
         
-    date_template = pd.date_range(start=startDate, end=endDate, freq='H', closed='left')
+    date_template = pd.date_range(start=startDate, end=endDate, freq='H', inclusive='left')
     tmc_unique = tmc['tmc'].unique()
     print(len(tmc_unique))
     d = [{'tmc_code':i, 'measurement_tstamp': datetime} for i in tmc_unique for datetime in date_template]
@@ -258,7 +258,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
     
     #Same process (c-c1-c2) for the Passenger NPMRDS dataset
     print ('Reading NPMRDS speeds for passenger vehicles')
-    npmrds_raw = pd.read_csv(PATH_npmrds_raw_pass, parse_dates=['measurement_tstamp'], usecols=['measurement_tstamp', 'tmc_code', 'speed', 'travel_time_seconds'], dtype={'tmc_code':str, 'speed':np.float, 'travel_time_seconds':np.float})
+    npmrds_raw = pd.read_csv(PATH_npmrds_raw_pass, parse_dates=['measurement_tstamp'], usecols=['measurement_tstamp', 'tmc_code', 'speed', 'travel_time_seconds'], dtype={'tmc_code':str, 'speed':float, 'travel_time_seconds':float})
     npmrds_raw = pd.merge(npmrds_raw, tmc_for_cleaning, left_on='tmc_code', right_on='tmc', how='inner')
     print ('Cleaning NPMRDS data for passenger vehicles')
     npmrds_raw.drop(npmrds_raw[npmrds_raw['speed']>90].index, axis=0, inplace=True)
@@ -278,7 +278,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
     
     #Same process (c-c1-c2) for the Truck NPMRDS dataset
     print ('Reading NPMRDS speeds for truck vehicles')
-    npmrds_raw = pd.read_csv(PATH_npmrds_raw_truck, parse_dates=['measurement_tstamp'], usecols=['measurement_tstamp', 'tmc_code', 'speed', 'travel_time_seconds'], dtype={'tmc_code':str, 'speed':np.float, 'travel_time_seconds':np.float})
+    npmrds_raw = pd.read_csv(PATH_npmrds_raw_truck, parse_dates=['measurement_tstamp'], usecols=['measurement_tstamp', 'tmc_code', 'speed', 'travel_time_seconds'], dtype={'tmc_code':str, 'speed':float, 'travel_time_seconds':float})
     npmrds_raw = pd.merge(npmrds_raw, tmc_for_cleaning, left_on='tmc_code', right_on='tmc', how='inner')
     print ('Cleaning NPMRDS data for truck vehicles')
     npmrds_raw.drop(npmrds_raw[npmrds_raw['speed']>90].index, axis=0, inplace=True)
@@ -492,10 +492,10 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
                 daily_volume['VOLUME_MODIFIER'] = daily_volume['VOL']/daily_volume['VOL_MEAN']
                 tier1_volume = daily_volume.groupby(['STATION_ID','tmc','DIR']).filter(lambda x: x['VOL'].count()>=6)
                 
-                hpms_numerator = tmas_class_state_tier1_clean.groupby(['STATION_ID','tmc','DIR','MONTH','DAY_TYPE','HOUR'], dropna=False)['HPMS_TYPE10','HPMS_TYPE25','HPMS_TYPE40','HPMS_TYPE50','HPMS_TYPE60'].sum()
-                noise_numerator = tmas_class_state_tier1_clean.groupby(['STATION_ID','tmc','DIR','MONTH','DAY_TYPE','HOUR'], dropna=False)['NOISE_AUTO','NOISE_MED_TRUCK','NOISE_HVY_TRUCK','NOISE_BUS','NOISE_MC'].sum()
-                tier1_hpms_classification = hpms_numerator.groupby(level=[0,1,2,3,4]).apply(lambda x: x/x.sum().sum())      # aggregate hours to day first, then sum across typeXX, (without axis=1)
-                tier1_noise_classification = noise_numerator.groupby(level=[0,1,2,3,4]).apply(lambda x: x/x.sum().sum())
+                hpms_numerator = tmas_class_state_tier1_clean.groupby(['STATION_ID','tmc','DIR','MONTH','DAY_TYPE','HOUR'], dropna=False)[['HPMS_TYPE10','HPMS_TYPE25','HPMS_TYPE40','HPMS_TYPE50','HPMS_TYPE60']].sum()
+                noise_numerator = tmas_class_state_tier1_clean.groupby(['STATION_ID','tmc','DIR','MONTH','DAY_TYPE','HOUR'], dropna=False)[['NOISE_AUTO','NOISE_MED_TRUCK','NOISE_HVY_TRUCK','NOISE_BUS','NOISE_MC']].sum()
+                tier1_hpms_classification = hpms_numerator.groupby(level=[0,1,2,3,4], as_index=False).apply(lambda x: x/x.sum().sum())      # aggregate hours to day first, then sum across typeXX, (without axis=1)
+                tier1_noise_classification = noise_numerator.groupby(level=[0,1,2,3,4], as_index=False).apply(lambda x: x/x.sum().sum())
                 tier1_hpms_classification.reset_index(inplace=True)
                 tier1_noise_classification.reset_index(inplace=True, drop=True)
                 tier1_class = pd.concat([tier1_hpms_classification,tier1_noise_classification], axis=1)
@@ -529,10 +529,10 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
         tier2_volume = daily_volume.groupby(['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','PEAKING']).filter(lambda x: x['VOL'].count()>=6) #filter tier data so only data with at least 3 months is included
         tier2_volume.to_csv(filepath+'tier2_volume.csv',index=False)
         
-        tier2_hpms = tmas_class_state.groupby(['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','MONTH','DAY_TYPE','PEAKING','HOUR'], dropna=False)['HPMS_TYPE10','HPMS_TYPE25','HPMS_TYPE40','HPMS_TYPE50','HPMS_TYPE60'].sum()
-        tier2_noise = tmas_class_state.groupby(['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','MONTH','DAY_TYPE','PEAKING','HOUR'], dropna=False)['NOISE_AUTO','NOISE_MED_TRUCK','NOISE_HVY_TRUCK','NOISE_BUS','NOISE_MC'].sum()
-        tier2_hpms_classification = tier2_hpms.groupby(level=[0,1,2,3,4,5]).apply(lambda x: x/x.sum().sum())
-        tier2_noise_classification = tier2_noise.groupby(level=[0,1,2,3,4,5]).apply(lambda x: x/x.sum().sum())
+        tier2_hpms = tmas_class_state.groupby(['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','MONTH','DAY_TYPE','PEAKING','HOUR'], dropna=False)[['HPMS_TYPE10','HPMS_TYPE25','HPMS_TYPE40','HPMS_TYPE50','HPMS_TYPE60']].sum()
+        tier2_noise = tmas_class_state.groupby(['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','MONTH','DAY_TYPE','PEAKING','HOUR'], dropna=False)[['NOISE_AUTO','NOISE_MED_TRUCK','NOISE_HVY_TRUCK','NOISE_BUS','NOISE_MC']].sum()
+        tier2_hpms_classification = tier2_hpms.groupby(level=[0,1,2,3,4,5], as_index=False).apply(lambda x: x/x.sum().sum())
+        tier2_noise_classification = tier2_noise.groupby(level=[0,1,2,3,4,5], as_index=False).apply(lambda x: x/x.sum().sum())
         tier2_hpms_classification.reset_index(inplace=True)
         tier2_noise_classification.reset_index(inplace=True, drop=True)
         #tier2_class = pd.concat([tier2_hpms_classification,tier2_noise_classification], axis=1, sort=False)
@@ -566,10 +566,10 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
         tier3_volume = daily_volume.groupby(['URB_RURAL','F_SYSTEM','PEAKING']).filter(lambda x: x['VOL'].count()>=6) #filter to make sure there is at least 3 months of data to use the modifier
         tier3_volume.to_csv(filepath+'tier3_volume.csv',index=False)
         
-        tier3_hpms = tmas_class_state.groupby(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'], dropna=False)['HPMS_TYPE10','HPMS_TYPE25','HPMS_TYPE40','HPMS_TYPE50','HPMS_TYPE60'].sum()
-        tier3_noise = tmas_class_state.groupby(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'], dropna=False)['NOISE_AUTO','NOISE_MED_TRUCK','NOISE_HVY_TRUCK','NOISE_BUS','NOISE_MC'].sum()
-        tier3_hpms_classification = tier3_hpms.groupby(level=[0,1,2,3,4]).apply(lambda x: x/x.sum().sum())
-        tier3_noise_classification = tier3_noise.groupby(level=[0,1,2,3,4]).apply(lambda x: x/x.sum().sum())
+        tier3_hpms = tmas_class_state.groupby(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'], dropna=False)[['HPMS_TYPE10','HPMS_TYPE25','HPMS_TYPE40','HPMS_TYPE50','HPMS_TYPE60']].sum()
+        tier3_noise = tmas_class_state.groupby(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'], dropna=False)[['NOISE_AUTO','NOISE_MED_TRUCK','NOISE_HVY_TRUCK','NOISE_BUS','NOISE_MC']].sum()
+        tier3_hpms_classification = tier3_hpms.groupby(level=[0,1,2,3,4], as_index=False).apply(lambda x: x/x.sum().sum())
+        tier3_noise_classification = tier3_noise.groupby(level=[0,1,2,3,4], as_index=False).apply(lambda x: x/x.sum().sum())
         tier3_hpms_classification.reset_index(inplace=True)
         tier3_noise_classification.reset_index(inplace=True, drop=True)
         tier3_class = pd.concat([tier3_hpms_classification,tier3_noise_classification], axis=1)
@@ -598,8 +598,8 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
     daily_volume = daily_volume.merge(grouped, on=['STATION_ID', 'URB_RURAL','F_SYSTEM','MONTH','DAY','DAY_TYPE','PEAKING'])
     daily_volume = daily_volume[daily_volume['Count']==24]
     daily_volume = daily_volume.groupby(['STATION_ID','URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING'])['VOL'].mean().reset_index()
-    tier4_hpms = tmas_class.groupby(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'])['HPMS_TYPE10','HPMS_TYPE25','HPMS_TYPE40','HPMS_TYPE50','HPMS_TYPE60'].sum()
-    tier4_noise = tmas_class.groupby(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'])['NOISE_AUTO','NOISE_MED_TRUCK','NOISE_HVY_TRUCK','NOISE_BUS','NOISE_MC'].sum()
+    tier4_hpms = tmas_class.groupby(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'])[['HPMS_TYPE10','HPMS_TYPE25','HPMS_TYPE40','HPMS_TYPE50','HPMS_TYPE60']].sum()
+    tier4_noise = tmas_class.groupby(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR'])[['NOISE_AUTO','NOISE_MED_TRUCK','NOISE_HVY_TRUCK','NOISE_BUS','NOISE_MC']].sum()
     #with ProgressBar():
     
     daily_volume, tier4_hpms, tier4_noise = dask.compute(daily_volume, tier4_hpms, tier4_noise)
@@ -612,8 +612,8 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
     tier4_volume = daily_volume.groupby(['URB_RURAL','F_SYSTEM','PEAKING']).filter(lambda x: x['VOL'].count()>=6) #filter to make sure there is at least 3 months of data to use the modifier
     tier4_volume.to_csv(filepath+'tier4_volume.csv',index=False)
     
-    tier4_hpms_classification = tier4_hpms.groupby(level=[0,1,2,3,4]).apply(lambda x: x/x.sum().sum())
-    tier4_noise_classification = tier4_noise.groupby(level=[0,1,2,3,4]).apply(lambda x: x/x.sum().sum())
+    tier4_hpms_classification = tier4_hpms.groupby(level=[0,1,2,3,4], as_index=False).apply(lambda x: x/x.sum().sum())
+    tier4_noise_classification = tier4_noise.groupby(level=[0,1,2,3,4], as_index=False).apply(lambda x: x/x.sum().sum())
     tier4_hpms_classification.reset_index(inplace=True)
     tier4_noise_classification.reset_index(inplace=True, drop=True)
     tier4_class = pd.concat([tier4_hpms_classification,tier4_noise_classification], axis=1)
@@ -685,7 +685,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
             'PCT_NOISE_BUS':'float32',
             'PCT_NOISE_MC':'float32',
             'tier':'int32'}
-        tier1_class = pd.read_csv(filepath+'tier1_class.csv', dtype=tier1_types)
+        tier1_class = pd.read_csv(filepath+'tier1_class.csv', dtype=tier1_types).drop(columns=['level_0'], errors='ignore')
         tier1_class['tier']=1
         tier1_class.drop('STATION_ID',inplace=True,axis=1)
         #Merge with NPMRDS data
@@ -714,7 +714,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
             'PCT_NOISE_BUS':'float32',
             'PCT_NOISE_MC':'float32',
             'tier':'int32'}
-        tier1_annualaverage_class = pd.read_csv(filepath+'tier1_annualaverage_class.csv', dtype=tier1_annualaverage_types)
+        tier1_annualaverage_class = pd.read_csv(filepath+'tier1_annualaverage_class.csv', dtype=tier1_annualaverage_types).drop(columns=['level_0'], errors='ignore')
         tier1_annualaverage_class['tier']=1.5
         tier1_annualaverage_class.drop('STATION_ID',inplace=True,axis=1)
         #Merge with NPMRDS data
@@ -745,7 +745,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
             'PCT_NOISE_BUS':'float32',
             'PCT_NOISE_MC':'float32',
             'tier':'int32'}
-        tier2_class = pd.read_csv(filepath+'tier2_class.csv',dtype=tier2_types)
+        tier2_class = pd.read_csv(filepath+'tier2_class.csv',dtype=tier2_types).drop(columns=['level_0'], errors='ignore')
         tier2_class['tier']=2
         #tier2_class['ROUTE_NUMBER'] = pd.to_numeric(tier2_class['ROUTE_NUMBER'], errors='coerce')
         #tier2_class['COUNTY'] = tier2_class['COUNTY'].str.replace(' County','').str.upper()
@@ -778,7 +778,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
             'PCT_NOISE_BUS':'float32',
             'PCT_NOISE_MC':'float32',
             'tier':'int32'}
-        tier2_annualaverage_class = pd.read_csv(filepath+'tier2_annualaverage_class.csv',dtype=tier2_annualaverage_types)
+        tier2_annualaverage_class = pd.read_csv(filepath+'tier2_annualaverage_class.csv',dtype=tier2_annualaverage_types).drop(columns=['level_0'], errors='ignore')
         tier2_annualaverage_class['tier']=2.5
         npmrds_for_tiers.drop(['COUNTY', 'ROUTE_SIGN', 'ROUTE_NUMBER', 'PEAKING', 'MONTH', 'DAY_TYPE','HOUR','PCT_TYPE10','PCT_TYPE25','PCT_TYPE40','PCT_TYPE50','PCT_TYPE60','PCT_NOISE_AUTO','PCT_NOISE_MED_TRUCK','PCT_NOISE_HVY_TRUCK','PCT_NOISE_BUS','PCT_NOISE_MC','tier'], inplace=True, axis=1)
         #Merge with NPMRDS data
@@ -808,7 +808,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
             'PCT_NOISE_BUS':'float32',
             'PCT_NOISE_MC':'float32',
             'tier':'int32'}
-        tier3_class = pd.read_csv(filepath+'tier3_class.csv', dtype=tier3_types)
+        tier3_class = pd.read_csv(filepath+'tier3_class.csv', dtype=tier3_types).drop(columns=['level_0'], errors='ignore')
         tier3_class['tier']=3
         npmrds_for_tiers.drop(['COUNTY','ROUTE_SIGN','ROUTE_NUMBER','DAY_TYPE','PEAKING','HOUR','PCT_TYPE10','PCT_TYPE25','PCT_TYPE40','PCT_TYPE50','PCT_TYPE60','PCT_NOISE_AUTO','PCT_NOISE_MED_TRUCK','PCT_NOISE_HVY_TRUCK','PCT_NOISE_BUS','PCT_NOISE_MC','tier'], inplace=True, axis=1)
         #Merging with Tier 3
@@ -837,7 +837,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
             'PCT_NOISE_BUS':'float32',
             'PCT_NOISE_MC':'float32',
             'tier':'int32'}
-        tier3_annualaverage_class = pd.read_csv(filepath+'tier3_annualaverage_class.csv', dtype=tier3_types)
+        tier3_annualaverage_class = pd.read_csv(filepath+'tier3_annualaverage_class.csv', dtype=tier3_types).drop(columns=['level_0'], errors='ignore')
         tier3_annualaverage_class['tier']=3.5
         npmrds_for_tiers.drop(['URB_RURAL','F_SYSTEM','MONTH','DAY_TYPE','PEAKING','HOUR','MONTH','DAY_TYPE','PEAKING','HOUR','PCT_TYPE10','PCT_TYPE25','PCT_TYPE40','PCT_TYPE50','PCT_TYPE60','PCT_NOISE_AUTO','PCT_NOISE_MED_TRUCK','PCT_NOISE_HVY_TRUCK','PCT_NOISE_BUS','PCT_NOISE_MC','tier'], inplace=True, axis=1)
         #Merging with Tier 3
@@ -865,7 +865,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
         'PCT_NOISE_BUS':'float32',
         'PCT_NOISE_MC':'float32',
         'tier':'int32'}
-    tier4_class = pd.read_csv(filepath+'tier4_class.csv', dtype=tier4_types)
+    tier4_class = pd.read_csv(filepath+'tier4_class.csv', dtype=tier4_types).drop(columns=['level_0']).drop(columns=['level_0'], errors='ignore')
     tier4_class['tier']=4
            
     if SELECT_STATE in states_avlb.values:
@@ -1206,8 +1206,8 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
     
     df_emissions_summary = df_emissions_summary_cols.groupby(['tmc', 'road'], dropna=False)
     noise_data = []
-    df_emissions_groups = df_emissions.groupby(['tmc'])
-    for t, group in df_emissions_groups:    
+    df_emissions_groups = df_emissions.groupby('tmc')
+    for t, group in df_emissions_groups:  
         res = runTNMPyAide(group)
         noise_s = {}
         noise_s['tmc'] = t
@@ -1232,7 +1232,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
             noise_s['Ldn_AVG_DAY'] = res[6]
             noise_s['Lden_AVG_DAY'] = res[7]    
         
-        noise_data = pd.concat([noise_data, noise_s])
+        noise_data.append(noise_s)
 
     noise_df = pd.DataFrame(data = noise_data)
     df_emissions_summary = df_emissions_summary.agg({'tmc_length':'mean', 'speed_all':'mean', 'aadt':'mean', 'TotEmissionsPerMile_2':'sum', 'TotEmissionsPerMile_3':'sum', 'TotEmissionsPerMile_5':'sum', 'TotEmissionsPerMile_6':'sum', 'TotEmissionsPerMile_87':'sum', 'TotEmissionsPerMile_90':'sum', 'TotEmissionsPerMile_98':'sum', 'TotEmissionsPerMile_100':'sum', 'TotEmissionsPerMile_110':'sum'}).reset_index()
@@ -1240,7 +1240,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
     #df_emissions_summary = df_emissions_summary.loc[geo_df['TotEmissions110'] != 0]
     #df_emissions_summary.reset_index(inplace=True)
     df_emissions_summary = pd.merge(df_emissions_summary, noise_df, how='inner', on=('tmc'))
-    df_emissions_summary = pd.merge(df_emissions_summary, geo_tmc[['tmc', 'geometry']], how='inner', on=('tmc'))
+    df_emissions_summary = pd.merge(df_emissions_summary, geo_tmc[['tmc', 'geometry']], how='left', on=('tmc'))
     df_emissions_summary['geometry'] = df_emissions_summary['geometry'].astype('string')
     df_emissions_summary.rename(columns = {'speed_all': 'Average_Speed', 'aadt':'Average AADT'}, inplace=True)
     df_emissions_summary.to_csv(filepath+SELECT_STATE+'_Composite_Emissions_SUMMARY.csv', index=False)
@@ -1277,9 +1277,10 @@ def NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmr
     tmc = pd.read_csv(PATH_tmc_identification)
 
     n = len(tmc)
-    chunkSize = math.ceil(n/math.ceil(n/600))
+    maxTMCs = 600
+    chunkSize = math.ceil(n/math.ceil(n/maxTMCs))
 
-    print(f"{n} tmcs will be processed in {math.ceil(n/400)} chunks")
+    print(f"{n} tmcs will be processed in {math.ceil(n/maxTMCs)} chunks")
     print("")
 
     Sample_df = pd.DataFrame()

@@ -277,8 +277,8 @@ def MOVES(SELECT_STATE, PATH_NPMRDS, PATH_HPMS, PATH_VM2, PATH_COUNTY_MILEAGE, /
     dayVMT_sources.loc[(dayVMT_sources['urban_rural']=='R') & (dayVMT_sources['f_system']<=2),'roadTypeID']=2
     dayVMT_sources.loc[(dayVMT_sources['urban_rural']=='R') & (dayVMT_sources['f_system']>2),'roadTypeID']=3
     
-    dayVMTFrac_grouped = dayVMT_sources.groupby(['county', 'monthid', 'roadTypeID', 'dayid', 'sourceTypeID'])['dayVMTFraction'].sum()
-    dayVMTFrac = dayVMTFrac_grouped.groupby(level=[0,1,2,4]).apply(lambda x: x/x.sum()).reset_index()
+    dayVMTFrac_grouped = dayVMT_sources.groupby(['county', 'monthid', 'roadTypeID', 'dayid', 'sourceTypeID'])[['dayVMTFraction']].sum()
+    dayVMTFrac = dayVMTFrac_grouped.groupby(level=[0,1,2,4], as_index=False).apply(lambda x: x/x.sum()).reset_index().drop(columns=['level_0'])
     
     dayVMTFrac.rename(columns = {'monthid':'monthID', 'roadtypeid':'roadTypeID', 'dayid': 'dayID'}, inplace=True)
     
