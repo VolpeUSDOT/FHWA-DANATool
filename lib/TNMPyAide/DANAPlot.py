@@ -18,10 +18,9 @@ class DANAPlot:
     style = 'tableau-colorblind10'
     
     backend_options = ['module://ipykernel.pylab.backend_inline', 'Qt5Agg', 'TkAgg']
-    backend =  backend_options[2]
+    backend =  backend_options[0]
     # See also https://matplotlib.org/stable/users/explain/backends.html
-    # useage = 
-    plt.switch_backend(backend)
+    # useage = plt.switch_backend(backend)
     
     axis_params = {'visible' : True, 
                    'which' : 'major', 
@@ -154,6 +153,7 @@ class DANAPlot:
 
         plt.style.use(cls.style)
         plt.switch_backend(cls.backend)
+        
         styles = [('solid', 'solid'),
                 ('densely dotted',        (0, (1, 1))),
                 ('long dash with offset', (5, (10, 3))),

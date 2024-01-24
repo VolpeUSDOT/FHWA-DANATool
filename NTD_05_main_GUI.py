@@ -724,6 +724,14 @@ def PopUpWrongSelection():
     label = ttk.Label(popup, text="No links were found with the selection parameters. Please modify the selection parameters")
     label.pack(side="top", pady=5, padx=5)
     popup.mainloop()
+
+def PopUpNoGeoData():
+    popup = tk.Toplevel()
+    popup.wm_title("Error")
+    label = ttk.Label(popup, text="There is no geographic data for the current selection parameters. \n"
+                                  "You can still select TMC values, but you cannot view the links on a map.")
+    label.pack(side="top", pady=5, padx=5)
+    popup.mainloop()
     
 def PopUpNoFile():
     popup = tk.Toplevel()
@@ -909,12 +917,15 @@ def MapTMCs():
         selected_tmc = dir_tmc
     if selected_tmc is None or len(selected_tmc)==0:
         PopUpWrongSelection()
+        return
     else:
         selectedGeoTMC = usashp.loc[usashp['Tmc'].isin(selected_tmc)]
         crs = {'init' :'epsg:4326'}
         selectedGeoTMC = gpd.GeoDataFrame(selectedGeoTMC, geometry='geometry', crs=crs)
-
-    
+    if selectedGeoTMC is None or len(selectedGeoTMC)==0:
+        PopUpNoGeoData()
+        return
+        
     ClearData()
     for i in selected_tmc:
         TMCoutput_text.insert(tk.END, i+', ')
@@ -1629,12 +1640,12 @@ if __name__ == "__main__":
     for child in tnmaideframe.winfo_children(): child.grid_configure(padx=2, pady=4)
     ##################################################
     
-    ###### Vizualization Tab
+    ###### Visualization Tab
     vis = tk.Frame(notebook)
     vis.grid(row=0, column=0, sticky="news")
     vis.grid_rowconfigure(0, weight=1)
     vis.grid_columnconfigure(0, weight=1)
-    notebook.add(vis, text='Data Vizualization')
+    notebook.add(vis, text='Data Visualization')
 
     vis_canvas = tk.Canvas(vis)
     vis_scrollbar = tk.Scrollbar(vis, orient="vertical", command=vis_canvas.yview)
