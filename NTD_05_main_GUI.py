@@ -1125,9 +1125,9 @@ def vis_plot():
         PopUpMsg('Please Calculate TNMAide results succesfully before attempting to plot noise results.')
         return
     
-    plotOptions = ['Avgerage Day Hourly SPL', 'Average Day Hourly Speed', 
+    plotOptions = ['Average Day Hourly SPL', 'Average Day Hourly Speed', 
                    'Hourly Speed Histograms', 'Hourly SPL Histograms']
-    if plotChoice.get() == 'Avgerage Day Hourly SPL':
+    if plotChoice.get() == 'Average Day Hourly SPL':
         figs, axs = tnmaide_result.Plot_Avg_Day_Hourly_SPL()
     if plotChoice.get() == 'Average Day Hourly Speed':
         figs, axs = tnmaide_result.Plot_Avg_Day_Hourly_Speed()
@@ -1656,7 +1656,7 @@ if __name__ == "__main__":
     visframe = tk.Frame(vis_canvas)
     vis_canvas.create_window((0,0), window=visframe, anchor='nw')
 
-    plotOptions = ['Avgerage Day Hourly SPL', 'Average Day Hourly Speed', 
+    plotOptions = ['Average Day Hourly SPL', 'Average Day Hourly Speed', 
                    'Hourly Speed Histograms', 'Hourly SPL Histograms']
 
     ttk.Label(visframe, text='What would you like to plot? ').grid(row=0, column=0, columnspan=1, sticky="w")
