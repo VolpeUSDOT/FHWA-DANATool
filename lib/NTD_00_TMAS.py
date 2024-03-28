@@ -53,7 +53,7 @@ def f(tmas_station):
     state = ''
     for key, value in states.items():
         if value[1] == state_code:
-            if key == 'SD': state = 'SDak'
+            if key == 'SD': state = 'SD'
             else: state = key
     if state == '':
         return tmas_station
@@ -61,7 +61,7 @@ def f(tmas_station):
     long = tmas_station['LONG']
     lat = tmas_station['LAT']
 
-    url = "https://geo.dot.gov/server/rest/services/Hosted/HPMS_Full_{}_2020/FeatureServer/0".format(state)
+    url = "https://geo.dot.gov/server/rest/services/Hosted/HPMS_Full_{}_2022/FeatureServer/0".format(state)
     result = 0
     for i in range(5):
         try:

@@ -17,9 +17,9 @@ import datetime as dt
 import matplotlib.pyplot as plt
 
 # Basic Input Parameters
-step = 4
+step = 0
 
-testOption = 12
+testOption = 1
 
 if testOption == 1:
     tmas_year = 2021
@@ -190,8 +190,8 @@ if __name__ == '__main__':
         #                  r'H:\DANATool\TMAS 2019\CLASS_2017.dat', PATH_FIPS, PATH_NEI, PREREADSTATION = True, PATH_OUTPUT = '00Output_2017')
         # NTD_00_TMAS.TMAS(SELECT_STATE, r'H:\DANATool\TMAS 2019\TMAS_Station_2019_V2.csv', 
         #                  r'H:\DANATool\TMAS 2019\CLASS_2018.dat', PATH_FIPS, PATH_NEI, PREREADSTATION = True, PATH_OUTPUT = '00Output_2018')
-        NTD_00_TMAS.TMAS(SELECT_STATE, r'H:\DANATool\TMAS 2019\TMAS_Station_2020.csv', 
-                         r'H:\DANATool\TMAS 2019\TMAS_CLASS_2020.dat', PATH_FIPS, PATH_NEI, PREREADSTATION = True, PATH_OUTPUT = r'H:\DANATool\TMAS 2019\00Output_2020')
+        NTD_00_TMAS.TMAS(SELECT_STATE, r'H:/DANATool/TMAS 2022/TMAS_Station_2022.dat', 
+                         r'H:/DANATool/TMAS 2022/TMAS_CLASS_2022.dat', PATH_FIPS, PATH_NEI, PREREADSTATION = False, PATH_OUTPUT = r'H:/DANATool/TMAS 2022/Output_2022')
     if step == 1:
         NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_default_speeds, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, PATH_OUTPUT=PATH_OUTPUT, AUTO_DETECT_DATES=True)
     elif step == 2:
