@@ -192,10 +192,17 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
     #b. Create a template for all hours and all links
 
     print ('Reading NPMRDS speeds for all vehicles')
+    
+    if 'historical_average_speed' in pd.read_csv(PATH_npmrds_raw_all, nrows=1).columns.tolist():
+        uc = ['measurement_tstamp', 'tmc_code', 'speed', 'travel_time_seconds', 'historical_average_speed', 'reference_speed']
+    else: 
+        uc = ['measurement_tstamp', 'tmc_code', 'speed', 'travel_time_seconds', 'average_speed', 'reference_speed']
     npmrds_raw = pd.read_csv(PATH_npmrds_raw_all, parse_dates=['measurement_tstamp'], 
-                             usecols=['measurement_tstamp', 'tmc_code', 'speed', 'travel_time_seconds', 'average_speed', 'reference_speed'],
+                             usecols=uc,
                              dtype={'tmc_code':str, 'speed':float, 'travel_time_seconds':float})
     
+    npmrds_raw.rename(columns={'historical_average_speed':'average_speed'}, inplace=True)
+
     print ('Creating NPMRDS Dataset Template')
     print ('  Autodetect date range: {}'.format(AUTO_DETECT_DATES))
     if AUTO_DETECT_DATES:

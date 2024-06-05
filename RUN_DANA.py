@@ -17,9 +17,9 @@ import datetime as dt
 import matplotlib.pyplot as plt
 
 # Basic Input Parameters
-step = 0
+step = 1
 
-testOption = 1
+testOption = 12.5
 
 if testOption == 1:
     tmas_year = 2021
@@ -101,7 +101,17 @@ elif testOption == 12:
     gradeentry = (0, 0)
     medwidthentry = 6
     lanesentry = (3, 3)
-    
+elif testOption == 12.5:
+    tmas_year = 2019
+    npmrds_year = 2019
+    state = 'OK'
+    county = 'Oklahoma2'
+
+    TMC_1Entry = '111+04911'
+    TMC_2Entry = '111+04912'
+    gradeentry = (0, 0)
+    medwidthentry = 6
+    lanesentry = (3, 3) 
 elif testOption == 13:
     tmas_year = 2020
     npmrds_year = 2020
@@ -151,10 +161,10 @@ elif computerName == 'OFFICEDESKTOP':
     pathPrefix2 = 'G:/Repos/FHWA-DANATool/User Input Files/Example_MiddlesexCounty_Massachusetts/2018 NPMRDS Data'
     pathPrefix3 = 'G:/Repos/FHWA-DANATool/NPMRDS_Intermediate_Output'
 elif computerName in ('TSCPDBOS-05790'):
-    pathPrefix1 = 'C:/Users/William.Chupp/Documents/FHWA-DANATool/Default Input Files'
+    pathPrefix1 = 'H:/DANATool'
     pathPrefix2 = 'H:/TestData/{}_{}'.format(county, state)
     pathPrefix3 = 'C:/Users/William.Chupp/Documents/FHWA-DANATool/Final Output'
-elif computerName in ('VOLSLBOS-06756'):
+elif computerName in ('TSCSLBOS-08906'):
     pathPrefix1 = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files'
     pathPrefix2 = 'H:/TestData/{}_{}'.format(county, state)
     pathPrefix3 = 'H:/DANATool/Outputs/TESTNEW_20231211'
@@ -190,8 +200,8 @@ if __name__ == '__main__':
         #                  r'H:\DANATool\TMAS 2019\CLASS_2017.dat', PATH_FIPS, PATH_NEI, PREREADSTATION = True, PATH_OUTPUT = '00Output_2017')
         # NTD_00_TMAS.TMAS(SELECT_STATE, r'H:\DANATool\TMAS 2019\TMAS_Station_2019_V2.csv', 
         #                  r'H:\DANATool\TMAS 2019\CLASS_2018.dat', PATH_FIPS, PATH_NEI, PREREADSTATION = True, PATH_OUTPUT = '00Output_2018')
-        NTD_00_TMAS.TMAS(SELECT_STATE, r'H:/DANATool/TMAS 2022/TMAS_Station_2022.dat', 
-                         r'H:/DANATool/TMAS 2022/TMAS_CLASS_2022.dat', PATH_FIPS, PATH_NEI, PREREADSTATION = False, PATH_OUTPUT = r'H:/DANATool/TMAS 2022/Output_2022')
+        NTD_00_TMAS.TMAS(SELECT_STATE, r'H:/DANATool/TMAS2022/Output_2022/TMAS_Intermediate_Output/TMAS_station.csv', 
+                         r'H:/DANATool/TMAS2022/TMAS_CLASS_2022.dat', PATH_FIPS, PATH_NEI, PREREADSTATION = True, PATH_OUTPUT = r'H:/DANATool/TMAS2022/Output_2022')
     if step == 1:
         NTD_01_NPMRDS.NPMRDS(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PATH_npmrds_raw_pass, PATH_npmrds_raw_truck, PATH_default_speeds, PATH_emission, PATH_TMAS_STATION, PATH_TMAS_CLASS_CLEAN, PATH_FIPS, PATH_NEI, PATH_OUTPUT=PATH_OUTPUT, AUTO_DETECT_DATES=True)
     elif step == 2:

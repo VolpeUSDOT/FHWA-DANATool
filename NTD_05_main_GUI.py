@@ -11,7 +11,7 @@ Author: Cambridge Systematics
 Modified By: Volpe National Transportation Systems Center
 """
 
-versionNum = "2.1"
+versionNum = "2.1.1"
 
 import pandas as pd
 import numpy as np

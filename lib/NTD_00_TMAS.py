@@ -21,11 +21,15 @@ import sys
 import dask.dataframe as dd
 from dask.diagnostics import ProgressBar
 from tqdm.asyncio import tqdm
-from multiprocessing import Pool, TimeoutError
+from multiprocessing.dummy import Pool
 from pandas.tseries.holiday import USFederalHolidayCalendar
-
+import os
 from arcgis.features import FeatureLayer
 from arcgis import geometry
+import pickle
+
+pd.set_option("mode.copy_on_write", True)                                                                
+pd.options.mode.copy_on_write = True                
 
 def f2(chunk):
     return chunk
@@ -62,6 +66,7 @@ def f(tmas_station):
     lat = tmas_station['LAT']
 
     url = "https://geo.dot.gov/server/rest/services/Hosted/HPMS_Full_{}_2022/FeatureServer/0".format(state)
+
     result = 0
     for i in range(5):
         try:
@@ -87,11 +92,12 @@ def f(tmas_station):
     gjson_string = result.to_geojson
     gjson_dict = json.loads(gjson_string)
     links = GeoDataFrame.from_features(gjson_dict['features'])
-    links.columns = links.columns.str.lower()
+    if len(links) != 0:
+        links.columns = links.columns.str.lower()
     if len(links) == 1:
         link = links.loc[0, :]
-        tmas_station.loc['FIPS_COUNTY'] = link.loc['county_code']
-        tmas_station.loc['URBAN_CODE'] = link.loc['urban_code']
+        tmas_station.loc['FIPS_COUNTY'] = link.loc['county_id']
+        tmas_station.loc['URBAN_CODE'] = link.loc['urban_id']
         tmas_station.loc['F_SYSTEM'] = link.loc['f_system']
         tmas_station.loc['PR_SIGNING'] = link.loc['route_signing']
         tmas_station.loc['PR_NUMBER'] = link.loc['route_number']
@@ -102,8 +108,8 @@ def f(tmas_station):
             links_test = links.loc[links['route_name'].str.isspace()==False].reset_index()
             if (len(links_test['route_name'].unique())) == 1:
                 link = links_test.loc[0, :]
-                tmas_station.loc['FIPS_COUNTY'] = link.loc['county_code']
-                tmas_station.loc['URBAN_CODE'] = link.loc['urban_code']
+                tmas_station.loc['FIPS_COUNTY'] = link.loc['county_id']
+                tmas_station.loc['URBAN_CODE'] = link.loc['urban_id']
                 tmas_station.loc['F_SYSTEM'] = link.loc['f_system']
                 tmas_station.loc['PR_SIGNING'] = link.loc['route_signing']
                 tmas_station.loc['PR_NUMBER'] = link.loc['route_number']
@@ -113,8 +119,8 @@ def f(tmas_station):
             links_test = links.loc[links['route_id'].str.isspace()==False].reset_index()
             if (len(links_test['route_id'].unique())) == 1:
                 link = links_test.loc[0, :]
-                tmas_station.loc['FIPS_COUNTY'] = link.loc['county_code']
-                tmas_station.loc['URBAN_CODE'] = link.loc['urban_code']
+                tmas_station.loc['FIPS_COUNTY'] = link.loc['county_id']
+                tmas_station.loc['URBAN_CODE'] = link.loc['urban_id']
                 tmas_station.loc['F_SYSTEM'] = link.loc['f_system']
                 tmas_station.loc['PR_SIGNING'] = link.loc['route_signing']
                 tmas_station.loc['PR_NUMBER'] = link.loc['route_number']
@@ -124,8 +130,8 @@ def f(tmas_station):
             links = links.loc[links['route_number_t'].str.isspace()==False].reset_index()
             if (len(links['route_number_t'].unique())) == 1:
                 link = links.loc[0, :]
-                tmas_station.loc['FIPS_COUNTY'] = link.loc['county_code']
-                tmas_station.loc['URBAN_CODE'] = link.loc['urban_code']
+                tmas_station.loc['FIPS_COUNTY'] = link.loc['county_id']
+                tmas_station.loc['URBAN_CODE'] = link.loc['urban_id']
                 tmas_station.loc['F_SYSTEM'] = link.loc['f_system']
                 tmas_station.loc['PR_SIGNING'] = link.loc['route_signing']
                 tmas_station.loc['PR_NUMBER'] = link.loc['route_number']
@@ -138,8 +144,8 @@ def f(tmas_station):
             for index, link in links.iterrows():
                 if link['route_number']==route:
                     
-                    tmas_station.loc['FIPS_COUNTY'] = link.loc['county_code']
-                    tmas_station.loc['URBAN_CODE'] = link.loc['urban_code']
+                    tmas_station.loc['FIPS_COUNTY'] = link.loc['county_id']
+                    tmas_station.loc['URBAN_CODE'] = link.loc['urban_id']
                     tmas_station.loc['F_SYSTEM'] = link.loc['f_system']
                     tmas_station.loc['PR_SIGNING'] = link.loc['route_signing']
                     tmas_station.loc['PR_NUMBER'] = link.loc['route_number']
@@ -183,11 +189,16 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
         #t = f((472, tmas_station_locs.loc[2, :]))
     
         n = len(tmas_station_locs)
-        with Pool(5) as p:
-            tmas_station = pd.DataFrame()
+        with Pool(10) as p:
+            if os.path.isfile('stations.processed.csv'):
+                tmas_station = pd.read_csv('stations.processed.csv')
+            else:
+                tmas_station = pd.DataFrame()
             print("    starting processing")
-            for sta in tqdm(p.imap(f, tmas_station_locs.iterrows(), chunksize=30), total=n):
-                tmas_station = pd.concat([tmas_station, sta])   
+            for sta in tqdm(p.imap(f, tmas_station_locs[tmas_station.index.max()+1:].iterrows(), chunksize=30), total=len(tmas_station_locs[tmas_station.index.max()+1:])):
+                tmas_station = pd.concat([tmas_station, sta.to_frame().T])   
+                tmas_station.to_csv('stations.processed.csv', index=False)
+
         
         tmas_station.drop_duplicates(subset=['FIPS','STATION_ID','DIR'],inplace=True)
         
@@ -208,8 +219,7 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
         tmas_station=tmas_station[['FIPS','FIPS_COUNTY','STATION_ID','DIR','URB_RURAL','F_SYSTEM','PR_SIGNING','PR_NUMBER','LAT','LONG','STATE_NAME','COUNTY_NAME','repcty']]
         tmas_station.rename(columns={'FIPS': 'STATE', 'FIPS_COUNTY': 'COUNTY', 'PR_SIGNING':'ROUTE_SIGN', 'PR_NUMBER':'ROUTE_NUMBER', 'repcty':'REPCTY'}, inplace=True)
     
-    
-    tmas_station = tmas_station.loc[~tmas_station['COUNTY'].isnull()].reset_index()
+    tmas_station = tmas_station.loc[~tmas_station['COUNTY'].isnull()].reset_index(drop=True)
     #c.	Select only desired State
     tmas_station_State = tmas_station[tmas_station['STATE_NAME']==SELECT_STATE]
     tmas_station_State.reset_index(inplace=True, drop=True)
@@ -234,14 +244,14 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
     tmas_types = {
         'TYPE':'category',
         'STATE': 'Int64',
-        'FIPS':'float16',
+        'FIPS':'Int64',
         'STATION_ID':str,
-        'DIR':'float16',
-        'LANE':'float16',
-        'YEAR':'float16',
-        'MONTH':'float16',
-        'DAY':'float16',
-        'HOUR':'float16',
+        'DIR':'Int64',
+        'LANE':'Int64',
+        'YEAR':'Int64',
+        'MONTH':'Int64',
+        'DAY':'Int64',
+        'HOUR':'Int64',
         'VOL':'float16',
         'CLASS_1':'float16',
         'CLASS_2':'float16',
@@ -272,23 +282,31 @@ def TMAS(SELECT_STATE, PATH_TMAS_STATION, PATH_TMAS_CLASS, PATH_FIPS, PATH_NEI, 
     #(b1a. to account for missing lane scenarios)
     print('Aggregating Classification data to link level')
     #tmas_class_raw.rename(columns={'FIPS': 'STATE'}, inplace=True)
-    tmas_class_sum = tmas_class_raw.groupby(['STATE','STATION_ID','YEAR','MONTH','DAY','HOUR','DIR'])['VOL',
-                                       'CLASS_1','CLASS_2','CLASS_3','CLASS_4','CLASS_5','CLASS_6','CLASS_7',
-                                       'CLASS_8','CLASS_9','CLASS_10','CLASS_11','CLASS_12','CLASS_13'].sum()
-    tmas_class_sum.reset_index(drop=True)
-    ProgressBar().register()
-    tmas_class_sum = tmas_class_sum.compute()
-    now=lapTimer('  took: ',now)
+
+    use_pkl = True
+
+    # IF USING UPDATED DATASET (any new columns calculated or selected)
+    # make sure to delete existing norm_data.pkl otherwise old data will be loaded
+    if use_pkl and os.path.isfile("H:/DANATool/TMAS2022/tmas_class_sum.pkl"):
+        print("Loaded .pkl file")
+        tmas_class_sum = pd.read_pickle("H:/DANATool/TMAS2022/tmas_class_sum.pkl")
+        tmas_class_sum = tmas_class_sum.reset_index(drop=True)
+    else:
+        tmas_class_sum = tmas_class_raw.groupby(['STATE','STATION_ID','YEAR','MONTH','DAY','HOUR','DIR'])[['VOL','CLASS_1','CLASS_2','CLASS_3','CLASS_4','CLASS_5','CLASS_6','CLASS_7','CLASS_8','CLASS_9','CLASS_10','CLASS_11','CLASS_12','CLASS_13']].sum()
+        tmas_class_sum = tmas_class_sum.reset_index()
+        ProgressBar().register()
+        tmas_class_sum = tmas_class_sum.compute()
+        now=lapTimer('  took: ',now)
+        pickle.dump(tmas_class_sum, open("H:/DANATool/TMAS2022/tmas_class_sum.pkl", "wb"), protocol=pickle.HIGHEST_PROTOCOL)
+
     
     #b2. Clean data from days where stations recorded a total volume of 0.
     print('Cleaning data with a volume of 0 for entire days')
-    tmas_day = tmas_class_sum.groupby(['STATE','STATION_ID','YEAR','MONTH','DAY','DIR'])
-    clean_tmas = tmas_day.filter(lambda x: x['VOL'].sum()>0)    ## aggregate hourly volumes to daily volumes
-    tmas_class_sum = tmas_class_sum.loc[clean_tmas.index]       ## maintain the original index
+    clean_tmas = tmas_class_sum.groupby(['STATE','STATION_ID','YEAR','MONTH','DAY','DIR']).filter(lambda x: x['VOL'].sum()>0).index    ## aggregate hourly volumes to daily volumes
+    tmas_class_sum = tmas_class_sum.loc[clean_tmas]       ## maintain the original index
     tmas_class_sum.reset_index(inplace=True)
-    del tmas_day
     del clean_tmas
-    now=lapTimer('  took: ',now)
+    now=lapTimer('  took: ', now)
     
     #b3. Join file with TMAS station data
     print('Joining TMAS Station data')
