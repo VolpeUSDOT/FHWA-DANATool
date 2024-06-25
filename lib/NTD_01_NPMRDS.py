@@ -374,10 +374,10 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
            raise ValueError("The NPMRDS filling method did not work")
     
     npmrds_tmc.loc[npmrds_tmc['speed_pass'].isna(), 'npmrds_pass_fill_method'] = 1
-    npmrds_tmc['speed_pass'].fillna(npmrds_tmc['speed_all'], inplace=True)
+    npmrds_tmc['speed_pass'] = npmrds_tmc['speed_pass'].fillna(npmrds_tmc['speed_all'])
     
     npmrds_tmc.loc[npmrds_tmc['speed_truck'].isna(), 'npmrds_truck_fill_method'] = 1
-    npmrds_tmc['speed_truck'].fillna(npmrds_tmc['speed_all'], inplace=True)
+    npmrds_tmc['speed_truck'] = npmrds_tmc['speed_truck'].fillna(npmrds_tmc['speed_all'])
     
     npmrds_tmc['travel_time_all'].fillna(3600*npmrds_tmc['miles']/npmrds_tmc['speed_all'], inplace=True)
     npmrds_tmc['travel_time_pass'].fillna(3600*npmrds_tmc['miles']/npmrds_tmc['speed_pass'], inplace=True)

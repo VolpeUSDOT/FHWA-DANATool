@@ -19,10 +19,10 @@ import matplotlib.pyplot as plt
 # Basic Input Parameters
 step = 1
 
-testOption = 12.5
+testOption = 1
 
 if testOption == 1:
-    tmas_year = 2021
+    tmas_year = 2018
     npmrds_year = 2018
     state  = 'MA'
     county = 'Middlesex'
@@ -167,7 +167,7 @@ elif computerName in ('TSCPDBOS-05790'):
 elif computerName in ('TSCSLBOS-08906'):
     pathPrefix1 = 'C:/Users/William.Chupp/OneDrive - DOT OST/Documents/DANAToolTesting/FHWA-DANATool/Default Input Files'
     pathPrefix2 = 'H:/TestData/{}_{}'.format(county, state)
-    pathPrefix3 = 'H:/DANATool/Outputs/TESTNEW_20231211'
+    pathPrefix3 = 'H:/DANATool/Outputs/TESTNEW_20240625'
 
 # Set File Paths for Calling DANA Scripts
 PATH_OUTPUT=pathPrefix3

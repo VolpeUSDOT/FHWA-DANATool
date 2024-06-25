@@ -4,7 +4,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "FHWA DANA Tool"
-#define MyAppVersion "2.1"
+#define MyAppVersion "2.1.2"
 #define MyAppPublisher "Federal Highway Administration"
 #define MyAppURL "https://www.fhwa.dot.gov/environment/air_quality/methodologies/dana/"
 #define MyAppExeName "DANATool.exe"
@@ -12,7 +12,7 @@
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{0725E56B-45B8-4E35-88F4-A9E76E6B17F3}
+AppId={{4458E5C2-ABC7-4E96-AEA9-A6E849E0F37B}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
