@@ -379,15 +379,16 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
     npmrds_tmc.loc[npmrds_tmc['speed_truck'].isna(), 'npmrds_truck_fill_method'] = 1
     npmrds_tmc['speed_truck'] = npmrds_tmc['speed_truck'].fillna(npmrds_tmc['speed_all'])
     
-    npmrds_tmc['travel_time_all'].fillna(3600*npmrds_tmc['miles']/npmrds_tmc['speed_all'], inplace=True)
-    npmrds_tmc['travel_time_pass'].fillna(3600*npmrds_tmc['miles']/npmrds_tmc['speed_pass'], inplace=True)
-    npmrds_tmc['travel_time_truck'].fillna(3600*npmrds_tmc['miles']/npmrds_tmc['speed_truck'], inplace=True)
+    npmrds_tmc['travel_time_all'] = npmrds_tmc['travel_time_all'].fillna(3600*npmrds_tmc['miles']/npmrds_tmc['speed_all'])
+    npmrds_tmc['travel_time_pass'] = npmrds_tmc['travel_time_pass'].fillna(3600*npmrds_tmc['miles']/npmrds_tmc['speed_pass'])
+    npmrds_tmc['travel_time_truck'] = npmrds_tmc['travel_time_truck'].fillna(3600*npmrds_tmc['miles']/npmrds_tmc['speed_truck'])
     
     npmrds_tmc.insert(9, 'npmrds_fill_method', None)
 
     npmrds_tmc['npmrds_fill_method'] = [[a, p, t] for a, p, t in zip(npmrds_tmc['npmrds_all_fill_method'],
                                                                      npmrds_tmc['npmrds_pass_fill_method'],
                                                                      npmrds_tmc['npmrds_truck_fill_method'])]
+
     npmrds_tmc.drop(['npmrds_all_fill_method', 'npmrds_pass_fill_method', 'npmrds_truck_fill_method'], inplace=True, axis=1)
     
     now=lapTimer('  took: ',now)

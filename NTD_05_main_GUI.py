@@ -1915,7 +1915,7 @@ if __name__ == "__main__":
         pl_emission.config(text='')
            
     if False:
-        testOption = 4
+        testOption = 1
 
         roadgrade1.set(0)
         roadgrade2.set(0)
@@ -2038,7 +2038,7 @@ if __name__ == "__main__":
         pl_npmrds_truck.config(text=fn_npmrds_truck.replace('/','\\'))
         fn_npmrds_tmc = f'H:/TestData/{county}_{state}/NPMRDS Data/TMC_Identification.csv'
         pl_npmrds_tmc.config(text=fn_npmrds_tmc.replace('/','\\'))
-        fn_output = f'H:/DANATool/Outputs/TESTNEW_20230927'
+        fn_output = f'H:/DANATool/Outputs/TESTNEW_20240709'
         pl_output_folder.config(text=fn_output.replace('/','\\'))
 
         fn_tmc_config = fn_npmrds_tmc
