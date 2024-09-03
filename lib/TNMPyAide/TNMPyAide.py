@@ -171,7 +171,6 @@ class TNMPyAide:
         df_DANA = df_selected_tmcs
         # Compute LAeq at Ref Distance and Reorganize df_DANA for easier analysis
         dnd_obj = DND(df_DANA, link_grade)   
-        
         # Make sure that links are in order, i.e. first link/TMC should be near lane
         if meta.L1_tmc != dnd_obj.df_Traffic_Noise.TMC_L1[0]:
             #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -183,7 +182,7 @@ class TNMPyAide:
         # CLEAN UP DATAFRAME - CONVERT PCTs to VOLs
         #######################################################################
         # Combine ADT and PCT to get hourly traffic, save ADT as separate obj
-        
+
         dnd_obj.df_Traffic_Noise['PCT_AT_L1'] = dnd_obj.df_Traffic_Noise['PCT_AT_L1'] * dnd_obj.df_Traffic_Noise['MAADT_L1']  
         dnd_obj.df_Traffic_Noise['PCT_MT_L1'] = dnd_obj.df_Traffic_Noise['PCT_MT_L1'] * dnd_obj.df_Traffic_Noise['MAADT_L1']  
         dnd_obj.df_Traffic_Noise['PCT_HT_L1'] = dnd_obj.df_Traffic_Noise['PCT_HT_L1'] * dnd_obj.df_Traffic_Noise['MAADT_L1']  

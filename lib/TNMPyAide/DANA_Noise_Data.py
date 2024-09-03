@@ -447,7 +447,7 @@ class DANA_Noise_Data:
                 self.tmc_length.append(0.0)
 
         # Create new dataframe using only needed columns
-        df_Min_Data_Needed = df_DANA[['TMC', 'DATE', 'HOUR', 'MAADT', 'SPEED_ALL', 'SPEED_PASS', 'SPEED_TRUCK', 
+        df_Min_Data_Needed = df_DANA[['TMC', 'DATE', 'HOUR', 'MAADT', 'AADT', 'SPEED_ALL', 'SPEED_PASS', 'SPEED_TRUCK', 
                    'PCT_NOISE_AUTO', 'PCT_NOISE_MED_TRUCK', 'PCT_NOISE_HVY_TRUCK', 'PCT_NOISE_BUS', 'PCT_NOISE_MC']].copy()
 
         # Move TMC to be after Hour - This is the last time that it is this easy to switch
@@ -457,6 +457,7 @@ class DANA_Noise_Data:
         link_name_dict = { 'DATE': 'DATE', 
                    'HOUR': 'HOUR', 
                    'MAADT': 'MAADT', 
+                   'AADT': 'AADT', 
                    'SPEED_ALL': 'SPD_ALL', 
                    'SPEED_PASS': 'SPD_AT',
                    'SPEED_TRUCK': 'SPD_HT', 
@@ -489,6 +490,7 @@ class DANA_Noise_Data:
                           'DATE': 'DATE', 
                           'HOUR': 'HOUR', 
                           'MAADT': 'MAADT_L1', 
+                          'AADT': 'AADT_L1', 
                           'SPD_ALL': 'SPD_ALL_L1', 
                           'SPD_AT': 'SPD_AT_L1',
                           'SPD_HT': 'SPD_HT_L1', 

@@ -11,7 +11,7 @@ Author: Cambridge Systematics
 Modified By: Volpe National Transportation Systems Center
 """
 
-versionNum = "2.1.1"
+versionNum = "2.1.2"
 
 import pandas as pd
 import numpy as np
@@ -39,6 +39,7 @@ from matplotlib.figure import Figure
 import pkg_resources
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 import importlib
+from ttkthemes import ThemedTk
 
 from lib import NTD_00_TMAS
 from lib import NTD_01_NPMRDS
@@ -380,6 +381,7 @@ def process_handler(proc_target, thread_queue, args, return_queue = None):
     
 # Func - ProcessData Function
 def ProcessData(procNum):
+    print(f'Starting to run {procNum}')
     global runningThreads
     #output_text.delete('1.0', END)
     tmc_chars = set('0123456789+-PN, ')
@@ -986,26 +988,69 @@ def calc_tnmaide(start=False):
         tnmaide_group = tnmaide_queue.get(block=False)
         tnmaide_group.columns = tnmaide_group.columns.str.upper()
         tnmaide_result = call_TNMAide.call_TNMAide(tnmaide_group.copy(), (roadgrade1.get(), roadgrade2.get()), medwidth.get(), (NumLanes1.get(), NumLanes2.get()))
-        LAeqOutput.set(str(round(tnmaide_result.average_day.LAEQ_24_HR, 2)))
-        LdnOutput.set(str(round(tnmaide_result.average_day.LDN, 2)))
-        LdenOutput.set(str(round(tnmaide_result.average_day.LDEN, 2)))
-        WorstHourOut.set(str(tnmaide_result.average_day.worst_hour))
-        WorstDayOut.set(str(tnmaide_result.worst_day.day))
+        worstHour.set(str(round(tnmaide_result.average_day.worst_hour, 2)))
+        LAeq1Hr.set(str(round(tnmaide_result.average_day.worst_hour_spl, 2)))
+        LAeq24Hr.set(str(round(tnmaide_result.average_day.LAEQ_24_HR, 2)))
+        Ldn.set(str(tnmaide_result.average_day.LDN))
+        Lden.set(str(tnmaide_result.average_day.LDEN))
 
-        CurrentAADTOut.set(str(sum(tnmaide_group.AADT.unique())))
+        WDworstDate.set(str(tnmaide_result.worst_day.day))
+        WDworstHour.set(str(round(tnmaide_result.worst_day.worst_hour, 2)))
+        WDLAeq1Hr.set(str(round(tnmaide_result.worst_day.worst_hour_spl, 2)))
+        WDLAeq24Hr.set(str(round(tnmaide_result.worst_day.LAEQ_24_HR, 2)))
+        WDLdn.set(str(tnmaide_result.worst_day.LDN))
+        WDLden.set(str(tnmaide_result.worst_day.LDEN))
+
+        CurrentAADTOut_L1.set(str(sum(tnmaide_result.df_Traffic_Noise.AADT_L1.unique())))
+        CurrentAADTOut_L2.set(str(sum(tnmaide_result.df_Traffic_Noise.AADT_L2.unique())))
+
         # Average day worst hour traffic 
         
-        wh_data = tnmaide_result.df_Traffic_Noise.loc[tnmaide_result.average_day.worst_hour_idx]
-        whOutTable[0][0].set(f"{round((wh_data['VOL_AT_L1'] + wh_data['VOL_AT_L2'])/2)}")
-        whOutTable[0][1].set(f"{round((wh_data['VOL_MT_L1'] + wh_data['VOL_MT_L2'])/2)}")
-        whOutTable[0][2].set(f"{round((wh_data['VOL_HT_L1'] + wh_data['VOL_HT_L2'])/2)}")
-        whOutTable[0][3].set(f"{round((wh_data['VOL_BUS_L1'] + wh_data['VOL_BUS_L2'])/2)}")
-        whOutTable[0][4].set(f"{round((wh_data['VOL_MC_L1'] + wh_data['VOL_MC_L2'])/2)}")
-        whOutTable[1][0].set(f"{round((wh_data['SPD_AT_L1'] + wh_data['SPD_AT_L2'])/2)}")
-        whOutTable[1][1].set(f"{round((wh_data['SPD_HT_L1'] + wh_data['SPD_HT_L2'])/2)}")
-        whOutTable[1][2].set(f"{round((wh_data['SPD_HT_L1'] + wh_data['SPD_HT_L2'])/2)}")
-        whOutTable[1][3].set(f"{round((wh_data['SPD_ALL_L1'] + wh_data['SPD_ALL_L2'])/2)}")
-        whOutTable[1][4].set(f"{round((wh_data['SPD_ALL_L1'] + wh_data['SPD_ALL_L2'])/2)}")
+        wh_data = tnmaide_result.df_avg_day.loc[tnmaide_result.average_day.worst_hour_idx]
+        AvWhOutTableNear[0][0].set(f"{round(wh_data['VOL_AT_L1'])}")
+        AvWhOutTableNear[0][1].set(f"{round(wh_data['VOL_MT_L1'])}")
+        AvWhOutTableNear[0][2].set(f"{round(wh_data['VOL_HT_L1'])}")
+        AvWhOutTableNear[0][3].set(f"{round(wh_data['VOL_BUS_L1'])}")
+        AvWhOutTableNear[0][4].set(f"{round(wh_data['VOL_MC_L1'])}")
+        AvWhOutTableNear[1][0].set(f"{round(wh_data['SPD_AT_L1'])}")
+        AvWhOutTableNear[1][1].set(f"{round(wh_data['SPD_HT_L1'])}")
+        AvWhOutTableNear[1][2].set(f"{round(wh_data['SPD_HT_L1'])}")
+        AvWhOutTableNear[1][3].set(f"{round(wh_data['SPD_ALL_L1'])}")
+        AvWhOutTableNear[1][4].set(f"{round(wh_data['SPD_ALL_L1'])}")
+
+        AvWhOutTableFar[0][0].set(f"{round(wh_data['VOL_AT_L2'])}")
+        AvWhOutTableFar[0][1].set(f"{round(wh_data['VOL_MT_L2'])}")
+        AvWhOutTableFar[0][2].set(f"{round(wh_data['VOL_HT_L2'])}")
+        AvWhOutTableFar[0][3].set(f"{round(wh_data['VOL_BUS_L2'])}")
+        AvWhOutTableFar[0][4].set(f"{round(wh_data['VOL_MC_L2'])}")
+        AvWhOutTableFar[1][0].set(f"{round(wh_data['SPD_AT_L2'])}")
+        AvWhOutTableFar[1][1].set(f"{round(wh_data['SPD_HT_L2'])}")
+        AvWhOutTableFar[1][2].set(f"{round(wh_data['SPD_HT_L2'])}")
+        AvWhOutTableFar[1][3].set(f"{round(wh_data['SPD_ALL_L2'])}")
+        AvWhOutTableFar[1][4].set(f"{round(wh_data['SPD_ALL_L2'])}")
+
+        wh_data = tnmaide_result.df_worst_day.loc[tnmaide_result.worst_day.worst_hour_idx]
+        WdWhOutTableNear[0][0].set(f"{round(wh_data['VOL_AT_L1'])}")
+        WdWhOutTableNear[0][1].set(f"{round(wh_data['VOL_MT_L1'])}")
+        WdWhOutTableNear[0][2].set(f"{round(wh_data['VOL_HT_L1'])}")
+        WdWhOutTableNear[0][3].set(f"{round(wh_data['VOL_BUS_L1'])}")
+        WdWhOutTableNear[0][4].set(f"{round(wh_data['VOL_MC_L1'])}")
+        WdWhOutTableNear[1][0].set(f"{round(wh_data['SPD_AT_L1'])}")
+        WdWhOutTableNear[1][1].set(f"{round(wh_data['SPD_HT_L1'])}")
+        WdWhOutTableNear[1][2].set(f"{round(wh_data['SPD_HT_L1'])}")
+        WdWhOutTableNear[1][3].set(f"{round(wh_data['SPD_ALL_L1'])}")
+        WdWhOutTableNear[1][4].set(f"{round(wh_data['SPD_ALL_L1'])}")
+
+        WdWhOutTableFar[0][0].set(f"{round(wh_data['VOL_AT_L2'])}")
+        WdWhOutTableFar[0][1].set(f"{round(wh_data['VOL_MT_L2'])}")
+        WdWhOutTableFar[0][2].set(f"{round(wh_data['VOL_HT_L2'])}")
+        WdWhOutTableFar[0][3].set(f"{round(wh_data['VOL_BUS_L2'])}")
+        WdWhOutTableFar[0][4].set(f"{round(wh_data['VOL_MC_L2'])}")
+        WdWhOutTableFar[1][0].set(f"{round(wh_data['SPD_AT_L2'])}")
+        WdWhOutTableFar[1][1].set(f"{round(wh_data['SPD_HT_L2'])}")
+        WdWhOutTableFar[1][2].set(f"{round(wh_data['SPD_HT_L2'])}")
+        WdWhOutTableFar[1][3].set(f"{round(wh_data['SPD_ALL_L2'])}")
+        WdWhOutTableFar[1][4].set(f"{round(wh_data['SPD_ALL_L2'])}")
 
         # Year Breakdown
         yrOutTable[0][0].set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_AUTO*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")        
@@ -1059,7 +1104,7 @@ def calc_tnmaide(start=False):
 
 def calc_future_noise_LDN():
     print("*** Calculate Future Noise Metrics ***")
-    if CurrentAADTOut.get() == '' or futureAADT.get() == '':
+    if CurrentAADTOut_L1.get() == '' or CurrentAADTOut_L2.get() == '' or futureAADTIn_L1.get() == '' or futureAADTIn_L2.get() == '':
         PopUpMsg('Calculate current noise metrics and fill in future AADT before calculating future noise metrics.')
         return
     traffic_df_day = tnmaide_group[tnmaide_group['HOUR'].between(7, 21)]
@@ -1073,17 +1118,128 @@ def calc_future_noise_LDN():
         traffic_df_night[cols[i]] = .01*float(ldnInTable[1][i].get())/9
 
     group_future_ldn = pd.concat([traffic_df_day, traffic_df_night])
-    group_future_ldn['MAADT'] = float(futureAADT.get())
+    group_future_ldn.loc[group_future_ldn['TMC']==str(TMC_1Entry.get()), 'MAADT'] = group_future_ldn.loc[group_future_ldn['TMC']==str(TMC_1Entry.get()), 'MAADT']*(float(futureAADTIn_L1.get())/float(CurrentAADTOut_L1.get()))
+    group_future_ldn.loc[group_future_ldn['TMC']==str(TMC_2Entry.get()), 'MAADT'] = group_future_ldn.loc[group_future_ldn['TMC']==str(TMC_2Entry.get()), 'MAADT']*(float(futureAADTIn_L2.get())/float(CurrentAADTOut_L2.get()))
+
     future_result_ldn = call_TNMAide.call_TNMAide(group_future_ldn, (roadgrade1.get(), roadgrade2.get()), medwidth.get(), (NumLanes1.get(), NumLanes2.get()))
     print(" Setting")
+    
     FleetBreakdownUsed.set('LDN Time Period Distribution')
-    LAeqFutureOutput.set(str(round(future_result_ldn.average_day.LAEQ_24_HR, 2)))
-    LdnFutureOutput.set(str(round(future_result_ldn.average_day.LDN, 2)))
-    LdenFutureOutput.set(str(round(future_result_ldn.average_day.LDEN, 2)))
+
+    futureWorstHour.set(str(round(future_result_ldn.average_day.worst_hour, 2)))
+    futureLAeq1Hr.set(str(round(future_result_ldn.average_day.worst_hour_spl, 2)))
+    futureLAeq24Hr.set(str(round(future_result_ldn.average_day.LAEQ_24_HR, 2)))
+    futureLdn.set(str(future_result_ldn.average_day.LDN))
+    futureLden.set(str(future_result_ldn.average_day.LDEN))
+
+    futureWDworstDate.set(str(future_result_ldn.worst_day.day))
+    futureWDworstHour.set(str(round(future_result_ldn.worst_day.worst_hour, 2)))
+    futureWDLAeq1Hr.set(str(round(future_result_ldn.worst_day.worst_hour_spl, 2)))
+    futureWDLAeq24Hr.set(str(round(future_result_ldn.worst_day.LAEQ_24_HR, 2)))
+    futureWDLdn.set(str(future_result_ldn.worst_day.LDN))
+    futureWDLden.set(str(future_result_ldn.worst_day.LDEN))
+
+    # Average day worst hour traffic 
+    
+    wh_data = future_result_ldn.df_avg_day.loc[future_result_ldn.average_day.worst_hour_idx]
+    fAvWhOutTableNear[0][0].set(f"{round(wh_data['VOL_AT_L1'])}")
+    fAvWhOutTableNear[0][1].set(f"{round(wh_data['VOL_MT_L1'])}")
+    fAvWhOutTableNear[0][2].set(f"{round(wh_data['VOL_HT_L1'])}")
+    fAvWhOutTableNear[0][3].set(f"{round(wh_data['VOL_BUS_L1'])}")
+    fAvWhOutTableNear[0][4].set(f"{round(wh_data['VOL_MC_L1'])}")
+    fAvWhOutTableNear[1][0].set(f"{round(wh_data['SPD_AT_L1'])}")
+    fAvWhOutTableNear[1][1].set(f"{round(wh_data['SPD_HT_L1'])}")
+    fAvWhOutTableNear[1][2].set(f"{round(wh_data['SPD_HT_L1'])}")
+    fAvWhOutTableNear[1][3].set(f"{round(wh_data['SPD_ALL_L1'])}")
+    fAvWhOutTableNear[1][4].set(f"{round(wh_data['SPD_ALL_L1'])}")
+
+    fAvWhOutTableFar[0][0].set(f"{round(wh_data['VOL_AT_L2'])}")
+    fAvWhOutTableFar[0][1].set(f"{round(wh_data['VOL_MT_L2'])}")
+    fAvWhOutTableFar[0][2].set(f"{round(wh_data['VOL_HT_L2'])}")
+    fAvWhOutTableFar[0][3].set(f"{round(wh_data['VOL_BUS_L2'])}")
+    fAvWhOutTableFar[0][4].set(f"{round(wh_data['VOL_MC_L2'])}")
+    fAvWhOutTableFar[1][0].set(f"{round(wh_data['SPD_AT_L2'])}")
+    fAvWhOutTableFar[1][1].set(f"{round(wh_data['SPD_HT_L2'])}")
+    fAvWhOutTableFar[1][2].set(f"{round(wh_data['SPD_HT_L2'])}")
+    fAvWhOutTableFar[1][3].set(f"{round(wh_data['SPD_ALL_L2'])}")
+    fAvWhOutTableFar[1][4].set(f"{round(wh_data['SPD_ALL_L2'])}")
+
+    wh_data = future_result_ldn.df_worst_day.loc[future_result_ldn.worst_day.worst_hour_idx]
+    fWdWhOutTableNear[0][0].set(f"{round(wh_data['VOL_AT_L1'])}")
+    fWdWhOutTableNear[0][1].set(f"{round(wh_data['VOL_MT_L1'])}")
+    fWdWhOutTableNear[0][2].set(f"{round(wh_data['VOL_HT_L1'])}")
+    fWdWhOutTableNear[0][3].set(f"{round(wh_data['VOL_BUS_L1'])}")
+    fWdWhOutTableNear[0][4].set(f"{round(wh_data['VOL_MC_L1'])}")
+    fWdWhOutTableNear[1][0].set(f"{round(wh_data['SPD_AT_L1'])}")
+    fWdWhOutTableNear[1][1].set(f"{round(wh_data['SPD_HT_L1'])}")
+    fWdWhOutTableNear[1][2].set(f"{round(wh_data['SPD_HT_L1'])}")
+    fWdWhOutTableNear[1][3].set(f"{round(wh_data['SPD_ALL_L1'])}")
+    fWdWhOutTableNear[1][4].set(f"{round(wh_data['SPD_ALL_L1'])}")
+
+    fWdWhOutTableFar[0][0].set(f"{round(wh_data['VOL_AT_L2'])}")
+    fWdWhOutTableFar[0][1].set(f"{round(wh_data['VOL_MT_L2'])}")
+    fWdWhOutTableFar[0][2].set(f"{round(wh_data['VOL_HT_L2'])}")
+    fWdWhOutTableFar[0][3].set(f"{round(wh_data['VOL_BUS_L2'])}")
+    fWdWhOutTableFar[0][4].set(f"{round(wh_data['VOL_MC_L2'])}")
+    fWdWhOutTableFar[1][0].set(f"{round(wh_data['SPD_AT_L2'])}")
+    fWdWhOutTableFar[1][1].set(f"{round(wh_data['SPD_HT_L2'])}")
+    fWdWhOutTableFar[1][2].set(f"{round(wh_data['SPD_HT_L2'])}")
+    fWdWhOutTableFar[1][3].set(f"{round(wh_data['SPD_ALL_L2'])}")
+    fWdWhOutTableFar[1][4].set(f"{round(wh_data['SPD_ALL_L2'])}")
+
+    # Year Breakdown
+    yrOutTable[0][0].set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_AUTO*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")        
+    yrOutTable[0][1].set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_MED_TRUCK*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")
+    yrOutTable[0][2].set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_HVY_TRUCK*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")
+    yrOutTable[0][3].set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_BUS*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")
+    yrOutTable[0][4].set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_MC*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")
+
+    traffic_df = future_result_ldn.df_Traffic_Noise
+    traffic_df['VOL_L1'] = traffic_df['VOL_AT_L1'] + traffic_df['VOL_MT_L1'] + traffic_df['VOL_HT_L1'] + traffic_df['VOL_BUS_L1'] + traffic_df['VOL_MC_L1']
+    traffic_df['VOL_L2'] = traffic_df['VOL_AT_L2'] + traffic_df['VOL_MT_L2'] + traffic_df['VOL_HT_L2'] + traffic_df['VOL_BUS_L2'] + traffic_df['VOL_MC_L2']
+
+    # LDN
+    traffic_df_day = traffic_df[traffic_df['HOUR'].between(7, 21)]
+    traffic_df_night = traffic_df[~traffic_df['HOUR'].between(7, 21)]
+
+    ldnOutTable[0][0].set(f"{round(100*(traffic_df_day['VOL_AT_L1'].sum() + traffic_df_day['VOL_AT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldnOutTable[1][0].set(f"{round(100*(traffic_df_night['VOL_AT_L1'].sum() + traffic_df_night['VOL_AT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldnOutTable[0][1].set(f"{round(100*(traffic_df_day['VOL_MT_L1'].sum() + traffic_df_day['VOL_MT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldnOutTable[1][1].set(f"{round(100*(traffic_df_night['VOL_MT_L1'].sum() + traffic_df_night['VOL_MT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldnOutTable[0][2].set(f"{round(100*(traffic_df_day['VOL_HT_L1'].sum() + traffic_df_day['VOL_HT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldnOutTable[1][2].set(f"{round(100*(traffic_df_night['VOL_HT_L1'].sum() + traffic_df_night['VOL_HT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldnOutTable[0][3].set(f"{round(100*(traffic_df_day['VOL_BUS_L1'].sum() + traffic_df_day['VOL_BUS_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldnOutTable[1][3].set(f"{round(100*(traffic_df_night['VOL_BUS_L1'].sum() + traffic_df_night['VOL_BUS_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldnOutTable[0][4].set(f"{round(100*(traffic_df_day['VOL_MC_L1'].sum() + traffic_df_day['VOL_MC_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldnOutTable[1][4].set(f"{round(100*(traffic_df_night['VOL_MC_L1'].sum() + traffic_df_night['VOL_MC_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+
+    del traffic_df_day
+    del traffic_df_night
+
+    # LDEN
+    traffic_df_day = traffic_df[traffic_df['HOUR'].between(7, 18)]
+    traffic_df_eve = traffic_df[traffic_df['HOUR'].between(19, 21)]
+    traffic_df_night = traffic_df[~traffic_df['HOUR'].between(7, 21)]
+
+    ldenOutTable[0][0].set(f"{round(100*(traffic_df_day['VOL_AT_L1'].sum() + traffic_df_day['VOL_AT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[1][0].set(f"{round(100*(traffic_df_eve['VOL_AT_L1'].sum() + traffic_df_eve['VOL_AT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[2][0].set(f"{round(100*(traffic_df_night['VOL_AT_L1'].sum() + traffic_df_night['VOL_AT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[0][1].set(f"{round(100*(traffic_df_day['VOL_MT_L1'].sum() + traffic_df_day['VOL_MT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[1][1].set(f"{round(100*(traffic_df_eve['VOL_MT_L1'].sum() + traffic_df_eve['VOL_MT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[2][1].set(f"{round(100*(traffic_df_night['VOL_MT_L1'].sum() + traffic_df_night['VOL_MT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[0][2].set(f"{round(100*(traffic_df_day['VOL_HT_L1'].sum() + traffic_df_day['VOL_HT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[1][2].set(f"{round(100*(traffic_df_eve['VOL_HT_L1'].sum() + traffic_df_eve['VOL_HT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[2][2].set(f"{round(100*(traffic_df_night['VOL_HT_L1'].sum() + traffic_df_night['VOL_HT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[0][3].set(f"{round(100*(traffic_df_day['VOL_BUS_L1'].sum() + traffic_df_day['VOL_BUS_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[1][3].set(f"{round(100*(traffic_df_eve['VOL_BUS_L1'].sum() + traffic_df_eve['VOL_BUS_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[2][3].set(f"{round(100*(traffic_df_night['VOL_BUS_L1'].sum() + traffic_df_night['VOL_BUS_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[0][4].set(f"{round(100*(traffic_df_day['VOL_MC_L1'].sum() + traffic_df_day['VOL_MC_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[1][4].set(f"{round(100*(traffic_df_eve['VOL_MC_L1'].sum() + traffic_df_eve['VOL_MC_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[2][4].set(f"{round(100*(traffic_df_night['VOL_MC_L1'].sum() + traffic_df_night['VOL_MC_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
 
 def calc_future_noise_LDEN():
     print("*** Calculate Future Noise Metrics ***")
-    if CurrentAADTOut.get() == '' or futureAADT.get() == '':
+    if CurrentAADTOut_L1.get() == '' or CurrentAADTOut_L2.get() == '' or futureAADTIn_L1.get() == '' or futureAADTIn_L2.get() == '':
         PopUpMsg('Calculate current noise metrics and fill in future AADT before calculating future noise metrics.')
         return
     traffic_df_day = tnmaide_group[tnmaide_group['HOUR'].between(7, 18)]
@@ -1101,16 +1257,129 @@ def calc_future_noise_LDEN():
 
     print(len(traffic_df_day), len(traffic_df_eve), len(traffic_df_night))
     group_future_lden = pd.concat([traffic_df_day, traffic_df_eve, traffic_df_night])
-    group_future_lden['MAADT'] = float(futureAADT.get())
+
+    group_future_lden.loc[group_future_lden['TMC']==str(TMC_1Entry.get()), 'MAADT'] = group_future_lden.loc[group_future_lden['TMC']==str(TMC_1Entry.get()), 'MAADT']*(float(futureAADTIn_L1.get())/float(CurrentAADTOut_L1.get()))
+    group_future_lden.loc[group_future_lden['TMC']==str(TMC_2Entry.get()), 'MAADT'] = group_future_lden.loc[group_future_lden['TMC']==str(TMC_2Entry.get()), 'MAADT']*(float(futureAADTIn_L2.get())/float(CurrentAADTOut_L2.get()))
+    
     future_result_lden = call_TNMAide.call_TNMAide(group_future_lden, (roadgrade1.get(), roadgrade2.get()), medwidth.get(), (NumLanes1.get(), NumLanes2.get()))
     print(" Outputting Results")
+    
     FleetBreakdownUsed.set('LDEN Time Period Distribution')
-    LAeqFutureOutput.set(str(round(future_result_lden.average_day.LAEQ_24_HR, 2)))
-    LdnFutureOutput.set(str(round(future_result_lden.average_day.LDN, 2)))
-    LdenFutureOutput.set(str(round(future_result_lden.average_day.LDEN, 2)))
+
+    futureWorstHour.set(str(round(future_result_lden.average_day.worst_hour, 2)))
+    futureLAeq1Hr.set(str(round(future_result_lden.average_day.worst_hour_spl, 2)))
+    futureLAeq24Hr.set(str(round(future_result_lden.average_day.LAEQ_24_HR, 2)))
+    futureLdn.set(str(future_result_lden.average_day.LDN))
+    futureLden.set(str(future_result_lden.worst_day.LDEN))
+
+    futureWDworstDate.set(str(future_result_lden.worst_day.day))
+    futureWDworstHour.set(str(round(future_result_lden.worst_day.worst_hour, 2)))
+    futureWDLAeq1Hr.set(str(round(future_result_lden.worst_day.worst_hour_spl, 2)))
+    futureWDLAeq24Hr.set(str(round(future_result_lden.worst_day.LAEQ_24_HR, 2)))
+    futureWDLdn.set(str(future_result_lden.worst_day.LDN))
+    futureWDLden.set(str(future_result_lden.worst_day.LDEN))
+
+    # Average day worst hour traffic 
+    
+    wh_data = future_result_lden.df_avg_day.loc[future_result_lden.average_day.worst_hour_idx]
+    fAvWhOutTableNear[0][0].set(f"{round(wh_data['VOL_AT_L1'])}")
+    fAvWhOutTableNear[0][1].set(f"{round(wh_data['VOL_MT_L1'])}")
+    fAvWhOutTableNear[0][2].set(f"{round(wh_data['VOL_HT_L1'])}")
+    fAvWhOutTableNear[0][3].set(f"{round(wh_data['VOL_BUS_L1'])}")
+    fAvWhOutTableNear[0][4].set(f"{round(wh_data['VOL_MC_L1'])}")
+    fAvWhOutTableNear[1][0].set(f"{round(wh_data['SPD_AT_L1'])}")
+    fAvWhOutTableNear[1][1].set(f"{round(wh_data['SPD_HT_L1'])}")
+    fAvWhOutTableNear[1][2].set(f"{round(wh_data['SPD_HT_L1'])}")
+    fAvWhOutTableNear[1][3].set(f"{round(wh_data['SPD_ALL_L1'])}")
+    fAvWhOutTableNear[1][4].set(f"{round(wh_data['SPD_ALL_L1'])}")
+
+    fAvWhOutTableFar[0][0].set(f"{round(wh_data['VOL_AT_L2'])}")
+    fAvWhOutTableFar[0][1].set(f"{round(wh_data['VOL_MT_L2'])}")
+    fAvWhOutTableFar[0][2].set(f"{round(wh_data['VOL_HT_L2'])}")
+    fAvWhOutTableFar[0][3].set(f"{round(wh_data['VOL_BUS_L2'])}")
+    fAvWhOutTableFar[0][4].set(f"{round(wh_data['VOL_MC_L2'])}")
+    fAvWhOutTableFar[1][0].set(f"{round(wh_data['SPD_AT_L2'])}")
+    fAvWhOutTableFar[1][1].set(f"{round(wh_data['SPD_HT_L2'])}")
+    fAvWhOutTableFar[1][2].set(f"{round(wh_data['SPD_HT_L2'])}")
+    fAvWhOutTableFar[1][3].set(f"{round(wh_data['SPD_ALL_L2'])}")
+    fAvWhOutTableFar[1][4].set(f"{round(wh_data['SPD_ALL_L2'])}")
+
+    wh_data = future_result_lden.df_worst_day.loc[future_result_lden.worst_day.worst_hour_idx]
+    fWdWhOutTableNear[0][0].set(f"{round(wh_data['VOL_AT_L1'])}")
+    fWdWhOutTableNear[0][1].set(f"{round(wh_data['VOL_MT_L1'])}")
+    fWdWhOutTableNear[0][2].set(f"{round(wh_data['VOL_HT_L1'])}")
+    fWdWhOutTableNear[0][3].set(f"{round(wh_data['VOL_BUS_L1'])}")
+    fWdWhOutTableNear[0][4].set(f"{round(wh_data['VOL_MC_L1'])}")
+    fWdWhOutTableNear[1][0].set(f"{round(wh_data['SPD_AT_L1'])}")
+    fWdWhOutTableNear[1][1].set(f"{round(wh_data['SPD_HT_L1'])}")
+    fWdWhOutTableNear[1][2].set(f"{round(wh_data['SPD_HT_L1'])}")
+    fWdWhOutTableNear[1][3].set(f"{round(wh_data['SPD_ALL_L1'])}")
+    fWdWhOutTableNear[1][4].set(f"{round(wh_data['SPD_ALL_L1'])}")
+
+    fWdWhOutTableFar[0][0].set(f"{round(wh_data['VOL_AT_L2'])}")
+    fWdWhOutTableFar[0][1].set(f"{round(wh_data['VOL_MT_L2'])}")
+    fWdWhOutTableFar[0][2].set(f"{round(wh_data['VOL_HT_L2'])}")
+    fWdWhOutTableFar[0][3].set(f"{round(wh_data['VOL_BUS_L2'])}")
+    fWdWhOutTableFar[0][4].set(f"{round(wh_data['VOL_MC_L2'])}")
+    fWdWhOutTableFar[1][0].set(f"{round(wh_data['SPD_AT_L2'])}")
+    fWdWhOutTableFar[1][1].set(f"{round(wh_data['SPD_HT_L2'])}")
+    fWdWhOutTableFar[1][2].set(f"{round(wh_data['SPD_HT_L2'])}")
+    fWdWhOutTableFar[1][3].set(f"{round(wh_data['SPD_ALL_L2'])}")
+    fWdWhOutTableFar[1][4].set(f"{round(wh_data['SPD_ALL_L2'])}")
+
+    # Year Breakdown
+    yrOutTable[0][0].set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_AUTO*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")        
+    yrOutTable[0][1].set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_MED_TRUCK*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")
+    yrOutTable[0][2].set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_HVY_TRUCK*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")
+    yrOutTable[0][3].set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_BUS*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")
+    yrOutTable[0][4].set(f"{round(100*sum(list(tnmaide_group.PCT_NOISE_MC*tnmaide_group.MAADT))/(sum(tnmaide_group.MAADT)/24), 2)} %")
+
+    traffic_df = future_result_lden.df_Traffic_Noise
+    traffic_df['VOL_L1'] = traffic_df['VOL_AT_L1'] + traffic_df['VOL_MT_L1'] + traffic_df['VOL_HT_L1'] + traffic_df['VOL_BUS_L1'] + traffic_df['VOL_MC_L1']
+    traffic_df['VOL_L2'] = traffic_df['VOL_AT_L2'] + traffic_df['VOL_MT_L2'] + traffic_df['VOL_HT_L2'] + traffic_df['VOL_BUS_L2'] + traffic_df['VOL_MC_L2']
+
+    # LDN
+    traffic_df_day = traffic_df[traffic_df['HOUR'].between(7, 21)]
+    traffic_df_night = traffic_df[~traffic_df['HOUR'].between(7, 21)]
+
+    ldnOutTable[0][0].set(f"{round(100*(traffic_df_day['VOL_AT_L1'].sum() + traffic_df_day['VOL_AT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldnOutTable[1][0].set(f"{round(100*(traffic_df_night['VOL_AT_L1'].sum() + traffic_df_night['VOL_AT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldnOutTable[0][1].set(f"{round(100*(traffic_df_day['VOL_MT_L1'].sum() + traffic_df_day['VOL_MT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldnOutTable[1][1].set(f"{round(100*(traffic_df_night['VOL_MT_L1'].sum() + traffic_df_night['VOL_MT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldnOutTable[0][2].set(f"{round(100*(traffic_df_day['VOL_HT_L1'].sum() + traffic_df_day['VOL_HT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldnOutTable[1][2].set(f"{round(100*(traffic_df_night['VOL_HT_L1'].sum() + traffic_df_night['VOL_HT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldnOutTable[0][3].set(f"{round(100*(traffic_df_day['VOL_BUS_L1'].sum() + traffic_df_day['VOL_BUS_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldnOutTable[1][3].set(f"{round(100*(traffic_df_night['VOL_BUS_L1'].sum() + traffic_df_night['VOL_BUS_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldnOutTable[0][4].set(f"{round(100*(traffic_df_day['VOL_MC_L1'].sum() + traffic_df_day['VOL_MC_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldnOutTable[1][4].set(f"{round(100*(traffic_df_night['VOL_MC_L1'].sum() + traffic_df_night['VOL_MC_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+
+    del traffic_df_day
+    del traffic_df_night
+
+    # LDEN
+    traffic_df_day = traffic_df[traffic_df['HOUR'].between(7, 18)]
+    traffic_df_eve = traffic_df[traffic_df['HOUR'].between(19, 21)]
+    traffic_df_night = traffic_df[~traffic_df['HOUR'].between(7, 21)]
+
+    ldenOutTable[0][0].set(f"{round(100*(traffic_df_day['VOL_AT_L1'].sum() + traffic_df_day['VOL_AT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[1][0].set(f"{round(100*(traffic_df_eve['VOL_AT_L1'].sum() + traffic_df_eve['VOL_AT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[2][0].set(f"{round(100*(traffic_df_night['VOL_AT_L1'].sum() + traffic_df_night['VOL_AT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[0][1].set(f"{round(100*(traffic_df_day['VOL_MT_L1'].sum() + traffic_df_day['VOL_MT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[1][1].set(f"{round(100*(traffic_df_eve['VOL_MT_L1'].sum() + traffic_df_eve['VOL_MT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[2][1].set(f"{round(100*(traffic_df_night['VOL_MT_L1'].sum() + traffic_df_night['VOL_MT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[0][2].set(f"{round(100*(traffic_df_day['VOL_HT_L1'].sum() + traffic_df_day['VOL_HT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[1][2].set(f"{round(100*(traffic_df_eve['VOL_HT_L1'].sum() + traffic_df_eve['VOL_HT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[2][2].set(f"{round(100*(traffic_df_night['VOL_HT_L1'].sum() + traffic_df_night['VOL_HT_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[0][3].set(f"{round(100*(traffic_df_day['VOL_BUS_L1'].sum() + traffic_df_day['VOL_BUS_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[1][3].set(f"{round(100*(traffic_df_eve['VOL_BUS_L1'].sum() + traffic_df_eve['VOL_BUS_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[2][3].set(f"{round(100*(traffic_df_night['VOL_BUS_L1'].sum() + traffic_df_night['VOL_BUS_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[0][4].set(f"{round(100*(traffic_df_day['VOL_MC_L1'].sum() + traffic_df_day['VOL_MC_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[1][4].set(f"{round(100*(traffic_df_eve['VOL_MC_L1'].sum() + traffic_df_eve['VOL_MC_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
+    ldenOutTable[2][4].set(f"{round(100*(traffic_df_night['VOL_MC_L1'].sum() + traffic_df_night['VOL_MC_L2'].sum())/(traffic_df['VOL_L1'].sum() + traffic_df['VOL_L2'].sum()), 2)} %")
 
 def fill_current_year():
-    futureAADT.set(CurrentAADTOut.get())
+    futureAADTIn_L1.set(CurrentAADTOut_L1.get())
+    futureAADTIn_L2.set(CurrentAADTOut_L2.get())
 
     for r in range(len(ldnOutTable)):
         for c in range(len(ldnOutTable[r])):
@@ -1213,7 +1482,7 @@ def ctrlEvent(event):
 if __name__ == "__main__":
     mp.freeze_support()  
     
-    root = Tk()
+    root = ThemedTk(theme='aquativo')
     root.title("FHWA DANA Tool - v{}".format(versionNum))
     root.grid_rowconfigure(0, weight=0)
     root.grid_rowconfigure(1, weight=1)
@@ -1322,7 +1591,7 @@ if __name__ == "__main__":
     direction.grid(column=2, row=6, columnspan=3, sticky="w")
     
     tmcbuttoncanvas = tk.Canvas(TMCSelection_frame)
-    tmcbuttoncanvas.grid(column=0, row=7, sticky="W", columnspan=5)
+    tmcbuttoncanvas.grid(column=0, row=7, sticky="W", columnspan=6)
 
     mapButton = ttk.Button(tmcbuttoncanvas, text="Map Selected TMCs", command=MapTMCs)
     mapButton.grid(column=0, row=0, columnspan=1, sticky='w', padx=(0, 5))
@@ -1340,7 +1609,7 @@ if __name__ == "__main__":
     clearButton.grid(column=4, row=0, columnspan=1, sticky='w', padx=(0, 5))
 
     TMCOutput_Container = tk.Frame(TMCSelection_frame)
-    TMCOutput_Container.grid(row=8, column=0, columnspan=5, sticky="news")
+    TMCOutput_Container.grid(row=8, column=0, columnspan=6, sticky="news")
     TMCOutput_Container.grid_rowconfigure(0, weight=1)
     TMCOutput_Container.grid_columnconfigure(0, weight=1)
     
@@ -1375,12 +1644,12 @@ if __name__ == "__main__":
     # Choose TMCs
     tnmaide_headerFont = ("Ariel", 13, "bold")
     ttk.Label(tnmaideframe, text='TNMAide - Estimate characteristic noise metrics near the roadway.', font=tnmaide_headerFont).grid(row=0, column=0, columnspan=2, sticky="w")
-    ttk.Separator(tnmaideframe, orient=HORIZONTAL).grid(row=1,column=0, columnspan=5, sticky="ew")
+    ttk.Separator(tnmaideframe, orient=HORIZONTAL).grid(row=1,column=0, columnspan=6, sticky="ew")
 
     tmc_selection_button = ttk.Button(tnmaideframe, text = 'TMC Selection Tool', command=lambda: notebook.select('.!notebook.!frame3')).grid(column=0, row=2, columnspan=1, sticky="w")
     w_npmrds_clean_3 = ttk.Button(tnmaideframe, text='Select Processed NPMRDS', command=f_npmrds_clean).grid(column=0, row=3, columnspan=1, sticky="w")
     pl_npmrds_clean_3 = ttk.Label(tnmaideframe)
-    pl_npmrds_clean_3.grid(column=1, row=3, columnspan=1, sticky="w")
+    pl_npmrds_clean_3.grid(column=1, row=3, columnspan=6, sticky="w")
 
     medwidthentry = ttk.Label(tnmaideframe, text='Median Width (ft): ').grid(column = 0, row=4, sticky="w")
     medwidth = DoubleVar()
@@ -1388,7 +1657,7 @@ if __name__ == "__main__":
     
     ttk.Label(tnmaideframe, text='Enter TMC Information').grid(row=5, column=0, columnspan=2, sticky="ew")
     tmcentercanvas = tk.Canvas(tnmaideframe)
-    tmcentercanvas.grid(column=0, row=6, columnspan=2, sticky="w")
+    tmcentercanvas.grid(column=0, row=6, columnspan=4, sticky="w")
 
     # Entry
     tmc1entrylabel = ttk.Label(tmcentercanvas, text='TMC 1: ').grid(row=0, column=1)
@@ -1413,7 +1682,7 @@ if __name__ == "__main__":
     helpgrade = ttk.Label(tmcentercanvas, text='in direction of near lanes, include - or +').grid(column = 3, row=3, sticky="w", padx=(5, 0))
 
     ########## Calculate and Outputs ###############
-    ttk.Separator(tnmaideframe, orient=HORIZONTAL).grid(row=9,column=0, columnspan=5, sticky="ew")
+    ttk.Separator(tnmaideframe, orient=HORIZONTAL).grid(row=9,column=0, columnspan=6, sticky="ew")
     calcButton = ttk.Button(tnmaideframe, text='Calculate TNMAide Outputs', command=lambda: calc_tnmaide(True), style='h2.TButton')
     style.configure('h2.TButton', font=tnmaide_headerFont)
 
@@ -1425,57 +1694,165 @@ if __name__ == "__main__":
     TNMAide_statusLabel.grid_remove()
     
     tnmaide_headerFont2 = ("Ariel", 11, "bold")
-    ttk.Label(tnmaideframe, text='Worst Hour Noise Metrics at Reference Location: ', font=tnmaide_headerFont2).grid(row=11, column=0, columnspan=2, sticky="w")
-    
-    #Output Labels
-    ttk.Label(tnmaideframe, text='LAeq: ').grid(row=12, column=0, columnspan=1, sticky="w")
-    ttk.Label(tnmaideframe, text='Ldn: ').grid(row=13, column=0, columnspan=1, sticky="w")
-    ttk.Label(tnmaideframe, text='Lden: ').grid(row=14, column=0, columnspan=1, sticky="w")
-    ttk.Label(tnmaideframe, text='Worst Hour: ').grid(row=15, column=0, columnspan=1, sticky="w")
-    ttk.Label(tnmaideframe, text='Worst Day: ').grid(row=16, column=0, columnspan=1, sticky="w")
-    
-    # Outputs
-    LAeqOutput = StringVar()
-    ttk.Entry(tnmaideframe, textvariable=LAeqOutput, state="readonly").grid(row=12, column=1, sticky="w")
-    LdnOutput = StringVar()
-    ttk.Entry(tnmaideframe, textvariable=LdnOutput, state="readonly").grid(row=13, column=1, sticky="w")
-    LdenOutput = StringVar()
-    ttk.Entry(tnmaideframe, textvariable=LdenOutput, state="readonly").grid(row=14, column=1, sticky="w")
-    WorstHourOut = StringVar()
-    ttk.Entry(tnmaideframe, textvariable=WorstHourOut, state="readonly").grid(row=15, column=1, sticky="w")
-    WorstDayOut = StringVar()
-    ttk.Entry(tnmaideframe, textvariable=WorstDayOut, state="readonly").grid(row=16, column=1, sticky="w") 
-    
-    ttk.Label(tnmaideframe, text="Traffic Information", font=tnmaide_headerFont2).grid(row=17, column=0, columnspan=2, sticky="w")   
-    ttk.Label(tnmaideframe, text='Current AADT: ').grid(row=18, column=0, columnspan=1, sticky="w")
-    CurrentAADTOut = StringVar()
-    ttk.Entry(tnmaideframe, textvariable=CurrentAADTOut, state="readonly").grid(row=18, column=1, sticky="w")
 
-    ttk.Label(tnmaideframe, text="Average Day Worst Hour Traffic Conditions: ", font='Ariel 10 bold').grid(row=19, column=0, columnspan = 2, sticky="W")
+    ttk.Label(tnmaideframe, text='Noise Metrics at Reference Location', font=tnmaide_headerFont2).grid(row=11, column=0, columnspan=2, sticky="w")
+    ttk.Label(tnmaideframe, text='Average Day, Worst Hour', font=tnmaide_headerFont2).grid(row=12, column=0, columnspan=2, sticky="w")
+    ttk.Label(tnmaideframe, text='Noise Metrics at Reference Location', font=tnmaide_headerFont2).grid(row=11, column=2, columnspan=2, sticky="w")
+    ttk.Label(tnmaideframe, text='Worst Date, Worst Hour', font=tnmaide_headerFont2).grid(row=12, column=2, columnspan=2, sticky="w")
+    
+    # --------------
+    #Output Labels - Average Day 
+    ttk.Label(tnmaideframe, text='Worst Hour: ').grid(row=13, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='LAeq, 1-hr: ').grid(row=14, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Average Day', font=tnmaide_headerFont2).grid(row=15, column=0, columnspan=2, sticky="w")
+    ttk.Label(tnmaideframe, text='LAeq, 24-hr: ').grid(row=16, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Ldn: ').grid(row=17, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Lden: ').grid(row=18, column=0, columnspan=1, sticky="w")
 
-    wh = tk.Canvas(tnmaideframe)
-    wh.grid(column=0, row=20, columnspan=5, rowspan=3, sticky="w")
-    ttk.Label(wh, text='Average Day Worst Hour Volume: ').grid(row=1, column=0, columnspan=1, sticky="w")
-    ttk.Label(wh, text='Average Day Worst Hour Average Speed: ').grid(row=2, column=0, columnspan=1, sticky="w")
-    ttk.Label(wh, text = "Auto").grid(column=1, row=0, sticky="w")
-    ttk.Label(wh, text = "Medium Trucks").grid(column=2, row=0, sticky="w")
-    ttk.Label(wh, text = "Heavy Trucks").grid(column=3, row=0, sticky="w")
-    ttk.Label(wh, text = "Buses").grid(column=4, row=0, sticky="w")
-    ttk.Label(wh, text = "Motor Cycles").grid(column=5, row=0, sticky="w")
+    ttk.Label(tnmaideframe, text='Worst Date, Worst Hour: ').grid(row=13, column=2, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='LAeq, 1-hr: ').grid(row=14, column=2, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Worst Date', font=tnmaide_headerFont2).grid(row=15, column=2, columnspan=2, sticky="w")
+    ttk.Label(tnmaideframe, text='LAeq, 24-hr: ').grid(row=16, column=2, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Ldn: ').grid(row=17, column=2, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Lden: ').grid(row=18, column=2, columnspan=1, sticky="w")
+    
+    # Outputs - Average Day
+    worstHour = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=worstHour, state="readonly").grid(row=13, column=1, sticky="w")
+    LAeq1Hr = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=LAeq1Hr, state="readonly").grid(row=14, column=1, sticky="w")
+    LAeq24Hr = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=LAeq24Hr, state="readonly").grid(row=16, column=1, sticky="w")
+    Ldn = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=Ldn, state="readonly").grid(row=17, column=1, sticky="w")
+    Lden = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=Lden, state="readonly").grid(row=18, column=1, sticky="w") 
 
-    whOutTable = []
+    # Outputs - Worst Date
+    WDworstDate = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=WDworstDate, state="readonly").grid(row=13, column=3, sticky="w")
+    WDworstHour = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=WDworstHour, state="readonly").grid(row=13, column=4, sticky="w")
+    WDLAeq1Hr = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=WDLAeq1Hr, state="readonly").grid(row=14, column=3, sticky="w")
+    WDLAeq24Hr = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=WDLAeq24Hr, state="readonly").grid(row=16, column=3, sticky="w")
+    WDLdn = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=WDLdn, state="readonly").grid(row=17, column=3, sticky="w")
+    WDLden = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=WDLden, state="readonly").grid(row=18, column=3, sticky="w") 
+
+    ####### Traffic Breakdowns
+    #----------------------
+    # Average Near 
+    ttk.Separator(tnmaideframe, orient=HORIZONTAL).grid(row=19, column=0, columnspan=6, sticky="ew")
+
+    ttk.Label(tnmaideframe, text="Average Day Worst Hour Traffic Conditions, Near Lanes: ", font='Ariel 10 bold').grid(row=20, column=0, columnspan = 2, sticky="W")
+
+    adwhnl = tk.Canvas(tnmaideframe)
+    adwhnl.grid(column=0, row=21, columnspan=6, rowspan=3, sticky="w")
+    ttk.Label(adwhnl, text='Average Day Worst Hour Volume: ').grid(row=1, column=0, columnspan=1, sticky="w")
+    ttk.Label(adwhnl, text='Average Day Worst Hour Average Speed: ').grid(row=2, column=0, columnspan=1, sticky="w")
+    ttk.Label(adwhnl, text = "Auto").grid(column=1, row=0, sticky="w")
+    ttk.Label(adwhnl, text = "Medium Trucks").grid(column=2, row=0, sticky="w")
+    ttk.Label(adwhnl, text = "Heavy Trucks").grid(column=3, row=0, sticky="w")
+    ttk.Label(adwhnl, text = "Buses").grid(column=4, row=0, sticky="w")
+    ttk.Label(adwhnl, text = "Motor Cycles").grid(column=5, row=0, sticky="w")
+
+    AvWhOutTableNear = []
     for r in range(2):
         whOutRow = []
         for c in range(5):
             strvar = tk.StringVar()
             whOutRow.append(strvar)
-            ttk.Entry(wh, textvariable=strvar, state="readonly").grid(row=1+r, column=1+c, sticky="w")
-        whOutTable.append(whOutRow)
+            ttk.Entry(adwhnl, textvariable=strvar, state="readonly").grid(row=1+r, column=1+c, sticky="w")
+        AvWhOutTableNear.append(whOutRow)
 
-    ttk.Label(tnmaideframe, text="Yearly Vehicle Mix (%): ", font='Ariel 10 bold').grid(row=23, column=0, columnspan = 2, sticky="W")
+    # Average Far
+    ttk.Label(tnmaideframe, text="Average Day Worst Hour Traffic Conditions, Far Lanes: ", font='Ariel 10 bold').grid(row=24, column=0, columnspan = 2, sticky="W")
+
+    adwhfl = tk.Canvas(tnmaideframe)
+    adwhfl.grid(column=0, row=25, columnspan=6, rowspan=3, sticky="w")
+    ttk.Label(adwhfl, text='Average Day Worst Hour Volume: ').grid(row=1, column=0, columnspan=1, sticky="w")
+    ttk.Label(adwhfl, text='Average Day Worst Hour Average Speed: ').grid(row=2, column=0, columnspan=1, sticky="w")
+    ttk.Label(adwhfl, text = "Auto").grid(column=1, row=0, sticky="w")
+    ttk.Label(adwhfl, text = "Medium Trucks").grid(column=2, row=0, sticky="w")
+    ttk.Label(adwhfl, text = "Heavy Trucks").grid(column=3, row=0, sticky="w")
+    ttk.Label(adwhfl, text = "Buses").grid(column=4, row=0, sticky="w")
+    ttk.Label(adwhfl, text = "Motor Cycles").grid(column=5, row=0, sticky="w")
+
+    AvWhOutTableFar = []
+    for r in range(2):
+        whOutRow = []
+        for c in range(5):
+            strvar = tk.StringVar()
+            whOutRow.append(strvar)
+            ttk.Entry(adwhfl, textvariable=strvar, state="readonly").grid(row=1+r, column=1+c, sticky="w")
+        AvWhOutTableFar.append(whOutRow)
     
+    # Worst Near
+    ttk.Separator(tnmaideframe, orient=HORIZONTAL).grid(row=28, column=0, columnspan=6, sticky="ew")
+
+    ttk.Label(tnmaideframe, text="Worst Date Worst Hour Traffic Conditions, Near Lanes: ", font='Ariel 10 bold').grid(row=29, column=0, columnspan = 2, sticky="W")
+
+    wdwhnl = tk.Canvas(tnmaideframe)
+    wdwhnl.grid(column=0, row=30, columnspan=6, rowspan=3, sticky="w")
+    ttk.Label(wdwhnl, text='Worst Date Worst Hour Volume: ').grid(row=1, column=0, columnspan=1, sticky="w")
+    ttk.Label(wdwhnl, text='Worst Date Worst Hour Average Speed: ').grid(row=2, column=0, columnspan=1, sticky="w")
+    ttk.Label(wdwhnl, text = "Auto").grid(column=1, row=0, sticky="w")
+    ttk.Label(wdwhnl, text = "Medium Trucks").grid(column=2, row=0, sticky="w")
+    ttk.Label(wdwhnl, text = "Heavy Trucks").grid(column=3, row=0, sticky="w")
+    ttk.Label(wdwhnl, text = "Buses").grid(column=4, row=0, sticky="w")
+    ttk.Label(wdwhnl, text = "Motor Cycles").grid(column=5, row=0, sticky="w")
+
+    WdWhOutTableNear = []
+    for r in range(2):
+        whOutRow = []
+        for c in range(5):
+            strvar = tk.StringVar()
+            whOutRow.append(strvar)
+            ttk.Entry(wdwhnl, textvariable=strvar, state="readonly").grid(row=1+r, column=1+c, sticky="w")
+        WdWhOutTableNear.append(whOutRow)
+
+    # Worst Far
+    ttk.Label(tnmaideframe, text="Worst Date Worst Hour Traffic Conditions, Far Lanes: ", font='Ariel 10 bold').grid(row=33, column=0, columnspan = 2, sticky="W")
+
+    wdwhfl = tk.Canvas(tnmaideframe)
+    wdwhfl.grid(column=0, row=34, columnspan=6, rowspan=3, sticky="w")
+    ttk.Label(wdwhfl, text='Worst Date Worst Hour Volume: ').grid(row=1, column=0, columnspan=1, sticky="w")
+    ttk.Label(wdwhfl, text='Worst Date Worst Hour Average Speed: ').grid(row=2, column=0, columnspan=1, sticky="w")
+    ttk.Label(wdwhfl, text = "Auto").grid(column=1, row=0, sticky="w")
+    ttk.Label(wdwhfl, text = "Medium Trucks").grid(column=2, row=0, sticky="w")
+    ttk.Label(wdwhfl, text = "Heavy Trucks").grid(column=3, row=0, sticky="w")
+    ttk.Label(wdwhfl, text = "Buses").grid(column=4, row=0, sticky="w")
+    ttk.Label(wdwhfl, text = "Motor Cycles").grid(column=5, row=0, sticky="w")
+
+    WdWhOutTableFar = []
+    for r in range(2):
+        whOutRow = []
+        for c in range(5):
+            strvar = tk.StringVar()
+            whOutRow.append(strvar)
+            ttk.Entry(wdwhfl, textvariable=strvar, state="readonly").grid(row=1+r, column=1+c, sticky="w")
+        WdWhOutTableFar.append(whOutRow)
+
+    # Annual Traffic Breakdown Metrics
+
+    ttk.Separator(tnmaideframe, orient=HORIZONTAL).grid(row=37, column=0, columnspan=6, sticky="ew")
+
+    ttk.Label(tnmaideframe, text="Annual Traffic Information", font=tnmaide_headerFont2).grid(row=38, column=0, columnspan=2, sticky="w")   
+    ttk.Label(tnmaideframe, text='Annual Current AADT, Near Lanes: ').grid(row=39, column=0, columnspan=1, sticky="w")
+    CurrentAADTOut_L1 = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=CurrentAADTOut_L1, state="readonly").grid(row=39, column=1, sticky="w")
+    
+    ttk.Label(tnmaideframe, text='Annual Current AADT, Far Lanes: ').grid(row=39, column=2, columnspan=1, sticky="w")
+    CurrentAADTOut_L2 = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=CurrentAADTOut_L2, state="readonly").grid(row=39, column=3, sticky="w")
+
+    ttk.Label(tnmaideframe, text="Yearly Vehicle Mix, Both Lanes (%): ", font='Ariel 10 bold').grid(row=40, column=0, columnspan = 2, sticky="W")
+
     yearbreakdown = tk.Canvas(tnmaideframe)
-    yearbreakdown.grid(column=0, row=24, columnspan=5, rowspan=2, sticky="w")
+    yearbreakdown.grid(column=0, row=41, columnspan=6, rowspan=2, sticky="w")
     ttk.Label(yearbreakdown, text='Percent Vehicles in the Current Year: ').grid(row=1, column=0, columnspan=1, sticky="w")
     ttk.Label(yearbreakdown, text = "Auto").grid(column=1, row=0, sticky="w")
     ttk.Label(yearbreakdown, text = "Medium Trucks").grid(column=2, row=0, sticky="w")
@@ -1491,31 +1868,11 @@ if __name__ == "__main__":
             yrOutRow.append(strvar)
             ttk.Entry(yearbreakdown, textvariable=strvar, state="readonly").grid(row=1+r, column=1+c, sticky="w")
         yrOutTable.append(yrOutRow)
-    
-    # ttk.Label(tnmaideframe, text='Cars: ').grid(row=20, column=0, columnspan=1, sticky="w")
-    # ttk.Label(tnmaideframe, text='Medium Trucks: ').grid(row=21, column=0, columnspan=1, sticky="w")
-    # ttk.Label(tnmaideframe, text='Heavy Trucks: ').grid(row=22, column=0, columnspan=1, sticky="w")
-    # ttk.Label(tnmaideframe, text='Buses: ').grid(row=23, column=0, columnspan=1, sticky="w")
-    # ttk.Label(tnmaideframe, text='Motorcycles: ').grid(row=24, column=0, columnspan=1, sticky="w")
-    # ttk.Label(tnmaideframe, text='Total: ').grid(row=25, column=0, columnspan=1, sticky="w")
-    
-    # CarsOut = StringVar()
-    # ttk.Entry(tnmaideframe, textvariable=CarsOut, state="readonly").grid(row=20, column=1, sticky="w")
-    # MedTrucksOut = StringVar()
-    # ttk.Entry(tnmaideframe, textvariable=MedTrucksOut, state="readonly").grid(row=21, column=1, sticky="w")
-    # HeavyTrucksOut = StringVar()
-    # ttk.Entry(tnmaideframe, textvariable=HeavyTrucksOut, state="readonly").grid(row=22, column=1, sticky="w")
-    # BusesOut = StringVar()
-    # ttk.Entry(tnmaideframe, textvariable=BusesOut, state="readonly").grid(row=23, column=1, sticky="w")
-    # MotoOut = StringVar()
-    # ttk.Entry(tnmaideframe, textvariable=MotoOut, state="readonly").grid(row=24, column=1, sticky="w")
-    # TotalOut = StringVar()
-    # ttk.Entry(tnmaideframe, textvariable=TotalOut, state="readonly").grid(row=25, column=1, sticky="w")
 
-    ttk.Label(tnmaideframe, text='LDN Time Period Distribution', font='Ariel 10 bold').grid(row=26, column=0, columnspan=2, sticky="w")
+    ttk.Label(tnmaideframe, text='LDN Time Period Distribution, Both Lanes (%)', font='Ariel 10 bold').grid(row=43, column=0, columnspan=2, sticky="w")
 
     daybreakdown = tk.Canvas(tnmaideframe)
-    daybreakdown.grid(column=0, row=27, columnspan=5, rowspan=3, sticky="w")
+    daybreakdown.grid(column=0, row=44, columnspan=6, rowspan=3, sticky="w")
     ttk.Label(daybreakdown, text='Percent Vehicles in the Current Year, DAYTIME: ').grid(row=1, column=0, columnspan=1, sticky="w")
     ttk.Label(daybreakdown, text='Percent Vehicles in the Current Year, NIGHTTIME: ').grid(row=2, column=0, columnspan=1, sticky="w")
     ttk.Label(daybreakdown, text = "Auto").grid(column=1, row=0, sticky="w")
@@ -1533,10 +1890,10 @@ if __name__ == "__main__":
             ttk.Entry(daybreakdown, textvariable=strvar, state="readonly").grid(row=1+r, column=1+c, sticky="w")
         ldnOutTable.append(ldnOutRow)
 
-    ttk.Label(tnmaideframe, text='LDEN Time Period Distribution', font='Ariel 10 bold').grid(row=30, column=0, columnspan=2, sticky="w")
+    ttk.Label(tnmaideframe, text='LDEN Time Period Distribution, Both Lanes (%)', font='Ariel 10 bold').grid(row=47, column=0, columnspan=2, sticky="w")
 
     denbreakdown = tk.Canvas(tnmaideframe)
-    denbreakdown.grid(column=0, row=31, columnspan=5, rowspan=4, sticky="w")
+    denbreakdown.grid(column=0, row=48, columnspan=6, rowspan=4, sticky="w")
     ttk.Label(denbreakdown, text='Percent Vehicles in the Current Year, DAYTIME: ').grid(row=1, column=0, columnspan=1, sticky="w")
     ttk.Label(denbreakdown, text='Percent Vehicles in the Current Year, EVENING: ').grid(row=2, column=0, columnspan=1, sticky="w")
     ttk.Label(denbreakdown, text='Percent Vehicles in the Current Year, NIGHTTIME: ').grid(row=3, column=0, columnspan=1, sticky="w")
@@ -1556,17 +1913,23 @@ if __name__ == "__main__":
         ldenOutTable.append(ldenOutRow)
 
     ########## Calculate Future Metrics ###############
-    ttk.Separator(tnmaideframe, orient=HORIZONTAL).grid(row=35,column=0, columnspan=5, sticky="ew")
-    ttk.Label(tnmaideframe, text='Estimate noise levels with future AADT breakdown', font=tnmaide_headerFont).grid(row=36, column=0, columnspan=2, sticky="w")
+    ttk.Separator(tnmaideframe, orient=HORIZONTAL).grid(row=54,column=0, columnspan=6, sticky="ew")
+    ttk.Label(tnmaideframe, text='Estimate noise levels with future AADT breakdown', font=tnmaide_headerFont).grid(row=55, column=0, columnspan=2, sticky="w")
     fillCurrentButton = ttk.Button(tnmaideframe, text='Fill from current year', command=fill_current_year)
-    fillCurrentButton.grid(column=1, row=37, columnspan=1, sticky='w', padx=(5, 5))
-    ttk.Label(tnmaideframe, text='Future Year AADT: ').grid(row=38, column=0, columnspan=2, sticky="w")
-    futureAADT = tk.StringVar()
-    ttk.Entry(tnmaideframe, textvariable=futureAADT).grid(row=38, column=1, sticky="w")
+    fillCurrentButton.grid(column=1, row=56, columnspan=1, sticky='w', padx=(5, 5))
     
-    ttk.Label(tnmaideframe, text='LDN Time Period Distribution', font='Ariel 10 bold').grid(row=39, column=0, columnspan=2, sticky="w")
+    ttk.Label(tnmaideframe, text='Future Year AADT, Near Lanes: ').grid(row=57, column=0, columnspan=2, sticky="w")
+    futureAADTIn_L1 = tk.StringVar()
+    ttk.Entry(tnmaideframe, textvariable=futureAADTIn_L1).grid(row=57, column=1, sticky="w")
+    
+    ttk.Label(tnmaideframe, text='Future Year AADT, Far Lanes: ').grid(row=57, column=2, columnspan=2, sticky="w")
+    futureAADTIn_L2 = tk.StringVar()
+    ttk.Entry(tnmaideframe, textvariable=futureAADTIn_L2).grid(row=57, column=3, sticky="w")
+
+    ttk.Label(tnmaideframe, text='LDN Time Period Distribution, Both Lanes (%)', font='Ariel 10 bold').grid(row=58, column=0, columnspan=2, sticky="w")
     futureLDNInput = tk.Canvas(tnmaideframe)
-    futureLDNInput.grid(column=0, row=40, columnspan=5, rowspan=3, sticky="w")
+
+    futureLDNInput.grid(column=0, row=59, columnspan=6, rowspan=3, sticky="w")
     ttk.Label(futureLDNInput, text='Percent Vehicles in the Future Year, DAYTIME: ').grid(row=1, column=0, columnspan=1, sticky="w")
     ttk.Label(futureLDNInput, text='Percent Vehicles in the Future Year, NIGHTTIME: ').grid(row=2, column=0, columnspan=1, sticky="w")
     ttk.Label(futureLDNInput, text = "Auto").grid(column=1, row=0, sticky="w")
@@ -1585,12 +1948,12 @@ if __name__ == "__main__":
         ldnInTable.append(ldnInRow)
 
     totLDNInput = tk.StringVar()
-    ttk.Label(tnmaideframe, text='Total Percent: ').grid(row=44, column=0, columnspan=1, sticky="w")
-    ttk.Entry(tnmaideframe, textvariable=totLDNInput, state="readonly").grid(row=44, column=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Total Percent: ').grid(row=62, column=0, columnspan=1, sticky="w")
+    ttk.Entry(tnmaideframe, textvariable=totLDNInput, state="readonly").grid(row=62, column=1, sticky="w")
 
-    ttk.Label(tnmaideframe, text='LDEN Time Period Distribution', font='Ariel 10 bold').grid(row=45, column=0, columnspan=2, sticky="w")
+    ttk.Label(tnmaideframe, text='LDEN Time Period Distribution, Both Lanes (%)', font='Ariel 10 bold').grid(row=63, column=0, columnspan=2, sticky="w")
     futureLDENInput = tk.Canvas(tnmaideframe)
-    futureLDENInput.grid(column=0, row=46, columnspan=5, rowspan=4, sticky="w")
+    futureLDENInput.grid(column=0, row=64, columnspan=6, rowspan=4, sticky="w")
     ttk.Label(futureLDENInput, text='Percent Vehicles in the Future Year, DAYTIME: ').grid(row=1, column=0, columnspan=1, sticky="w")
     ttk.Label(futureLDENInput, text='Percent Vehicles in the Future Year, EVENING: ').grid(row=2, column=0, columnspan=1, sticky="w")
     ttk.Label(futureLDENInput, text='Percent Vehicles in the Future Year, NIGHTTIME: ').grid(row=3, column=0, columnspan=1, sticky="w")
@@ -1610,32 +1973,165 @@ if __name__ == "__main__":
         ldenInTable.append(ldenInRow)
     
     totLDENInput = tk.StringVar()
-    ttk.Label(tnmaideframe, text='Total Percent: ').grid(row=50, column=0, columnspan=1, sticky="w")
-    ttk.Entry(tnmaideframe, textvariable=totLDENInput, state="readonly").grid(row=50, column=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Total Percent: ').grid(row=68, column=0, columnspan=1, sticky="w")
+    ttk.Entry(tnmaideframe, textvariable=totLDENInput, state="readonly").grid(row=68, column=1, sticky="w")
+
+    # Buttons for future metrics
+    ttk.Separator(tnmaideframe, orient=HORIZONTAL).grid(row=69, column=0, columnspan=6, sticky="ew")
 
     calcFutureLDNButton = ttk.Button(tnmaideframe, text='Calculate with LDN Distributions', command=lambda: calc_future_noise_LDN(), style='h2.TButton')
-    calcFutureLDNButton.grid(column=0, row=51, columnspan=1, sticky='w', padx=(0, 5))
+    calcFutureLDNButton.grid(column=0, row=74, columnspan=1, sticky='w', padx=(0, 5))
 
     calcFutureLDENButton = ttk.Button(tnmaideframe, text='Calculate with LDEN Distributions', command=lambda: calc_future_noise_LDEN(), style='h2.TButton')
-    calcFutureLDENButton.grid(column=1, row=51, columnspan=1, sticky='w', padx=(0, 5))
+    calcFutureLDENButton.grid(column=1, row=74, columnspan=2, sticky='w', padx=(0, 5))
     
-    ttk.Label(tnmaideframe, text='Worst Hour Noise Metrics at Reference Location: ', font=tnmaide_headerFont2).grid(row=52, column=0, columnspan=2, sticky="w")
-
-    #Output Labels
-    ttk.Label(tnmaideframe, text='Future Fleet Distribution Based On: ').grid(row=53, column=0, columnspan=1, sticky="w")
-    ttk.Label(tnmaideframe, text='LAeq: ').grid(row=54, column=0, columnspan=1, sticky="w")
-    ttk.Label(tnmaideframe, text='Ldn: ').grid(row=55, column=0, columnspan=1, sticky="w")
-    ttk.Label(tnmaideframe, text='Lden: ').grid(row=56, column=0, columnspan=1, sticky="w")
-
-    # Outputs
+    # Calculate future metrics outputs
+    # --------------
+    ttk.Label(tnmaideframe, text='Future Fleet Distribution Based On: ').grid(row=75, column=0, columnspan=1, sticky="w")
     FleetBreakdownUsed = StringVar()
-    ttk.Entry(tnmaideframe, textvariable=FleetBreakdownUsed, state="readonly").grid(row=53, column=1, sticky="w", columnspan=2)
-    LAeqFutureOutput = StringVar()
-    ttk.Entry(tnmaideframe, textvariable=LAeqFutureOutput, state="readonly").grid(row=54, column=1, sticky="w")
-    LdnFutureOutput = StringVar()
-    ttk.Entry(tnmaideframe, textvariable=LdnFutureOutput, state="readonly").grid(row=55, column=1, sticky="w")
-    LdenFutureOutput = StringVar()
-    ttk.Entry(tnmaideframe, textvariable=LdenFutureOutput, state="readonly").grid(row=56, column=1, sticky="w")
+    ttk.Entry(tnmaideframe, textvariable=FleetBreakdownUsed, state="readonly").grid(row=75, column=1, sticky="w", columnspan=2)
+
+    ttk.Label(tnmaideframe, text='Noise Metrics at Reference Location', font=tnmaide_headerFont2).grid(row=76, column=0, columnspan=2, sticky="w")
+    ttk.Label(tnmaideframe, text='Average Day, Worst Hour', font=tnmaide_headerFont2).grid(row=77, column=0, columnspan=2, sticky="w")
+    ttk.Label(tnmaideframe, text='Noise Metrics at Reference Location', font=tnmaide_headerFont2).grid(row=76, column=2, columnspan=2, sticky="w")
+    ttk.Label(tnmaideframe, text='Worst Date, Worst Hour', font=tnmaide_headerFont2).grid(row=77, column=2, columnspan=2, sticky="w")
+
+    # Output Labels - Average Day 
+    ttk.Label(tnmaideframe, text='Worst Hour: ').grid(row=78, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='LAeq, 1-hr: ').grid(row=79, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Average Day', font=tnmaide_headerFont2).grid(row=80, column=0, columnspan=2, sticky="w")
+    ttk.Label(tnmaideframe, text='LAeq, 24-hr: ').grid(row=81, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Ldn: ').grid(row=82, column=0, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Lden: ').grid(row=83, column=0, columnspan=1, sticky="w")
+
+    # Output Labels - Worst Day
+    ttk.Label(tnmaideframe, text='Worst Date, Worst Hour: ').grid(row=78, column=2, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='LAeq, 1-hr: ').grid(row=79, column=2, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Worst Date', font=tnmaide_headerFont2).grid(row=80, column=2, columnspan=2, sticky="w")
+    ttk.Label(tnmaideframe, text='LAeq, 24-hr: ').grid(row=81, column=2, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Ldn: ').grid(row=82, column=2, columnspan=1, sticky="w")
+    ttk.Label(tnmaideframe, text='Lden: ').grid(row=83, column=2, columnspan=1, sticky="w")
+    
+    # Outputs - Average Day
+    futureWorstHour = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=futureWorstHour, state="readonly").grid(row=78, column=1, sticky="w")
+    futureLAeq1Hr = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=futureLAeq1Hr, state="readonly").grid(row=79, column=1, sticky="w")
+    futureLAeq24Hr = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=futureLAeq24Hr, state="readonly").grid(row=81, column=1, sticky="w")
+    futureLdn = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=futureLdn, state="readonly").grid(row=82, column=1, sticky="w")
+    futureLden = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=futureLden, state="readonly").grid(row=83, column=1, sticky="w") 
+
+    # Outputs - Worst Date
+    futureWDworstDate = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=futureWDworstDate, state="readonly").grid(row=78, column=3, sticky="w")
+    futureWDworstHour = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=futureWDworstHour, state="readonly").grid(row=78, column=4, sticky="w")
+    futureWDLAeq1Hr = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=futureWDLAeq1Hr, state="readonly").grid(row=79, column=3, sticky="w")
+    futureWDLAeq24Hr = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=futureLAeq24Hr, state="readonly").grid(row=81, column=3, sticky="w")
+    futureWDLdn = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=futureWDLdn, state="readonly").grid(row=82, column=3, sticky="w")
+    futureWDLden = StringVar()
+    ttk.Entry(tnmaideframe, textvariable=futureWDLden, state="readonly").grid(row=83, column=3, sticky="w") 
+
+    ####### Traffic Breakdowns
+    #----------------------
+    ttk.Separator(tnmaideframe, orient=HORIZONTAL).grid(row=84, column=0, columnspan=6, sticky="ew")
+
+    # Average Near 
+    ttk.Label(tnmaideframe, text="Average Day Worst Hour Traffic Conditions, Near lane: ", font='Ariel 10 bold').grid(row=85, column=0, columnspan = 2, sticky="W")
+
+    fadwhnl = tk.Canvas(tnmaideframe)
+    fadwhnl.grid(column=0, row=86, columnspan=6, rowspan=3, sticky="w")
+    ttk.Label(fadwhnl, text='Average Day Worst Hour Volume: ').grid(row=1, column=0, columnspan=1, sticky="w")
+    ttk.Label(fadwhnl, text='Average Day Worst Hour Average Speed: ').grid(row=2, column=0, columnspan=1, sticky="w")
+    ttk.Label(fadwhnl, text = "Auto").grid(column=1, row=0, sticky="w")
+    ttk.Label(fadwhnl, text = "Medium Trucks").grid(column=2, row=0, sticky="w")
+    ttk.Label(fadwhnl, text = "Heavy Trucks").grid(column=3, row=0, sticky="w")
+    ttk.Label(fadwhnl, text = "Buses").grid(column=4, row=0, sticky="w")
+    ttk.Label(fadwhnl, text = "Motor Cycles").grid(column=5, row=0, sticky="w")
+
+    fAvWhOutTableNear = []
+    for r in range(2):
+        whOutRow = []
+        for c in range(5):
+            strvar = tk.StringVar()
+            whOutRow.append(strvar)
+            ttk.Entry(fadwhnl, textvariable=strvar, state="readonly").grid(row=1+r, column=1+c, sticky="w")
+        fAvWhOutTableNear.append(whOutRow)
+
+    # Average Far
+    ttk.Label(tnmaideframe, text="Average Day Worst Hour Traffic Conditions, Far lane: ", font='Ariel 10 bold').grid(row=89, column=0, columnspan = 2, sticky="W")
+
+    fadwhfl = tk.Canvas(tnmaideframe)
+    fadwhfl.grid(column=0, row=90, columnspan=6, rowspan=3, sticky="w")
+    ttk.Label(fadwhfl, text='Average Day Worst Hour Volume: ').grid(row=1, column=0, columnspan=1, sticky="w")
+    ttk.Label(fadwhfl, text='Average Day Worst Hour Average Speed: ').grid(row=2, column=0, columnspan=1, sticky="w")
+    ttk.Label(fadwhfl, text = "Auto").grid(column=1, row=0, sticky="w")
+    ttk.Label(fadwhfl, text = "Medium Trucks").grid(column=2, row=0, sticky="w")
+    ttk.Label(fadwhfl, text = "Heavy Trucks").grid(column=3, row=0, sticky="w")
+    ttk.Label(fadwhfl, text = "Buses").grid(column=4, row=0, sticky="w")
+    ttk.Label(fadwhfl, text = "Motor Cycles").grid(column=5, row=0, sticky="w")
+
+    fAvWhOutTableFar = []
+    for r in range(2):
+        whOutRow = []
+        for c in range(5):
+            strvar = tk.StringVar()
+            whOutRow.append(strvar)
+            ttk.Entry(fadwhfl, textvariable=strvar, state="readonly").grid(row=1+r, column=1+c, sticky="w")
+        fAvWhOutTableFar.append(whOutRow)
+
+    
+    # Worst Near
+    ttk.Separator(tnmaideframe, orient=HORIZONTAL).grid(row=93, column=0, columnspan=6, sticky="ew")
+
+    ttk.Label(tnmaideframe, text="Worst Date Worst Hour Traffic Conditions, Near lane: ", font='Ariel 10 bold').grid(row=94, column=0, columnspan = 2, sticky="W")
+
+    fwdwhnl = tk.Canvas(tnmaideframe)
+    fwdwhnl.grid(column=0, row=95, columnspan=6, rowspan=3, sticky="w")
+    ttk.Label(fwdwhnl, text='Worst Date Worst Hour Volume: ').grid(row=1, column=0, columnspan=1, sticky="w")
+    ttk.Label(fwdwhnl, text='Worst Date Worst Hour Average Speed: ').grid(row=2, column=0, columnspan=1, sticky="w")
+    ttk.Label(fwdwhnl, text = "Auto").grid(column=1, row=0, sticky="w")
+    ttk.Label(fwdwhnl, text = "Medium Trucks").grid(column=2, row=0, sticky="w")
+    ttk.Label(fwdwhnl, text = "Heavy Trucks").grid(column=3, row=0, sticky="w")
+    ttk.Label(fwdwhnl, text = "Buses").grid(column=4, row=0, sticky="w")
+    ttk.Label(fwdwhnl, text = "Motor Cycles").grid(column=5, row=0, sticky="w")
+
+    fWdWhOutTableNear = []
+    for r in range(2):
+        whOutRow = []
+        for c in range(5):
+            strvar = tk.StringVar()
+            whOutRow.append(strvar)
+            ttk.Entry(fwdwhnl, textvariable=strvar, state="readonly").grid(row=1+r, column=1+c, sticky="w")
+        fWdWhOutTableNear.append(whOutRow)
+
+    # Worst Far
+    ttk.Label(tnmaideframe, text="Worst Date Worst Hour Traffic Conditions, Far lane: ", font='Ariel 10 bold').grid(row=98, column=0, columnspan = 2, sticky="W")
+
+    fwdwhfl = tk.Canvas(tnmaideframe)
+    fwdwhfl.grid(column=0, row=99, columnspan=6, rowspan=3, sticky="w")
+    ttk.Label(fwdwhfl, text='Worst Date Worst Hour Volume: ').grid(row=1, column=0, columnspan=1, sticky="w")
+    ttk.Label(fwdwhfl, text='Worst Date Worst Hour Average Speed: ').grid(row=2, column=0, columnspan=1, sticky="w")
+    ttk.Label(fwdwhfl, text = "Auto").grid(column=1, row=0, sticky="w")
+    ttk.Label(fwdwhfl, text = "Medium Trucks").grid(column=2, row=0, sticky="w")
+    ttk.Label(fwdwhfl, text = "Heavy Trucks").grid(column=3, row=0, sticky="w")
+    ttk.Label(fwdwhfl, text = "Buses").grid(column=4, row=0, sticky="w")
+    ttk.Label(fwdwhfl, text = "Motor Cycles").grid(column=5, row=0, sticky="w")
+
+    fWdWhOutTableFar = []
+    for r in range(2):
+        whOutRow = []
+        for c in range(5):
+            strvar = tk.StringVar()
+            whOutRow.append(strvar)
+            ttk.Entry(fwdwhfl, textvariable=strvar, state="readonly").grid(row=1+r, column=1+c, sticky="w")
+        fWdWhOutTableFar.append(whOutRow)
 
     for child in tnmaideframe.winfo_children(): child.grid_configure(padx=2, pady=4)
     ##################################################
@@ -1678,22 +2174,22 @@ if __name__ == "__main__":
     ##################################################
     #0. File location output
     #ttk.Label(mainframe, text='Choose output file location').grid(row=0,column=0, columnspan=1, sticky="w")
-    ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=1,column=0, columnspan=5, sticky="ew")
+    ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=1,column=0, columnspan=6, sticky="ew")
     #1. Header
     
     ttk.Label(mainframe, text='Select State:').grid(row=2,column=0, columnspan=1, sticky="w")
     
-    ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=3,column=0, columnspan=5, sticky="ew")
+    ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=3,column=0, columnspan=6, sticky="ew")
     
     #ttk.Label(mainframe, text='Select inputs under the desired process and press the “Run Process” button.').grid(row=6,column=0, columnspan=3, sticky="w")
     
-    #ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=4,column=0, columnspan=5, sticky="ew")
+    #ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=4,column=0, columnspan=6, sticky="ew")
     #ttk.Label(mainframe, text=step0).grid(row=6,column=1, columnspan=1, sticky="w")
-    ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=9,column=0, columnspan=5, sticky="ew")
+    ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=9,column=0, columnspan=6, sticky="ew")
     ttk.Label(mainframe, text=step1).grid(row=10,column=0, columnspan=1, sticky="w")
-    ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=25,column=0, columnspan=5, sticky="ew")
+    ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=25,column=0, columnspan=6, sticky="ew")
     ttk.Label(mainframe, text=step2).grid(row=26,column=0, columnspan=1, sticky="w")
-    ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=31,column=0, columnspan=5, sticky="ew")
+    ttk.Separator(mainframe, orient=HORIZONTAL).grid(row=31,column=0, columnspan=6, sticky="ew")
     ttk.Label(mainframe, text=step3).grid(row=32,column=0, columnspan=1, sticky="w")
     
     ##################################################
@@ -1915,7 +2411,7 @@ if __name__ == "__main__":
         pl_emission.config(text='')
            
     if False:
-        testOption = 1
+        testOption = 18
 
         roadgrade1.set(0)
         roadgrade2.set(0)
@@ -1950,6 +2446,8 @@ if __name__ == "__main__":
 
             TMC_1Entry.set('114-04428')
             TMC_2Entry.set('114+04429')
+            fn_output = f'H:/DANATool/Outputs/OK_Run_20240814'
+
         elif testOption == 5:
             tmas_year = 2019
             npmrds_year = 2021
@@ -2023,6 +2521,17 @@ if __name__ == "__main__":
             npmrds_year = 2020
             state = 'VA'
             county = 'RingRoads'
+        elif testOption == 18:
+            tmas_year = 2018
+            npmrds_year = 2018
+            state = 'CT'
+            county = 'NewHaven'
+
+            TMC_1Entry.set('120N05475')
+            TMC_2Entry.set('120P05475')
+
+            fn_output = f'H:/DANATool/Outputs/NewHaven_CT_20231011'
+            pl_output_folder.config(text=fn_output.replace('/','\\'))
                 
         
         w_state.set(state)
@@ -2038,8 +2547,7 @@ if __name__ == "__main__":
         pl_npmrds_truck.config(text=fn_npmrds_truck.replace('/','\\'))
         fn_npmrds_tmc = f'H:/TestData/{county}_{state}/NPMRDS Data/TMC_Identification.csv'
         pl_npmrds_tmc.config(text=fn_npmrds_tmc.replace('/','\\'))
-        fn_output = f'H:/DANATool/Outputs/TESTNEW_20240709'
-        pl_output_folder.config(text=fn_output.replace('/','\\'))
+        
 
         fn_tmc_config = fn_npmrds_tmc
         medwidth.set(6)
@@ -2057,8 +2565,13 @@ if __name__ == "__main__":
     ##################################################
     # pad each widget globally
     for child in mainframe.winfo_children(): child.grid_configure(padx=2, pady=4)
-    
-    
+    for child in mainframe.winfo_children(): 
+        try:
+            ttk.Style().configure(f'{child}')
+        except:
+            print(f'error trying to set bg in {child}')
+
+
     enable_tmas_preprocess()
 
     old_stdout = sys.stdout
