@@ -22,7 +22,7 @@ def get_TNMPyAide_inputs(PATH_NPMRDS, TMC1, TMC2=None):
 
     print("Reading NPMRDS Clean Link Data")
     #fullLinkLevel = pq.read_table(PATH_NPMRDS, memory_map=True)
-    fullLinkLevel = dd.read_parquet(PATH_NPMRDS,)
+    fullLinkLevel = dd.read_parquet(PATH_NPMRDS, categories=[])
 
     print("Processing Data. This may take a while.")
     #fullLinkLevel = fullLinkLevel.to_pandas()

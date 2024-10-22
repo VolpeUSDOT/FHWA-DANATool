@@ -1482,7 +1482,8 @@ def ctrlEvent(event):
 if __name__ == "__main__":
     mp.freeze_support()  
     
-    root = ThemedTk(theme='aquativo')
+    #root = ThemedTk(theme='aquativo')
+    root = Tk()
     root.title("FHWA DANA Tool - v{}".format(versionNum))
     root.grid_rowconfigure(0, weight=0)
     root.grid_rowconfigure(1, weight=1)
@@ -1660,8 +1661,8 @@ if __name__ == "__main__":
     tmcentercanvas.grid(column=0, row=6, columnspan=4, sticky="w")
 
     # Entry
-    tmc1entrylabel = ttk.Label(tmcentercanvas, text='TMC 1: ').grid(row=0, column=1)
-    tmc2entrylabel = ttk.Label(tmcentercanvas, text='TMC 2: ').grid(row=0, column=2)
+    tmc1entrylabel = ttk.Label(tmcentercanvas, text='Near Lanes: ').grid(row=0, column=1)
+    tmc2entrylabel = ttk.Label(tmcentercanvas, text='Far Lanes: ').grid(row=0, column=2)
     TMC_1Entry = StringVar()
     TMC_2Entry = StringVar()
     tmcIDLabel = ttk.Label(tmcentercanvas, text='Enter TMC IDs: ').grid(row=1, column=0, sticky='w', padx=(0, 5))
@@ -1849,7 +1850,7 @@ if __name__ == "__main__":
     CurrentAADTOut_L2 = StringVar()
     ttk.Entry(tnmaideframe, textvariable=CurrentAADTOut_L2, state="readonly").grid(row=39, column=3, sticky="w")
 
-    ttk.Label(tnmaideframe, text="Yearly Vehicle Mix, Both Lanes (%): ", font='Ariel 10 bold').grid(row=40, column=0, columnspan = 2, sticky="W")
+    ttk.Label(tnmaideframe, text="Yearly Vehicle Mix, Both Directions, All Lanes (%): ", font='Ariel 10 bold').grid(row=40, column=0, columnspan = 2, sticky="W")
 
     yearbreakdown = tk.Canvas(tnmaideframe)
     yearbreakdown.grid(column=0, row=41, columnspan=6, rowspan=2, sticky="w")
@@ -1869,7 +1870,7 @@ if __name__ == "__main__":
             ttk.Entry(yearbreakdown, textvariable=strvar, state="readonly").grid(row=1+r, column=1+c, sticky="w")
         yrOutTable.append(yrOutRow)
 
-    ttk.Label(tnmaideframe, text='LDN Time Period Distribution, Both Lanes (%)', font='Ariel 10 bold').grid(row=43, column=0, columnspan=2, sticky="w")
+    ttk.Label(tnmaideframe, text='LDN Time Period Distribution, Both Directions, All Lanes (%)', font='Ariel 10 bold').grid(row=43, column=0, columnspan=2, sticky="w")
 
     daybreakdown = tk.Canvas(tnmaideframe)
     daybreakdown.grid(column=0, row=44, columnspan=6, rowspan=3, sticky="w")
@@ -1890,7 +1891,7 @@ if __name__ == "__main__":
             ttk.Entry(daybreakdown, textvariable=strvar, state="readonly").grid(row=1+r, column=1+c, sticky="w")
         ldnOutTable.append(ldnOutRow)
 
-    ttk.Label(tnmaideframe, text='LDEN Time Period Distribution, Both Lanes (%)', font='Ariel 10 bold').grid(row=47, column=0, columnspan=2, sticky="w")
+    ttk.Label(tnmaideframe, text='LDEN Time Period Distribution, Both Directions, All Lanes (%)', font='Ariel 10 bold').grid(row=47, column=0, columnspan=2, sticky="w")
 
     denbreakdown = tk.Canvas(tnmaideframe)
     denbreakdown.grid(column=0, row=48, columnspan=6, rowspan=4, sticky="w")
@@ -1926,7 +1927,7 @@ if __name__ == "__main__":
     futureAADTIn_L2 = tk.StringVar()
     ttk.Entry(tnmaideframe, textvariable=futureAADTIn_L2).grid(row=57, column=3, sticky="w")
 
-    ttk.Label(tnmaideframe, text='LDN Time Period Distribution, Both Lanes (%)', font='Ariel 10 bold').grid(row=58, column=0, columnspan=2, sticky="w")
+    ttk.Label(tnmaideframe, text='LDN Time Period Distribution, Both Directions, All Lanes (%)', font='Ariel 10 bold').grid(row=58, column=0, columnspan=2, sticky="w")
     futureLDNInput = tk.Canvas(tnmaideframe)
 
     futureLDNInput.grid(column=0, row=59, columnspan=6, rowspan=3, sticky="w")
@@ -1951,7 +1952,7 @@ if __name__ == "__main__":
     ttk.Label(tnmaideframe, text='Total Percent: ').grid(row=62, column=0, columnspan=1, sticky="w")
     ttk.Entry(tnmaideframe, textvariable=totLDNInput, state="readonly").grid(row=62, column=1, sticky="w")
 
-    ttk.Label(tnmaideframe, text='LDEN Time Period Distribution, Both Lanes (%)', font='Ariel 10 bold').grid(row=63, column=0, columnspan=2, sticky="w")
+    ttk.Label(tnmaideframe, text='LDEN Time Period Distribution, Both Directions, All Lanes (%)', font='Ariel 10 bold').grid(row=63, column=0, columnspan=2, sticky="w")
     futureLDENInput = tk.Canvas(tnmaideframe)
     futureLDENInput.grid(column=0, row=64, columnspan=6, rowspan=4, sticky="w")
     ttk.Label(futureLDENInput, text='Percent Vehicles in the Future Year, DAYTIME: ').grid(row=1, column=0, columnspan=1, sticky="w")
@@ -2043,7 +2044,7 @@ if __name__ == "__main__":
     ttk.Separator(tnmaideframe, orient=HORIZONTAL).grid(row=84, column=0, columnspan=6, sticky="ew")
 
     # Average Near 
-    ttk.Label(tnmaideframe, text="Average Day Worst Hour Traffic Conditions, Near lane: ", font='Ariel 10 bold').grid(row=85, column=0, columnspan = 2, sticky="W")
+    ttk.Label(tnmaideframe, text="Average Day Worst Hour Traffic Conditions, Near Lanes: ", font='Ariel 10 bold').grid(row=85, column=0, columnspan = 2, sticky="W")
 
     fadwhnl = tk.Canvas(tnmaideframe)
     fadwhnl.grid(column=0, row=86, columnspan=6, rowspan=3, sticky="w")
@@ -2065,7 +2066,7 @@ if __name__ == "__main__":
         fAvWhOutTableNear.append(whOutRow)
 
     # Average Far
-    ttk.Label(tnmaideframe, text="Average Day Worst Hour Traffic Conditions, Far lane: ", font='Ariel 10 bold').grid(row=89, column=0, columnspan = 2, sticky="W")
+    ttk.Label(tnmaideframe, text="Average Day Worst Hour Traffic Conditions, Far Lanes: ", font='Ariel 10 bold').grid(row=89, column=0, columnspan = 2, sticky="W")
 
     fadwhfl = tk.Canvas(tnmaideframe)
     fadwhfl.grid(column=0, row=90, columnspan=6, rowspan=3, sticky="w")
@@ -2090,7 +2091,7 @@ if __name__ == "__main__":
     # Worst Near
     ttk.Separator(tnmaideframe, orient=HORIZONTAL).grid(row=93, column=0, columnspan=6, sticky="ew")
 
-    ttk.Label(tnmaideframe, text="Worst Date Worst Hour Traffic Conditions, Near lane: ", font='Ariel 10 bold').grid(row=94, column=0, columnspan = 2, sticky="W")
+    ttk.Label(tnmaideframe, text="Worst Date Worst Hour Traffic Conditions, Near Lanes: ", font='Ariel 10 bold').grid(row=94, column=0, columnspan = 2, sticky="W")
 
     fwdwhnl = tk.Canvas(tnmaideframe)
     fwdwhnl.grid(column=0, row=95, columnspan=6, rowspan=3, sticky="w")
@@ -2112,7 +2113,7 @@ if __name__ == "__main__":
         fWdWhOutTableNear.append(whOutRow)
 
     # Worst Far
-    ttk.Label(tnmaideframe, text="Worst Date Worst Hour Traffic Conditions, Far lane: ", font='Ariel 10 bold').grid(row=98, column=0, columnspan = 2, sticky="W")
+    ttk.Label(tnmaideframe, text="Worst Date Worst Hour Traffic Conditions, Far Lanes: ", font='Ariel 10 bold').grid(row=98, column=0, columnspan = 2, sticky="W")
 
     fwdwhfl = tk.Canvas(tnmaideframe)
     fwdwhfl.grid(column=0, row=99, columnspan=6, rowspan=3, sticky="w")

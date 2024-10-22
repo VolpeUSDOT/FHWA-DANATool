@@ -213,8 +213,10 @@ class DANA_Noise_Data:
             frameinfo = getframeinfo(currentframe())
             print(frameinfo.filename, frameinfo.lineno)
             print('')
-                    
-            print('Missing speed data')
+
+            print('-----DANA_Noise_Data.__init__.')
+            print('-----Error, Missing ALL speed data')
+            self.df_Traffic_Noise = None
             return
         if any(df_DANA['SPEED_PASS'].isna()):
             
@@ -222,7 +224,9 @@ class DANA_Noise_Data:
             print(frameinfo.filename, frameinfo.lineno)
             print('')
             
-            print('Missing speed data')
+            print('-----DANA_Noise_Data.__init__.')
+            print('-----Error, Missing PASS speed data')
+            self.df_Traffic_Noise = None
             return
         if any(df_DANA['SPEED_TRUCK'].isna()):
             
@@ -230,7 +234,9 @@ class DANA_Noise_Data:
             print(frameinfo.filename, frameinfo.lineno)
             print('')
             
-            print('Missing speed data')
+            print('-----DANA_Noise_Data.__init__.')
+            print('-----Error, Missing TRUCK speed data')
+            self.df_Traffic_Noise = None
             return
         
         # TMCS

@@ -45,7 +45,7 @@ def f(tmas_station):
     'MI':['Michigan',26],'MN':['Minnesota',27],'MS':['Mississippi',28],'MO':['Missouri',29],'MT':['Montana',30],'NE':['Nebraska',31],
     'NV':['Nevada',32],'NH':['New Hampshire',33],'NJ':['New Jersey',34],'NM':['New Mexico',35],'NY':['New York',36],
     'NC':['North Carolina',37],'ND':['North Dakota',38],'OH':['Ohio',39],'OK':['Oklahoma',40],'OR':['Oregon',41],
-    'PA':['Pennsylvania',42],'RI':['Rhode Island',44],'SC':['South Carolina',46],'SD':['South Dakota',46],
+    'PA':['Pennsylvania',42],'RI':['Rhode Island',44],'SC':['South Carolina', 45],'SD':['South Dakota', 46],
     'TN':['Tennessee',47],
     'TX':['Texas', 48], 
     'UT':['Utah',49],'VT':['Vermont',50],'VA':['Virginia',51],
