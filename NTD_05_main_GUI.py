@@ -1680,7 +1680,7 @@ if __name__ == "__main__":
     ttk.Entry(tmcentercanvas, textvariable=roadgrade1).grid(column=1, row=3, sticky="w", padx=(5, 5))
     roadgrade2 = DoubleVar()
     ttk.Entry(tmcentercanvas, textvariable=roadgrade2).grid(column=2, row=3, sticky="w", padx=(5, 5))
-    helpgrade = ttk.Label(tmcentercanvas, text='in direction of near lanes, include - or +').grid(column = 3, row=3, sticky="w", padx=(5, 0))
+    helpgrade = ttk.Label(tmcentercanvas, text='positive for uphill, negative for downhill (in direction of travel)').grid(column = 3, row=3, sticky="w", padx=(5, 0))
 
     ########## Calculate and Outputs ###############
     ttk.Separator(tnmaideframe, orient=HORIZONTAL).grid(row=9,column=0, columnspan=6, sticky="ew")
