@@ -12,10 +12,17 @@ class RoadLink():
     '''
 
     def __init__(self, df_DANA, geometry, link_grade=None, link_name="RoadLink"):
-        self.df_DANA = df_DANA
-        self.geometry = self.convert_geometry(geometry)
-        self.TNMGeometry = self.convert_geometry_TNM(geometry)
+        self.m_map_projection = "EPSG:3857"
+        self.geom_offset = (0,0)
         self.name = link_name
+        self.df_DANA = df_DANA
+
+        if isinstance(geometry, str):
+            self.geo_str = geometry
+        else:
+            self.geo_str = geometry.values[0]
+        self.geometry = self.convert_geometry(self.geo_str)
+        self.TNMGeometry = self.convert_geometry_TNM(self.geo_str)
 
         num_links = len(list(pd.unique(self.df_DANA['tmc'])))
         if num_links > 1:
@@ -34,47 +41,91 @@ class RoadLink():
         dndobj = DND(self.df_DANA, self.link_grade, robust_speeds = False)
         self.df_traffic_noise = dndobj.df_Traffic_Noise
 
+    def setGeomOffset(self, offset):
+        if self.geom_offset == offset:
+            return
+
+        self.geom_offset = offset
+        self.geometry = self.convert_geometry(self.geo_str)
+
+    def geomOffset(self):
+         return self.geom_offset
+
+    def setProjection(self, map_projection):
+        '''
+        update projection and x, y coords to match new projection
+        '''
+        if self.m_map_projection == map_projection:
+             return
+
+        self.m_map_projection = map_projection
+        self.geometry = self.convert_geometry(self.geo_str)
+
+    def projection(self):
+         '''
+         returns current map projection of the receiver
+         '''
+         return self.m_map_projection
+
     def convert_geometry(self, geometry):
         '''
         Separates out the geometry data into a list of sections of the segment for later processing
         '''
-        if isinstance(geometry, str):
-            geo_str = geometry
-        else:
-            geo_str = geometry.values[0]
-        line_segs = re.findall(r'(?:,\s{1}|\()(.+?,\s.+?)(?:,\s|\))', geo_str, overlapped=True)
+        line_segs = re.findall(r'(?:,\s{1}|\()(.+?,\s.+?)(?:,\s|\))', geometry, overlapped=True)
         for i, line in enumerate(line_segs):
             line_segs[i] = line.split(", ")
             for k, point in enumerate(line_segs[i]):
-                line_segs[i][k] = tuple(float(s) for s in point.split(' '))
+                temp_tuple = tuple(float(s) for s in point.split(' '))
+                x, y = self.convertCoords(temp_tuple[0], temp_tuple[1])
+                line_segs[i][k] = (x, y)
         return line_segs
 
     def convert_geometry_TNM(self, geometry):
         '''
         Separates out the geometry data into a list of points for later processing
         '''
-        if isinstance(geometry, str):
-            geo_str = geometry
-        else:
-            geo_str = geometry.values[0]
-        line_segs = re.findall(r'(?:,\s{1}|\()(.+?)(?:,\s|\))', geo_str)
+        line_segs = re.findall(r'(?:,\s{1}|\()(.+?)(?:,\s|\))', geometry)
         for i, point in enumerate(line_segs):
             line_segs[i] = tuple(float(s) for s in point.split(' '))
 
         return line_segs
+
+    def convertCoords(self, lat, long):
+        '''
+            function to calculate the x, y coords from lat-long, apply an offset to match to a different projection if applicable
+
+            Target Projection is set on the road link object with the setProjection function
+
+            Offset is set with setGeomOffset function
+
+        '''
+                # Create a transformer object for the desired projection
+        transformer = pyproj.Transformer.from_crs("EPSG:4326", self.m_map_projection)
+
+        crs_obj = pyproj.CRS(self.m_map_projection)
+        # print(self.name)
+        # print(crs_obj.axis_info)
+
+        # Convert coordinates
+        x, y = transformer.transform(long, lat)
+
+        # Convert meters to feet
+        x = x * 3.28084
+        y = y * 3.28084
+
+        x = x + self.geom_offset[0]
+        y = y + self.geom_offset[1]
+
+        return x, y
 
     def select_hour(self, hour):
         if hour != None:
             self.df_DANA = self.df_DANA.loc[(self.df_DANA['HOUR'] == hour)]
             self.df_traffic_noise = self.df_traffic_noise.loc[(self.df_traffic_noise['HOUR'] == hour)]
 
-    def createTNMImportDF(self, offset = (0,0), target_projection = "EPSG:3857"):
+    def createTNMImportDF(self):
         '''
-        function to calculate the x, y coords from lat-long, apply an offest to match to a different projection if applicable
-
-        Accepts:
-            offset - A tuple of x and y offset to allow projection to be shifted to match TNM projection, default is (0,0)
-            target_projection - A string that represents the desired map projection out, default is web mercator
+        function to calculate the x, y coords from lat-long, apply an offset to match to a different projection if applicable
 
         Returns:
             A Pandas df containing one row per geometry segment with info about this road link
@@ -83,7 +134,7 @@ class RoadLink():
         # Create lat_long DF
         df_geom = pd.DataFrame(self.TNMGeometry, columns=["X", "Y"])
         # Create a transformer object for the desired projection
-        transformer = pyproj.Transformer.from_crs("EPSG:4326", target_projection)
+        transformer = pyproj.Transformer.from_crs("EPSG:4326", self.m_map_projection)
         # Convert coordinates
         df_geom["X"], df_geom["Y"] = transformer.transform(df_geom["Y"], df_geom["X"])
 
@@ -91,9 +142,9 @@ class RoadLink():
         df_geom["X"] = df_geom["X"] * 3.28084
         df_geom["Y"] = df_geom["Y"] * 3.28084
 
-        # Apply offest
-        df_geom["X"] = df_geom["X"] + offset[0]
-        df_geom["Y"] = df_geom["Y"] + offset[1]
+        # Apply offset
+        df_geom["X"] = df_geom["X"] + self.geom_offset[0]
+        df_geom["Y"] = df_geom["Y"] + self.geom_offset[1]
 
         # Make a new df of the correct size
         len_geom = len(self.TNMGeometry)
@@ -186,4 +237,5 @@ if __name__ == "__main__":
 
     rl = RoadLink(df_DANA, geo_df.loc['121N04350'])
 
-    rl.createTNMImportDF()
+    rdf = rl.createTNMImportDF(target_projection="ESRI:103286")
+    print(rdf)

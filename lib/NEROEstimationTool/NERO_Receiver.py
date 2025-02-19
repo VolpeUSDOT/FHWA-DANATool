@@ -9,10 +9,39 @@ class Receiver():
     '''
 
     def __init__(self, latitude, longitude, receiverName = "Receiver"):
+        self.m_map_projection = "EPSG:3857"
+        self.geom_offset = (0,0)
+        self.name = receiverName
+        self.x, self.y = self.convertCoords(lat=latitude, long=longitude)
         self.lat = latitude
         self.long = longitude
-        self.name = receiverName
         self.worst_hour = None
+
+    def setGeomOffset(self, offset):
+        if self.geom_offset == offset:
+            return
+
+        self.geom_offset = offset
+        self.x, self.y = self.convertCoords(self.lat, self.long)
+
+    def geomOffset(self):
+         return self.geom_offset
+
+    def setProjection(self, map_projection):
+        '''
+        update projection and x, y coords to match new projection
+        '''
+        if self.m_map_projection == map_projection:
+             return
+
+        self.m_map_projection = map_projection
+        self.x, self.y = self.convertCoords(self.lat, self.long)
+
+    def projection(self):
+         '''
+         returns current map projection of the receiver
+         '''
+         return self.m_map_projection
 
     def Compute_Rel_Attenuation(self, alpha, distance):
         '''
@@ -31,17 +60,7 @@ class Receiver():
         # Find lengths of all 3 sides in common units
         link_start = (segment[0][0], segment[0][1])
         link_end = (segment[1][0], segment[1][1])
-        receiver_pos = (self.lat, self.long)
-
-        def Distance_Formula(point1, point2):
-            x1 = point1[0]
-            x2 = point2[0]
-            y1 = point1[1]
-            y2 = point2[1]
-            x_diff = (x2 - x1)**2
-            y_diff = (y2 - y1)**2
-            distance = np.sqrt(x_diff + y_diff)
-            return distance
+        receiver_pos = (self.x, self.y)
 
         link_len = Distance_Formula(link_start, link_end)
         start_to_mic = Distance_Formula(link_start, receiver_pos)
@@ -59,61 +78,56 @@ class Receiver():
         # define points
         x1, y1 = segment[0][0], segment[0][1]
         x2, y2 = segment[1][0], segment[1][1]
-        x3, y3 = self.lat, self.long
+        x3, y3 = self.x, self.y
 
-        # Calculate point of intersection with the straight line #TODO: Check that this works on lat/long
+        # Calculate point of intersection with the straight line
         dx, dy = x2-x1, y2-y1
         det = dx*dx + dy*dy
         a = (dy*(y3-y1)+dx*(x3-x1))/det
         x4, y4 = x1+a*dx, y1+a*dy
 
-        # Calculate lat and long differences between intersection and receiver point
-        diff_lat, diff_long = x3-x4, y3-y4
-
-        # Convert to radians
-        x3, y3 = np.radians(x3), np.radians(y3)
-        x4, y4 = np.radians(x4), np.radians(y4)
-        diff_lat, diff_long = np.radians(diff_lat), np.radians(diff_long)
-
-        # Use Haversine Formula to find distance
-        # R = 6371 # km
-        R = 20902211 # ft
-
-        a = ((np.sin(diff_lat / 2))**2) + (np.cos(x3) * np.cos(x4) * ((np.sin(diff_long / 2))**2))
-        c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
-        distance = R * c
+        # find distance
+        distance = Distance_Formula((x3, y3), (x4, y4))
         return distance
 
         # Kentucky North: ESRI:103286 from epsg.io
 
-    def createTNMImportDF(self, offset = (0,0), target_projection = "EPSG:3857"):
+    def convertCoords(self, lat, long):
         '''
-        function to calculate the x, y coords from lat-long, apply an offest to match to a different projection if applicable
+            function to calculate the x, y coords from lat-long, apply an offset to match to a different projection if applicable
 
-        Accepts:
-            offset - A tuple of x and y offset to allow projection to be shifted to match TNM projection, default is (0,0)
-            target_projection - A string that represents the desired map projection out, default is web mercator
+            Target Projection is set on the receiver object with the setProjection function
 
-        Returns:
-            A Pandas df containing one row with info about this receiver
+            Offset is set with setGeomOffset function
         '''
         # Create a transformer object for the desired projection
-        transformer = pyproj.Transformer.from_crs("EPSG:4326", target_projection)
+        transformer = pyproj.Transformer.from_crs("EPSG:4326", self.m_map_projection)
+
+        crs_obj = pyproj.CRS(self.m_map_projection)
+        # print(self.name)
+        # print(crs_obj.axis_info)
 
         # Convert coordinates
-        x, y = transformer.transform(self.long, self.lat)
+        x, y = transformer.transform(long, lat)
 
         # Convert meters to feet
         x = x * 3.28084
         y = y * 3.28084
 
-        x = x + offset[0]
-        y = y + offset[1]
+        x = x + self.geom_offset[0]
+        y = y + self.geom_offset[1]
 
+        return x, y
+
+    def createTNMImportDF(self):
+        '''
+        Returns:
+            A Pandas df containing one row with info about this receiver
+        '''
         data = {"Type": ["Receiver"],
                 "ReceiverName": [self.name],
-                "X": [x],
-                "Y": [y],
+                "X": [self.x],
+                "Y": [self.y],
             	"Z": [0],   # Update to make this setable
                 "Height": [5],  # Update to make this setable
                 "DwellingUnits": [0],
@@ -128,12 +142,30 @@ class Receiver():
         return receiverDF
 
 
+def Distance_Formula(point1, point2):
+            x1 = point1[0]
+            x2 = point2[0]
+            y1 = point1[1]
+            y2 = point2[1]
+            x_diff = (x2 - x1)**2
+            y_diff = (y2 - y1)**2
+            distance = np.sqrt(x_diff + y_diff)
+            return distance
 
 
 if __name__ == "__main__":
+
+
+
     # Unit Tests (show 4.5 db decrease per dist doubling), (3db per angular doubling) (General unit testing)
     segment = [(-85.58886, 38.31122), (-85.58789, 38.3117)]
+
     receiver = Receiver(-85.581518, 38.312084)
+    receiver.setProjection("ESRI:103286")
+    for i, point in enumerate(segment):
+        x, y = receiver.convertCoords(point[0], point[1])
+        segment[i] = (x, y)
+    print(segment)
     alpha = receiver.Find_Angle_Alpha(segment)
     dist = receiver.Find_Perp_Dist(segment)
     ra = receiver.Compute_Rel_Attenuation(alpha, dist)
@@ -155,21 +187,28 @@ if __name__ == "__main__":
     print('Angle Function Check')
     segment = [(-85.60000, 38.30000), (-85.50000, 38.30000)]
     receiver = Receiver(-85.55000, 38.35000)
+    receiver.setProjection("ESRI:103286")
+    for i, point in enumerate(segment):
+        x, y = receiver.convertCoords(point[0], point[1])
+        segment[i] = (x, y)
     alpha = receiver.Find_Angle_Alpha(segment)
     print('90 Degree:')
     print(np.rad2deg(alpha))
 
     receiver = Receiver(-85.55000, 38.42071)
+    receiver.setProjection("ESRI:103286")
     alpha = receiver.Find_Angle_Alpha(segment)
     print('45 Degree:')
     print(np.rad2deg(alpha))
 
     receiver = Receiver(-85.55000, 38.17929)
+    receiver.setProjection("ESRI:103286")
     alpha = receiver.Find_Angle_Alpha(segment)
     print('45 Degrees: (opposite side of road)')
     print(np.rad2deg(alpha))
 
     receiver = Receiver(-85.55000, 38.30000)
+    receiver.setProjection("ESRI:103286")
     alpha = receiver.Find_Angle_Alpha(segment)
     print('180 Degree: (on roadway line)')
     print(np.rad2deg(alpha))
@@ -177,22 +216,26 @@ if __name__ == "__main__":
     # Test dist calc:
     print('='*80)
     print('Distance Function Check')
+    receiver.setProjection("ESRI:103286")
     receiver = Receiver(-85.55000, 38.30000)
     dist = receiver.Find_Perp_Dist(segment)
     print('on roadway line')
     print(dist)
 
     receiver = Receiver(-85.65000, 38.30000)
+    receiver.setProjection("ESRI:103286")
     dist = receiver.Find_Perp_Dist(segment)
     print('on roadway line past end of segment')
     print(dist)
 
     receiver = Receiver(-85.55000, 38.303533)
+    receiver.setProjection("ESRI:103286")
     dist = receiver.Find_Perp_Dist(segment)
     print('100ft')
     print(dist)
 
     receiver = Receiver(-85.55000, 38.296467)
+    receiver.setProjection("ESRI:103286")
     dist = receiver.Find_Perp_Dist(segment)
     print('100ft, opposite side of road')
     print(dist)
@@ -201,6 +244,13 @@ if __name__ == "__main__":
     segment1 = [(-85.60000, 38.30000), (-85.55000, 38.30500)]
     segment2 = [(-85.55000, 38.30500), (-85.50000, 38.30000)]
     receiver = Receiver(-85.55000, 38.25000)
+    receiver.setProjection("ESRI:103286")
+    for i, point in enumerate(segment1):
+        x, y = receiver.convertCoords(point[0], point[1])
+        segment1[i] = (x, y)
+    for i, point in enumerate(segment2):
+        x, y = receiver.convertCoords(point[0], point[1])
+        segment2[i] = (x, y)
     alpha = receiver.Find_Angle_Alpha(segment1)
     dist = receiver.Find_Perp_Dist(segment1)
     ra1 = receiver.Compute_Rel_Attenuation(alpha, dist)

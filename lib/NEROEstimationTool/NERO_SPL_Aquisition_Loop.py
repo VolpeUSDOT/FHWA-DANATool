@@ -108,15 +108,16 @@ def Find_Worst_Hour_All_Receivers(receiver_list, road_link_list):
 
 def convertXYtoLatLong(x, y, offset = (0,0), converted_projection = "EPSG:3857"):
 
-    # Create a transformer object for the desired projection
+    # Create a transformer object for the desired projection "EPSG:4326"
     transformer = pyproj.Transformer.from_crs(converted_projection, "EPSG:4326")
 
-    # Convert meters to feet
+    # Convert feet to meters
     x = x / 3.28084
     y = y / 3.28084
 
     # Convert coordinates
     lat, long = transformer.transform(x, y)
+    print(lat, long)
     return lat, long
 
 
@@ -143,15 +144,15 @@ if __name__ == "__main__":
 
 
     receiver_lat_long_coords = {}
-    receiver_lat_long_coords[1] = tuple(convertXYtoLatLong(-31258613.04, 15168904.95))
-    receiver_lat_long_coords[2] = tuple(convertXYtoLatLong(-31257430.04, 15169557.7))
-    receiver_lat_long_coords[3] = tuple(convertXYtoLatLong(-31256939.54, 15169472.7))
+    receiver_lat_long_coords[1] = tuple(convertXYtoLatLong(4967202, 4000683, converted_projection="ESRI:103288"))
+    receiver_lat_long_coords[2] = tuple(convertXYtoLatLong(4968385, 4001336, converted_projection="ESRI:103288"))
+    receiver_lat_long_coords[3] = tuple(convertXYtoLatLong(4968876, 4001251, converted_projection="ESRI:103288"))
 
     # print(receiver_lat_long_coords)
 
-    receiver_list = [Receiver(receiver_lat_long_coords[1][1], receiver_lat_long_coords[1][0], receiverName="Receiver1"),
-                     Receiver(receiver_lat_long_coords[2][1], receiver_lat_long_coords[2][0], receiverName="Receiver2"),
-                     Receiver(receiver_lat_long_coords[3][1], receiver_lat_long_coords[3][0], receiverName="Receiver3")]
+    receiver_list = [Receiver(receiver_lat_long_coords[1][1], receiver_lat_long_coords[1][0], receiverName="Receiver 1 - 4607 Crossfield Circle"),
+                     Receiver(receiver_lat_long_coords[2][1], receiver_lat_long_coords[2][0], receiverName="Receiver 2 - 4501 Springdale Road"),
+                     Receiver(receiver_lat_long_coords[3][1], receiver_lat_long_coords[3][0], receiverName="Receiver 3 - Crowne Apts at Springdale")]
 
     # receiver_list = [Receiver(-85.581518, 38.312084, receiverName="Receiver1"), Receiver(-85.588119, 38.310498, receiverName="Receiver2"), Receiver(-85.577600, 38.314593, receiverName="Receiver3")]
 
@@ -159,17 +160,22 @@ if __name__ == "__main__":
     list_of_links = []
     for tmc, df_DANA in grouped:
         rs = RoadLink(df_DANA, geo_df.loc[tmc], link_name=tmc)
+        rs.setProjection("ESRI:103288")
         list_of_links.append(rs)
     # start = time.time()
     # receiver_SPL_Dict = Find_Reference_Worst_Hour(receiver_list, list_of_links)
     # end = time.time()
     # print(end - start)
 
+
+    for receiver in receiver_list:
+        receiver.setProjection("ESRI:103288")
+
     start = time.time()
     worst_hour, receiver_SPL_Dict = Find_Absolute_Worst_Hour(receiver_list, list_of_links)
     print("Worst Hour: " + str(worst_hour))
     for receiver, spl in receiver_SPL_Dict.items():
-        print(receiver.name + ": Latitude = " + str(receiver.lat) + " Longitude = " + str(receiver.long))
+        print(receiver.name + ": x = " + str(receiver.x) + " y = " + str(receiver.y))
         print("SPL: " + str(spl))
     end = time.time()
     print("time to compute:")
