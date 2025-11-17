@@ -131,7 +131,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
     tmc.loc[tmc['aadt']<=100, 'aadt'] = 100
     #a2. Clean the direction field; Drop addtional columns
     dir_dic = {'EASTBOUND':'EB', 'NORTHBOUND':'NB', 'WESTBOUND':'WB', 'SOUTHBOUND':'SB'}
-    tmc['direction'].replace(dir_dic, inplace=True)                     ## 1st pass
+    tmc.replace({'direction': dir_dic}, inplace=True)                     ## 1st pass
     tmc['direction']=tmc['direction'].str.extract('(EB|NB|SB|WB)')      ## 2nd pass
     tmc['dir_num']=-1                                                    # if it is still -1, it means we don't have direction information
     tmc.loc[tmc['direction']=='NB','dir_num']=1
@@ -419,7 +419,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
     
     #a. Read TMAS Station and Classification
     print('Reading TMAS Data')    #This takes like 10 min
-    tmas_class = dd.read_csv(PATH_TMAS_CLASS_CLEAN, dtype={'STATION_ID':str, 'ROUTE_NUMBER':str})
+    tmas_class = dd.read_csv(PATH_TMAS_CLASS_CLEAN, dtype={'STATION_ID':str, 'ROUTE_NUMBER':str, 'COUNTY': float, 'ROUTE_SIGN': float, 'F_SYSTEM': float})
     now=lapTimer('  took: ',now)
     tmas_class_state = tmas_class[tmas_class['STATE_NAME']==SELECT_STATE]
     # with ProgressBar():
@@ -1023,7 +1023,7 @@ def NPMRDS_Helper(SELECT_STATE, PATH_tmc_identification, PATH_npmrds_raw_all, PA
     print ('Reading NPMRDS TMAS data')
     df['dow'] = df['dow'].astype('category')
     df['peaking'] = df['peaking'].astype('category')
-    df['direction'] = df['direction'].astype('category')
+    df['direction'] = pd.Series(pd.Categorical(df['direction'], categories = ['NB', 'EB', 'WB', 'SB']))
     df['state']= df['state'].astype('category')
     df['urban_rural'] = df['urban_rural'].astype('category')
     #df['faciltype'] = df['faciltype'].astype('category')

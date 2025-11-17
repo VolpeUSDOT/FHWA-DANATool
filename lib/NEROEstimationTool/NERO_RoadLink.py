@@ -1,5 +1,6 @@
 import sys
-sys.path.append('C:/Users/andrew.decandia/Documents/NERO Dev/FHWA-DANATool/lib/TNMPyAide')
+import os
+sys.path.append(f'{os.getcwd()}/lib/TNMPyAide')
 from DANA_Noise_Data import DANA_Noise_Data as DND
 import regex as re
 import pandas as pd
